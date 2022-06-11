@@ -1,9 +1,9 @@
 use std::fmt;
 
-use thiserror::Error;
-use backtrace::Backtrace;
-use tracing::trace;
 use crate::util::tracing_err;
+use backtrace::Backtrace;
+use thiserror::Error;
+use tracing::trace;
 
 pub type Result<T = (), E = Error> = std::result::Result<T, E>;
 

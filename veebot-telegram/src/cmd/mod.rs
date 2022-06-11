@@ -1,7 +1,7 @@
 //! Telegram commands root module
 
-use teloxide::{prelude::*, utils::command::BotCommands};
 use crate::Bot;
+use teloxide::{prelude::*, utils::command::BotCommands};
 
 use std::error::Error;
 
