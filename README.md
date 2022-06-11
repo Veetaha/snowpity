@@ -10,11 +10,9 @@ It has assorted functionality:
 
 # Development
 
-As for now, you have to build the bot from sources.
+To build the bot from sources, we need to have [Rust toolchain installed][rust-toolchain].
 
-For this, you need to have [Rust toolchain installed][rust-toolchain].
-
-To build and run the bot in development mode run this:
+To build and run the bot in development mode with this:
 
 ```bash
 cargo run
