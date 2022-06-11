@@ -1,0 +1,9 @@
+# See documentation for this config file at https://github.com/crate-ci/typos/blob/master/docs/reference.md
+
+[default.extend-identifiers]
+
+[files]
+extend-exclude = [
+    # Exclude generated files that are checked in to source control
+    "Cargo.lock",
+]

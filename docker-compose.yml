@@ -1,0 +1,6 @@
+version: "3.9"
+services:
+  telegram-bot:
+    env_file: .env
+    user: ${CURRENT_UID:?"Please run as follows 'CURRENT_UID=$(id -u):$(id -g) docker-compose up'"}
+    build: .

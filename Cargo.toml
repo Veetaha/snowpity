@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "veebot-telegram"
+]
+
+[profile.dev]
+debug = 0
+
+[profile.dev.package.backtrace]
+opt-level = 3
