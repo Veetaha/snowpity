@@ -126,7 +126,7 @@ pub(crate) enum HttpError {
     UnexpectedResponseJsonShape { source: serde_json::Error },
 }
 
-/// Most likely unrecoverable errors from database communcation layer
+/// Most likely unrecoverable errors from database communication layer
 #[derive(Debug, Error)]
 pub(crate) enum DbError {
     #[error("Failed to connect to the database")]

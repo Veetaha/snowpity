@@ -3,14 +3,14 @@ use std::collections::HashSet;
 
 use crate::Result;
 
-macro_rules! def_constaints {
+macro_rules! def_constraints {
     ($($ident:ident = $val:literal;)*) => {
         $( pub(crate) const $ident: &str = $val; )*
         const ALL_CONSTRAINTS: &[&str] = &[$($ident),*];
     }
 }
 
-def_constaints! {
+def_constraints! {
     TG_CHATS_PK = "tg_chats_pk";
     TG_CHAT_AND_PATTERN_COMPOSITE_PK = "tg_chat_and_pattern_composite_pk";
     TG_CHATS_FK = "tg_chats_fk";

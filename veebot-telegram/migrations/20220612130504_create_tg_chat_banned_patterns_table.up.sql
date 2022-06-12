@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS tg_chat_banned_patterns(
     CONSTRAINT tg_chats_fk FOREIGN KEY(tg_chat_id) REFERENCES tg_chats(id)
 );
 
--- The expectation is that looking up banned workds by `tg_chat_id` will dominate
--- the database throughput enough that it's resonable to make a hash index for it
+-- The expectation is that looking up banned patterns by `tg_chat_id` will dominate
+-- the database throughput enough that it's reasonable to make a hash index for it
 -- instead of letting it use the default BTree index created for the composite key.
 CREATE INDEX tg_chat_banned_patterns_by_tg_chat_id
     ON tg_chat_banned_patterns
