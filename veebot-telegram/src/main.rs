@@ -25,8 +25,7 @@ async fn try_main() -> veebot_telegram::Result {
         .with(tracing_subscriber::EnvFilter::from_env("VEEBOT_LOG"))
         .init();
 
-    let config: veebot_telegram::Config =
-        envy::from_env().expect("BUG: couldn't parse config from env variables");
+    let config = veebot_telegram::Config::load_or_panic();
 
     veebot_telegram::run(config).await?;
 

@@ -1,11 +1,29 @@
 //! Assorted utility functions (missing batteries).
+mod sqlx_ext;
+mod teloxide_ext;
 
+pub(crate) use sqlx_ext::*;
+pub(crate) use teloxide_ext::*;
+
+pub(crate) mod prelude {
+    pub(crate) use super::sqlx_ext::ErrorExt;
+    pub(crate) use super::sqlx_ext::FromDb;
+    pub(crate) use super::sqlx_ext::IntoApp;
+    pub(crate) use super::sqlx_ext::IntoDb;
+    pub(crate) use super::sqlx_ext::TryIntoDb;
+    pub(crate) use super::teloxide_ext::MessageKindExt;
+    pub(crate) use super::teloxide_ext::SendMessageSettersExt;
+}
+
+use crate::{HttpError, UserError};
 use async_trait::async_trait;
 use bytes::Bytes;
 use serde::de::DeserializeOwned;
 use std::fmt;
 use std::str::FromStr;
 use tracing::{debug, warn};
+
+pub(crate) type DynError = dyn std::error::Error + Send + Sync;
 
 macro_rules! def_url_base {
     ($ident:ident, $url:literal) => {
@@ -44,7 +62,7 @@ impl ReqwestBuilderExt for reqwest::RequestBuilder {
                     "Bad JSON response"
                 ),
             };
-            crate::err_val!(UnexpectedHttpResponseJsonShape { source: err })
+            crate::err_val!(HttpError::UnexpectedResponseJsonShape { source: err })
         })
     }
 
@@ -56,7 +74,7 @@ impl ReqwestBuilderExt for reqwest::RequestBuilder {
             .header("User-Agent", "Veebot")
             .send()
             .await
-            .map_err(crate::err_ctx!(SendHttpRequest))?;
+            .map_err(crate::err_ctx!(HttpError::SendRequest))?;
 
         let status = res.status();
 
@@ -66,10 +84,15 @@ impl ReqwestBuilderExt for reqwest::RequestBuilder {
                 Err(err) => format!("Could not collect the error response body text: {}", err),
             };
 
-            return Err(crate::err_val!(BadHttpResponseStatusCode { status, body }));
+            return Err(crate::err_val!(HttpError::BadResponseStatusCode {
+                status,
+                body
+            }));
         }
 
-        res.bytes().await.map_err(crate::err_ctx!(ReadHttpResponse))
+        res.bytes()
+            .await
+            .map_err(crate::err_ctx!(HttpError::ReadResponse))
     }
 }
 
@@ -93,7 +116,7 @@ impl FromStr for ThemeTag {
     fn from_str(s: &str) -> Result<ThemeTag, Self::Err> {
         let input = s.to_owned();
         if s.contains(',') {
-            return Err(crate::err_val!(CommaInImageTag { input }));
+            return Err(crate::err_val!(UserError::CommaInImageTag { input }));
         }
         Ok(ThemeTag(input))
     }
@@ -105,17 +128,3 @@ pub fn tracing_err<'a, E: std::error::Error + 'static>(
 ) -> impl tracing::Value + std::fmt::Debug + 'a {
     err as &dyn std::error::Error
 }
-
-// Returns duration in a colon separated string format.
-// pub(crate) fn format_duration(duration: &impl Hhmmss) -> String {
-//     // Unfortunately chrono doesn't have anything useful for formatting durations
-//     // FIXME: use chrono means of formatting durations once this is added to the lib:
-//     // https://github.com/chronotope/chrono/issues/197#issuecomment-716257398
-//     let rendered = duration.hhmmss();
-
-//     // Remove unnecessary leading zeros for hours (most of the tracks are within the minutes timespan)
-//     match rendered.strip_prefix("00:") {
-//         Some(it) => it.to_owned(),
-//         None => rendered,
-//     }
-// }

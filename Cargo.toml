@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "veebot-telegram"
+    "veebot-telegram",
 ]
 
 [profile.dev]
