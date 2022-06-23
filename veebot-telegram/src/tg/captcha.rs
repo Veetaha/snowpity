@@ -29,7 +29,7 @@ use tracing_futures::Instrument;
 
 /// Duration for the new users to solve the captcha. If they don't reply
 /// in this time, they will be kicked.
-const CAPTCHA_TIMEOUT: Duration = Duration::from_secs(60);
+const CAPTCHA_TIMEOUT: Duration = Duration::from_secs(60 * 5);
 const CAPTCHA_DURATION_TEXT: &str = "1 минута";
 const GREETING_ANIMATION_URL: &str = "https://derpicdn.net/img/2021/12/19/2767482/small.gif";
 
@@ -248,7 +248,7 @@ pub(crate) async fn handle_left_chat_member(
     let user_id = member.left_chat_member.id;
     let chat_id = msg.chat.id;
 
-    info!("Chat member left, canceling captcha confirmation if they did pass it");
+    info!("Chat member left, canceling captcha confirmation if they didn't pass it");
 
     cancel_captcha_confirmation(&bot, chat_id, user_id).await?;
 
