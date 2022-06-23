@@ -268,7 +268,7 @@ async fn cancel_captcha_confirmation(bot: &Bot, chat_id: ChatId, user_id: UserId
     };
 
     if let Err(()) = send.send(()) {
-        debug!("Failed to cancel captcha time out (reciever dropped)");
+        debug!("Failed to cancel captcha time out (receiver dropped)");
     }
 
     info!(
