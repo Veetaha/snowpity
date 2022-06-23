@@ -31,7 +31,7 @@ pub(crate) async fn init(di: &mut DependencyMap, config: DbConfig) -> Result {
         .map_err(err_ctx!(DbError::Migrate))?;
 
     // Validate that our constraint names in code are fresh
-    db_constraints::DbConstraints::new(pool.clone()).validate();
+    db_constraints::DbConstraints::new(pool.clone()).validate().await;
 
     di.insert(Arc::new(Repo {
         tg_chat_banned_patterns: TgChatBannedPatternsRepo::new(pool.clone()),

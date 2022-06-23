@@ -2,6 +2,7 @@
 
 mod cmd;
 mod updates;
+mod captcha;
 
 use crate::util;
 use crate::{Result, TgConfig};
@@ -38,7 +39,8 @@ pub(crate) async fn run_bot(di: DependencyMap, config: TgConfig) -> Result {
         )
         .branch(Update::filter_message().endpoint(updates::handle_message))
         // .branch(Update::filter_edited_message().endpoint(updates::handle_edited_message))
-        .branch(Update::filter_my_chat_member().endpoint(updates::handle_my_chat_member));
+        .branch(Update::filter_my_chat_member().endpoint(updates::handle_my_chat_member))
+        .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query));
 
     Dispatcher::builder(bot, handler)
         .dependencies(di)

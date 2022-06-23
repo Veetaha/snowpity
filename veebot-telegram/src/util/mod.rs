@@ -1,18 +1,22 @@
 //! Assorted utility functions (missing batteries).
+mod chrono_ext;
 mod sqlx_ext;
 mod teloxide_ext;
 
+pub(crate) use chrono_ext::*;
 pub(crate) use sqlx_ext::*;
 pub(crate) use teloxide_ext::*;
 
 pub(crate) mod prelude {
-    pub(crate) use super::sqlx_ext::ErrorExt;
-    pub(crate) use super::sqlx_ext::FromDb;
-    pub(crate) use super::sqlx_ext::IntoApp;
-    pub(crate) use super::sqlx_ext::IntoDb;
-    pub(crate) use super::sqlx_ext::TryIntoDb;
-    pub(crate) use super::teloxide_ext::MessageKindExt;
-    pub(crate) use super::teloxide_ext::SendMessageSettersExt;
+    pub(crate) use super::chrono_ext::DateTimeExt as _;
+    pub(crate) use super::sqlx_ext::ErrorExt as _;
+    pub(crate) use super::sqlx_ext::FromDb as _;
+    pub(crate) use super::sqlx_ext::IntoApp as _;
+    pub(crate) use super::sqlx_ext::IntoDb as _;
+    pub(crate) use super::sqlx_ext::TryIntoDb as _;
+    pub(crate) use super::teloxide_ext::MessageKindExt as _;
+    pub(crate) use super::teloxide_ext::UtilRequesterExt as _;
+    pub(crate) use super::teloxide_ext::UserExt as _;
 }
 
 use crate::{HttpError, UserError};
@@ -39,11 +43,7 @@ pub(crate) use def_url_base;
 
 #[async_trait]
 pub(crate) trait ReqwestBuilderExt {
-    async fn read_json<T: DeserializeOwned>(
-        self,
-        // url: Url,
-        // query: &[(&str, &str)],
-    ) -> crate::Result<T>;
+    async fn read_json<T: DeserializeOwned>(self) -> crate::Result<T>;
 
     async fn read_bytes(self) -> crate::Result<Bytes>;
 }
@@ -71,7 +71,7 @@ impl ReqwestBuilderExt for reqwest::RequestBuilder {
 
         let res = self
             // XXX: important for derpibooru (otherwise it responds with an html capcha page)
-            .header("User-Agent", "Veebot")
+            .header("User-Agent", "Telegram Bot made by Veetaha")
             .send()
             .await
             .map_err(crate::err_ctx!(HttpError::SendRequest))?;

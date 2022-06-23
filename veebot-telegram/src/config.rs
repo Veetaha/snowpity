@@ -19,7 +19,7 @@ pub(crate) struct DbConfig {
 }
 
 fn default_database_pool_size() -> u32 {
-    // Free Postgres instances hosted on Heroku has 20 connections limit.
+    // Free Postgres instances hosted on Heroku have 20 connections limit.
     // However, we also reserve 1 connection for ad-hoc db administration purposes
     // via pg_admin, for example.
     19

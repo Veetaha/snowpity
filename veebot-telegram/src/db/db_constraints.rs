@@ -33,13 +33,13 @@ impl DbConstraints {
 
         let non_existing_constraints: Vec<_> = ALL_CONSTRAINTS
             .iter()
-            .filter(|&&constraint| actual_constraints.contains(constraint))
+            .filter(|&&constraint| !actual_constraints.contains(constraint))
             .collect();
 
         assert_eq!(
             non_existing_constraints,
             &[] as &[&&str],
-            "Some constraints were not defined in migrations"
+            "Some constraints were not defined in migrations. Actual constraints: {actual_constraints:?}",
         );
     }
 

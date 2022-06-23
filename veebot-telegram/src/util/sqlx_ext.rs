@@ -3,14 +3,12 @@ use duplicate::duplicate;
 use sqlx::postgres::types::PgInterval;
 use std::time::Duration;
 use teloxide::types::{ChatId, UserId};
+use easy_ext::ext;
 
-pub(crate) type PgQuery = sqlx::query::Query<sqlx::Postgres, sqlx::postgres::PgArguments>;
+pub(crate) type PgQuery<'a> = sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>;
 
-pub(crate) trait ErrorExt {
-    fn is_constraint_violation(&self, constraint: &str) -> bool;
-}
-
-impl ErrorExt for sqlx::Error {
+#[ext(ErrorExt)]
+pub(crate) impl sqlx::Error {
     fn is_constraint_violation(&self, constraint: &str) -> bool {
         self.as_database_error()
             .map(|err| err.constraint() == Some(constraint))

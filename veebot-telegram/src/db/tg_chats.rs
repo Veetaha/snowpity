@@ -1,6 +1,6 @@
 use crate::db::db_constraints;
 use crate::util::prelude::*;
-use crate::util::PgQuery;
+use crate::util::{PgQuery, IntoApp, FromDb};
 use crate::Result;
 use crate::{err_val, UserError};
 use chrono::prelude::*;
@@ -10,7 +10,7 @@ use std::time::Duration;
 use teloxide::types::{ChatId, UserId};
 use tracing::{instrument, warn};
 
-struct TgChat {
+pub(crate) struct TgChat {
     pub(crate) id: ChatId,
     pub(crate) created_at: DateTime<Utc>,
     pub(crate) created_by: UserId,
@@ -78,7 +78,7 @@ impl TgChatsRepo {
             chat_id.into_db(),
         );
 
-        query.fetch_one(&self.pool).await.map(IntoApp::into_app)
+        query.fetch_one(&self.pool).map_ok(IntoApp::into_app).err_into().await
     }
 
     /// Get all chats from tg_chats table
@@ -123,7 +123,7 @@ impl TgChatsRepo {
         self.execute_or_chat_not_found(chat_id, query).await
     }
 
-    async fn execute_or_chat_not_found(&self, chat_id: ChatId, query: PgQuery) -> Result {
+    async fn execute_or_chat_not_found(&self, chat_id: ChatId, query: PgQuery<'_>) -> Result {
         let affected = query.execute(&self.pool).await?.rows_affected();
 
         if affected > 1 {

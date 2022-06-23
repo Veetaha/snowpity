@@ -1,4 +1,5 @@
 use crate::tg::Bot;
+use crate::tg::captcha;
 use crate::util::prelude::*;
 use crate::util::DynError;
 use crate::Result;
@@ -6,12 +7,13 @@ use crate::{db, Error};
 use futures::prelude::*;
 use std::sync::Arc;
 use teloxide::prelude::*;
-use teloxide::types::{ChatMemberUpdated, Message};
+use teloxide::types::{ChatMemberUpdated, Message, MessageKind};
 use teloxide::utils::markdown;
 
 pub(crate) async fn handle_my_chat_member(
     bot: Bot,
     upd: ChatMemberUpdated,
+    db: Arc<db::Repo>,
 ) -> Result<(), Box<DynError>> {
     bot.send_message(
         upd.chat.id,
@@ -28,6 +30,23 @@ pub(crate) async fn handle_message(
     db: Arc<db::Repo>,
 ) -> Result<(), Box<DynError>> {
     async {
+        match &msg.kind {
+            MessageKind::NewChatMembers(members) => {
+                return captcha::handle_new_chat_members(bot, &msg, members).await;
+            }
+
+            MessageKind::Common(common) => {
+                // tracing::debug!(common = msg.text());
+                // if let Some("sandbox") = msg.text() {
+                //     return handle_new_chat_members(bot, &db, &msg).await;
+                // }
+            }
+            _ => {}
+        }
+
+        return Ok(());
+        // TODO: handling of banned patterns here:
+
         let text = match msg.text() {
             Some(text) => text,
             None => return Ok(()),
@@ -52,7 +71,8 @@ pub(crate) async fn handle_message(
         {
             let pattern = markdown::code_inline(pattern.pattern.as_str());
             let reply_msg = format!("The pattern {pattern} was banned in this chat");
-            bot.reply(&msg, reply_msg).await?;
+
+            bot.reply_chunked(&msg, reply_msg).await?;
         }
 
         // bot.restrict_chat_member()
