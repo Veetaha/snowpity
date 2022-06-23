@@ -153,7 +153,7 @@ pub(crate) async fn handle_new_chat_members(
 
             let buttons = [[
                 InlineKeyboardButton::callback("Хуйло! 😉", payload_allow),
-                InlineKeyboardButton::callback("Президент мира! 🤨", payload_deny),
+                InlineKeyboardButton::callback("Молодец (бан)! 🤨", payload_deny),
             ]];
 
             bot.restrict_chat_member(chat_id, user.id, ChatPermissions::empty())

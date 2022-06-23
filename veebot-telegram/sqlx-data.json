@@ -1,3 +1,193 @@
 {
-  "db": "PostgreSQL"
+  "db": "PostgreSQL",
+  "07cbbacbe4763e3ea0f6e9cd8baa81744780c7684f66feec979f8a078d8d6998": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "DELETE FROM tg_chats WHERE id = $1"
+  },
+  "08c7d288d43eee3f5e96f4a43a70f25ee4d04e9c0600160e1d51a1e02c03732b": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "created_by",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "banned_pattern_mute_duration",
+          "ordinal": 3,
+          "type_info": "Interval"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT id, created_at, created_by, banned_pattern_mute_duration\n            FROM tg_chats\n            WHERE id = $1"
+  },
+  "6ea79c0bb8815ca86722132a09233bea5fc6d395e9d6ac1b44e5541601869430": {
+    "describe": {
+      "columns": [
+        {
+          "name": "pattern",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 1,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "created_by",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT pattern, created_at, created_by\n            FROM tg_chat_banned_patterns WHERE tg_chat_id = $1"
+  },
+  "736f5bdc9f6e29558efac5426fe072b971ed4972aa5efd43d456dcf2d30d2096": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Interval"
+        ]
+      }
+    },
+    "query": "INSERT INTO tg_chats (id, created_by, banned_pattern_mute_duration)\n            VALUES ($1, $2, $3)"
+  },
+  "81deb841118d097dccf7c91c49a34768a0f7796b44d86e66eb7926f66701dc85": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Interval",
+          "Text"
+        ]
+      }
+    },
+    "query": "UPDATE tg_chats\n            SET banned_pattern_mute_duration = $1\n            WHERE id = $2"
+  },
+  "9317106398f24220007d35436186a190f9b92bd6b4f72ec8358b37217dcf55a4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_by",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 2,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "banned_pattern_mute_duration",
+          "ordinal": 3,
+          "type_info": "Interval"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "SELECT id, created_by, created_at, banned_pattern_mute_duration\n            FROM tg_chats"
+  },
+  "cdd498c169d4d6e99a575781b537f18d8cefbae871d2df666dff315916bdf6b5": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      }
+    },
+    "query": "DELETE FROM tg_chat_banned_patterns\n            WHERE tg_chat_id = $1 AND pattern = $2"
+  },
+  "ec4249b49ec813068045442242cefb69b12171df98ba1abb867a61caebdf5a9c": {
+    "describe": {
+      "columns": [
+        {
+          "name": "constraint!",
+          "ordinal": 0,
+          "type_info": "Name"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\n            SELECT conname as \"constraint!\"\n            FROM pg_catalog.pg_constraint con\n            INNER JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid\n            INNER JOIN pg_catalog.pg_namespace nsp ON nsp.oid = connamespace\n            WHERE nsp.nspname = 'public'\n        "
+  },
+  "f2b20b637b6d366e27b8de9633a795822a7ceee877caee9e834cfdd963b9aac4": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Text",
+          "Varchar"
+        ]
+      }
+    },
+    "query": "INSERT INTO tg_chat_banned_patterns (tg_chat_id, pattern, created_by)\n            VALUES ($1, $2, $3)"
+  }
 }
