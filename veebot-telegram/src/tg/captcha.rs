@@ -29,8 +29,12 @@ use tracing_futures::Instrument;
 
 /// Duration for the new users to solve the captcha. If they don't reply
 /// in this time, they will be kicked.
-const CAPTCHA_TIMEOUT: Duration = Duration::from_secs(60 * 5);
+const CAPTCHA_TIMEOUT: Duration = Duration::from_secs(60);
 const CAPTCHA_DURATION_TEXT: &str = "1 минута";
+
+/// Duration for the ban of the users that didn't pass captcha.
+const CAPTCHA_BAN_DURATION: Duration = Duration::from_secs(60 * 2);
+
 const GREETING_ANIMATION_URL: &str = "https://derpicdn.net/img/2021/12/19/2767482/small.gif";
 
 static UNVERIFIED_USERS: SyncLazy<
@@ -229,7 +233,7 @@ pub(crate) async fn handle_new_chat_members(
 
 #[instrument(skip(bot))]
 async fn kick_user_due_to_captcha(bot: &Bot, chat_id: ChatId, user_id: UserId) -> Result {
-    let ban_timeout = Utc::now() + chrono::Duration::from_std(CAPTCHA_TIMEOUT).unwrapx();
+    let ban_timeout = Utc::now() + chrono::Duration::from_std(CAPTCHA_BAN_DURATION).unwrapx();
 
     info!(until = ban_timeout.to_ymd_hms().as_str(), "Banning user");
 
