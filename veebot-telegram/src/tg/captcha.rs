@@ -14,6 +14,7 @@ use std::time::Duration;
 use teloxide::prelude::*;
 use teloxide::types::ChatPermissions;
 use teloxide::types::InlineKeyboardButton;
+use teloxide::types::MessageLeftChatMember;
 use teloxide::types::ReplyMarkup;
 use teloxide::types::{InputFile, Message, MessageNewChatMembers};
 use teloxide::utils::markdown;
@@ -24,6 +25,7 @@ use tracing::info;
 use tracing::instrument;
 use tracing::trace;
 use tracing::warn;
+use tracing_futures::Instrument;
 
 /// Duration for the new users to solve the captcha. If they don't reply
 /// in this time, they will be kicked.
@@ -31,8 +33,9 @@ const CAPTCHA_TIMEOUT: Duration = Duration::from_secs(60);
 const CAPTCHA_DURATION_TEXT: &str = "1 минута";
 const GREETING_ANIMATION_URL: &str = "https://derpicdn.net/img/2021/12/19/2767482/small.gif";
 
-static UNVERIFIED_USERS: SyncLazy<SyncMutex<HashMap<UserId, oneshot::Sender<()>>>> =
-    SyncLazy::new(Default::default);
+static UNVERIFIED_USERS: SyncLazy<
+    SyncMutex<HashMap<(ChatId, UserId), (i32, oneshot::Sender<()>)>>,
+> = SyncLazy::new(Default::default);
 
 #[derive(Serialize, Deserialize)]
 struct CaptchaReplyPayload {
@@ -54,6 +57,8 @@ pub(crate) async fn handle_callback_query(
     callback_query: CallbackQuery,
 ) -> Result<(), Box<DynError>> {
     async {
+        debug!("Processing callback query");
+
         let callback_data = match callback_query.data {
             Some(data) => data,
             None => {
@@ -70,7 +75,7 @@ pub(crate) async fn handle_callback_query(
             }
         };
 
-        let payload: CaptchaReplyPayload = serde_json::from_str(&callback_data).unwrap();
+        let payload: CaptchaReplyPayload = serde_json::from_str(&callback_data).unwrapx();
 
         if payload.expected_user_id != callback_query.from.id {
             info!(
@@ -83,17 +88,14 @@ pub(crate) async fn handle_callback_query(
         let user_id = callback_query.from.id;
         let chat_id = captcha_message.chat.id;
 
-        if let Err(()) = UNVERIFIED_USERS.lock().remove(&user_id).unwrap().send(()) {
-            warn!("Failed to cancel captcha time out (reciever dropped)");
-            return Ok(());
-        }
-
-        bot.delete_message(chat_id, captcha_message.id).await?;
+        cancel_captcha_confirmation(&bot, chat_id, user_id).await?;
 
         if !payload.allowed {
             kick_user_due_to_captcha(&bot, chat_id, user_id).await?;
             return Ok(());
         }
+
+        info!("User passed captcha");
 
         let default_perms = match bot.get_chat(chat_id).await?.permissions() {
             Some(perms) => perms,
@@ -117,20 +119,22 @@ pub(crate) async fn handle_new_chat_members(
     msg: &Message,
     users: &MessageNewChatMembers,
 ) -> Result {
-    async {
-        let image_url: Url = GREETING_ANIMATION_URL.parse().unwrap();
+    let image_url: Url = GREETING_ANIMATION_URL.parse().unwrapx();
 
-        let futs = users.new_chat_members.iter().map(|user| async {
-            let mention = user.md_link();
-            let chat_id = msg.chat.id;
-            let user_id = user.id;
+    let futs = users.new_chat_members.iter().map(|user| async {
+        let mention = user.md_link();
+        let chat_id = msg.chat.id;
+        let user_id = user.id;
 
+        let span = tracing::info_span!("handle_new_chat_member", %user_id, %chat_id, %mention);
+
+        async {
             let caption = format!(
                 "{}{}{}{}",
                 mention,
                 markdown::escape(
                     "\nHi, new friend! Привет, поняша :3\n\n\
-                    Ответь на капчу: "
+                Ответь на капчу: "
                 ),
                 "*Путин это кто?*",
                 markdown::escape(&format!(
@@ -148,8 +152,8 @@ pub(crate) async fn handle_new_chat_members(
                 allowed: false,
             };
 
-            let payload_allow = serde_json::to_string(&payload_allow).unwrap();
-            let payload_deny = serde_json::to_string(&payload_deny).unwrap();
+            let payload_allow = serde_json::to_string(&payload_allow).unwrapx();
+            let payload_deny = serde_json::to_string(&payload_deny).unwrapx();
 
             let buttons = [[
                 InlineKeyboardButton::callback("Хуйло! 😉", payload_allow),
@@ -170,7 +174,8 @@ pub(crate) async fn handle_new_chat_members(
             let (send, recv) = oneshot::channel::<()>();
 
             let bot = bot.clone();
-            tokio::spawn(async move {
+
+            let fut = async move {
                 if let Ok(recv_result) = tokio::time::timeout(CAPTCHA_TIMEOUT, recv).await {
                     if let Err(err) = recv_result {
                         warn!("BUG: captcha confirmation timeout channel closed: {err:#?}");
@@ -186,7 +191,7 @@ pub(crate) async fn handle_new_chat_members(
                 );
 
                 let (delete_message_result, kick_result) = futures::join!(
-                    bot.delete_message(chat_id, captcha_message_id),
+                    cancel_captcha_confirmation(&bot, chat_id, user_id),
                     kick_user_due_to_captcha(&bot, chat_id, user_id)
                 );
 
@@ -197,33 +202,81 @@ pub(crate) async fn handle_new_chat_members(
                 if let Err(err) = kick_result {
                     error!("Failed to ban user due to captcha: {err:#?}");
                 }
-            });
+            }
+            .in_current_span();
 
-            UNVERIFIED_USERS.lock().insert(user.id, send);
+            tokio::spawn(fut);
+
+            info!("Added user to captcha confirmation map");
+
+            UNVERIFIED_USERS
+                .lock()
+                .insert((chat_id, user_id), (captcha_message_id, send));
 
             Ok::<_, Error>(())
-        });
+        }
+        .instrument(span)
+        .await
+    });
 
-        future::join_all(futs)
-            .await
-            .into_iter()
-            .collect::<Result<Vec<()>>>()?;
+    future::join_all(futs)
+        .await
+        .into_iter()
+        .collect::<Result<Vec<()>>>()?;
 
-        Ok::<_, Error>(())
-    }
-    .await
-    .map_err(Into::into)
+    Ok::<_, Error>(())
 }
 
 #[instrument(skip(bot))]
 async fn kick_user_due_to_captcha(bot: &Bot, chat_id: ChatId, user_id: UserId) -> Result {
-    let ban_timeout = Utc::now() + chrono::Duration::from_std(CAPTCHA_TIMEOUT).unwrap();
+    let ban_timeout = Utc::now() + chrono::Duration::from_std(CAPTCHA_TIMEOUT).unwrapx();
 
-    debug!(until = ban_timeout.to_ymd_hms().as_str(), "Banning user");
+    info!(until = ban_timeout.to_ymd_hms().as_str(), "Banning user");
 
     bot.kick_chat_member(chat_id, user_id)
         .until_date(ban_timeout)
         .await?;
+
+    Ok(())
+}
+
+pub(crate) async fn handle_left_chat_member(
+    bot: Bot,
+    msg: &Message,
+    member: &MessageLeftChatMember,
+) -> Result {
+    let user_id = member.left_chat_member.id;
+    let chat_id = msg.chat.id;
+
+    info!("Chat member left, canceling captcha confirmation if they did pass it");
+
+    cancel_captcha_confirmation(&bot, chat_id, user_id).await?;
+
+    Ok::<_, Error>(())
+}
+
+#[instrument(skip(bot))]
+async fn cancel_captcha_confirmation(bot: &Bot, chat_id: ChatId, user_id: UserId) -> Result {
+    let result = UNVERIFIED_USERS.lock().remove(&(chat_id, user_id));
+
+    let (msg_id, send) = match result {
+        Some(res) => res,
+        None => {
+            debug!("User was not in unverified users map, thus no captcha to cancel");
+            return Ok(());
+        }
+    };
+
+    if let Err(()) = send.send(()) {
+        debug!("Failed to cancel captcha time out (reciever dropped)");
+    }
+
+    info!(
+        %msg_id,
+        "Cancelled captcha confirmation, deleting captcha message"
+    );
+
+    bot.delete_message(chat_id, msg_id).await?;
 
     Ok(())
 }

@@ -35,6 +35,10 @@ pub(crate) async fn handle_message(
                 return captcha::handle_new_chat_members(bot, &msg, members).await;
             }
 
+            MessageKind::LeftChatMember(member) => {
+                return captcha::handle_left_chat_member(bot, &msg, member).await;
+            }
+
             MessageKind::Common(common) => {
                 // tracing::debug!(common = msg.text());
                 // if let Some("sandbox") = msg.text() {
