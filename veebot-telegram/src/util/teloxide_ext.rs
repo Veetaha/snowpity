@@ -1,5 +1,4 @@
 use assert_matches::assert_matches;
-use chrono::prelude::*;
 use easy_ext::ext;
 use teloxide::payloads::setters::*;
 use teloxide::prelude::*;

@@ -1,6 +1,6 @@
 [package]
 name = "veebot-telegram"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Veetaha <veetaha2@gmail.com>"]
 edition = "2021"
 publish = false
@@ -37,6 +37,10 @@ tracing-futures = "0.2"
 tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = { version = "2.2", features = ["serde"] }
+wav = "1.0"
+ogg-opus = "0.1"
+# ogg = "0.8"
+wav_io = "0.1"
 
 [dependencies.teloxide]
 version = "0.9"

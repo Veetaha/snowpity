@@ -18,7 +18,7 @@ pub(crate) struct Repo {
     pub(crate) tg_chat_banned_patterns: TgChatBannedPatternsRepo,
 }
 
-pub(crate) async fn init(di: &mut DependencyMap, config: DbConfig) -> Result {
+pub(crate) async fn init(config: DbConfig) -> Result<Repo> {
     let pool = PgPoolOptions::new()
         .max_connections(config.pool_size)
         // Verify that the connection is working early.
@@ -38,10 +38,8 @@ pub(crate) async fn init(di: &mut DependencyMap, config: DbConfig) -> Result {
         .validate()
         .await;
 
-    di.insert(Arc::new(Repo {
+    Ok(Repo {
         tg_chat_banned_patterns: TgChatBannedPatternsRepo::new(pool.clone()),
         tg_chats: TgChatsRepo::new(pool),
-    }));
-
-    Ok(())
+    })
 }

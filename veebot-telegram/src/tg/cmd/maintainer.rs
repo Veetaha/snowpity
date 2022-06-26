@@ -1,8 +1,9 @@
-use crate::tg::{cmd, Bot};
+use crate::tg;
 use crate::util::prelude::*;
-use crate::{db, Result, TgConfig};
+use crate::{Result};
 use async_trait::async_trait;
 use itertools::Itertools;
+use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
@@ -21,14 +22,13 @@ pub(crate) enum Cmd {
     Version,
 }
 
-pub(crate) struct HandleImp;
-
 #[async_trait]
-impl cmd::HandleImp<Cmd> for HandleImp {
-    async fn handle_imp(&self, bot: &Bot, msg: &Message, _: &db::Repo, cmd: Cmd) -> Result {
-        match cmd {
+impl tg::cmd::Command for Cmd {
+    async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result {
+        match self {
             Cmd::MaintainerHelp => {
-                bot.reply_chunked(&msg, Cmd::descriptions().to_string())
+                ctx.bot
+                    .reply_chunked(&msg, Cmd::descriptions().to_string())
                     .disable_web_page_preview(true)
                     .parse_mode(ParseMode::Html)
                     .await?;
@@ -70,7 +70,7 @@ impl cmd::HandleImp<Cmd> for HandleImp {
 
                 let metadata = format!("```\n{metadata}\n```",);
 
-                bot.reply_chunked(&msg, metadata).await?;
+                ctx.bot.reply_chunked(&msg, metadata).await?;
             }
         };
 
@@ -78,6 +78,6 @@ impl cmd::HandleImp<Cmd> for HandleImp {
     }
 }
 
-pub(crate) fn is_maintainer(cfg: TgConfig, msg: Message) -> bool {
-    matches!(msg.from(), Some(sender) if sender.id == cfg.bot_maintainer)
+pub(crate) fn is_maintainer(ctx: Arc<tg::Ctx>, msg: Message) -> bool {
+    matches!(msg.from(), Some(sender) if sender.id == ctx.cfg.bot_maintainer)
 }

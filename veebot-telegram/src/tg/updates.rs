@@ -1,9 +1,8 @@
 use crate::tg::Bot;
 use crate::util::DynError;
+use crate::Error;
 use crate::Result;
-use crate::{db, Error};
 use futures::prelude::*;
-use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::Chat;
 use teloxide::types::{ChatMemberUpdated, Message};
@@ -13,7 +12,6 @@ use tracing::info;
 pub(crate) async fn handle_my_chat_member(
     bot: Bot,
     upd: ChatMemberUpdated,
-    _db: Arc<db::Repo>,
 ) -> Result<(), Box<DynError>> {
     // TODO: Send this message only when bot is invited to a chat
     bot.send_message(

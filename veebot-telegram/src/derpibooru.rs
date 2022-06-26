@@ -1,6 +1,7 @@
 //! Symbols related to communicating with the Derpibooru API
 
-use crate::util::{self, ReqwestBuilderExt, ThemeTag};
+use crate::util::prelude::*;
+use crate::util::{self, ThemeTag};
 use itertools::Itertools;
 use std::{collections::HashSet, sync::Arc};
 use url::Url;

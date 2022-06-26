@@ -4,7 +4,10 @@ mod captcha;
 mod cmd;
 mod updates;
 
-use crate::util;
+use std::sync::Arc;
+
+use crate::ftai::FtaiService;
+use crate::{db, util};
 use crate::{Result, TgConfig};
 use dptree::di::DependencyMap;
 use teloxide::adaptors::{AutoSend, CacheMe, DefaultParseMode, Throttle, Trace};
@@ -16,17 +19,33 @@ use tracing::info;
 
 type Bot = AutoSend<Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>>;
 
-pub(crate) async fn run_bot(mut di: DependencyMap, config: TgConfig) -> Result {
-    di.insert(config.clone());
+pub(crate) struct Ctx {
+    bot: Bot,
+    // db: db::Repo,
+    cfg: TgConfig,
+    ftai: FtaiService,
+}
 
-    let http_client = util::create_http_client();
+pub(crate) async fn run_bot(_db: db::Repo, cfg: TgConfig) -> Result {
+    let mut di = DependencyMap::new();
 
-    let bot: Bot = teloxide::Bot::with_client(config.bot_token, http_client)
+    let http = util::create_http_client();
+
+    let bot: Bot = teloxide::Bot::with_client(cfg.bot_token.clone(), http.clone())
         .throttle(Default::default())
         .parse_mode(ParseMode::MarkdownV2)
         .cache_me()
         .trace(teloxide::adaptors::trace::Settings::all())
         .auto_send();
+
+    let ftai = FtaiService::new(http);
+
+    di.insert(Arc::new(Ctx {
+        bot: bot.clone(),
+        // db,
+        cfg,
+        ftai,
+    }));
 
     info!("Starting bot...");
 
@@ -52,13 +71,13 @@ pub(crate) async fn run_bot(mut di: DependencyMap, config: TgConfig) -> Result {
         .branch(
             Update::filter_message()
                 .filter_command::<cmd::regular::Cmd>()
-                .endpoint(cmd::handle(&cmd::regular::HandleImp)),
+                .endpoint(cmd::handle::<cmd::regular::Cmd>()),
         )
         .branch(
             Update::filter_message()
                 .filter_command::<cmd::maintainer::Cmd>()
                 .chain(dptree::filter(cmd::maintainer::is_maintainer))
-                .endpoint(cmd::handle(&cmd::maintainer::HandleImp)),
+                .endpoint(cmd::handle::<cmd::maintainer::Cmd>()),
         )
         // .branch(Update::filter_edited_message().endpoint(updates::handle_edited_message))
         .branch(Update::filter_my_chat_member().endpoint(updates::handle_my_chat_member))

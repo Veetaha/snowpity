@@ -69,6 +69,12 @@ pub(crate) enum ErrorKind {
     },
 
     #[error(transparent)]
+    FtAi {
+        #[from]
+        source: FtAiError,
+    },
+
+    #[error(transparent)]
     Tg {
         #[from]
         source: teloxide::RequestError,
@@ -82,6 +88,26 @@ impl<T: Into<DbError>> From<T> for ErrorKind {
     fn from(err: T) -> Self {
         Self::Db { source: err.into() }
     }
+}
+
+#[derive(Debug, Error)]
+pub(crate) enum FtAiError {
+    #[error("15.ai returned zero WAV files in the response")]
+    MissingWavFile,
+
+    #[error(
+        "Failed to create a WAV reader, that is probably a bug, it must be infallibe: {message}"
+    )]
+    CreateWavReader { message: &'static str },
+
+    #[error("Failed to read WAV header returned by 15.ai: {message}")]
+    ReadWavHeader { message: &'static str },
+
+    #[error("Failed to read WAV samples returned by 15.ai: {message}")]
+    ReadWavSamples { message: &'static str },
+
+    #[error("Failed to encode the resampled WAV to OGG")]
+    EncodeWavToOpus { source: ogg_opus::Error },
 }
 
 /// Errors caused by interaction with the user.
@@ -104,6 +130,17 @@ pub(crate) enum UserError {
 
     #[error("Requested chat was not found in the database (chat_id: {chat_id})")]
     ChatNotFound { chat_id: ChatId },
+
+    #[error("Текст для 15.ai не должен содержать цифр")]
+    FtaiTextContainsNumber,
+
+    #[error(
+        "Текст для 15.ai должен быть не более 200 символов. Длина же заданого текста: {actual_len}"
+    )]
+    FtaiTextTooLong { actual_len: usize },
+
+    #[error("Команда для 15.ai должна иметь название персонажа и текст через запятую: <персонаж>,<текст>")]
+    FtaiInvalidFormat,
 }
 
 /// Errors at the layer of the HTTP API
@@ -177,6 +214,7 @@ impl<T: Into<ErrorKind>> From<T> for Error {
         let kind: ErrorKind = kind.into();
         // No need for a backtrace if the error is an expected one
         // TODO: add ability to send multiple message to overcome message limit
+        // or truncate the backtrace
         let backtrace = if !kind.is_user_error() {
             // We don't use `bool::then` adapter to reduce the backtrace
             None

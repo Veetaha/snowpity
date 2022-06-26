@@ -4,6 +4,7 @@ mod db;
 mod derpibooru;
 mod error;
 mod tg;
+mod ftai;
 
 pub mod util;
 
@@ -12,11 +13,9 @@ pub use config::*;
 
 /// Run the telegram bot processing loop
 pub async fn run(config: Config) -> Result<()> {
-    let mut di = dptree::di::DependencyMap::new();
+    let repo = db::init(config.db).await?;
 
-    db::init(&mut di, config.db).await?;
-
-    tg::run_bot(di, config.tg).await?;
+    tg::run_bot(repo, config.tg).await?;
 
     Ok(())
 }

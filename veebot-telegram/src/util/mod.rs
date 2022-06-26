@@ -1,10 +1,12 @@
 //! Assorted utility functions (missing batteries).
 mod chrono_ext;
+mod reqwest_ext;
 mod sqlx_ext;
 mod std_ext;
 mod teloxide_ext;
 
 // pub(crate) use chrono_ext::*;
+pub(crate) use reqwest_ext::*;
 pub(crate) use sqlx_ext::*;
 // pub(crate) use teloxide_ext::*;
 // pub(crate) use std_ext::*;
@@ -19,17 +21,14 @@ pub(crate) mod prelude {
     pub(crate) use super::sqlx_ext::IntoDb as _;
     pub(crate) use super::sqlx_ext::TryIntoDb as _;
     // pub(crate) use super::teloxide_ext::MessageKindExt as _;
+    pub(crate) use super::reqwest_ext::ReqwestBuilderExt as _;
     pub(crate) use super::teloxide_ext::UserExt as _;
     pub(crate) use super::teloxide_ext::UtilRequesterExt as _;
 }
 
-use crate::{HttpError, UserError};
-use async_trait::async_trait;
-use bytes::Bytes;
-use serde::de::DeserializeOwned;
+use crate::{Result, UserError};
 use std::fmt;
 use std::str::FromStr;
-use tracing::{debug, warn};
 
 pub(crate) type DynError = dyn std::error::Error + Send + Sync;
 
@@ -44,70 +43,6 @@ macro_rules! def_url_base {
 }
 
 pub(crate) use def_url_base;
-
-#[async_trait]
-trait MyTraitAsyn {
-    async fn my_async_method(&self, val: &u32, val2: &bool);
-}
-
-#[async_trait]
-pub(crate) trait ReqwestBuilderExt {
-    async fn read_json<T: DeserializeOwned>(self) -> crate::Result<T>;
-
-    async fn read_bytes(self) -> crate::Result<Bytes>;
-}
-
-#[async_trait]
-impl ReqwestBuilderExt for reqwest::RequestBuilder {
-    async fn read_json<T: DeserializeOwned>(self) -> crate::Result<T> {
-        let bytes = self.read_bytes().await?;
-
-        serde_json::from_slice(&bytes).map_err(|err| {
-            match std::str::from_utf8(&bytes) {
-                Ok(response_body) => warn!(response_body, "Bad JSON response"),
-                Err(utf8_decode_err) => warn!(
-                    response_body = ?bytes,
-                    ?utf8_decode_err,
-                    "Bad JSON response"
-                ),
-            };
-            crate::err_val!(HttpError::UnexpectedResponseJsonShape { source: err })
-        })
-    }
-
-    async fn read_bytes(self) -> crate::error::Result<Bytes> {
-        debug!(request = ?self, "sending HTTP request");
-
-        let res = self
-            // XXX: important for derpibooru (otherwise it responds with an html capcha page)
-            .header("User-Agent", "Telegram Bot made by Veetaha")
-            .send()
-            .await
-            .map_err(crate::err_ctx!(HttpError::SendRequest))?;
-
-        let status = res.status();
-
-        if status.is_client_error() || status.is_server_error() {
-            let body = match res.text().await {
-                Ok(it) => it,
-                Err(err) => format!("Could not collect the error response body text: {}", err),
-            };
-
-            return Err(crate::err_val!(HttpError::BadResponseStatusCode {
-                status,
-                body
-            }));
-        }
-
-        res.bytes()
-            .await
-            .map_err(crate::err_ctx!(HttpError::ReadResponse))
-    }
-}
-
-pub(crate) fn create_http_client() -> reqwest::Client {
-    teloxide::net::client_from_env()
-}
 
 // A string without commas
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
