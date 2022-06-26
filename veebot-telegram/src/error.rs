@@ -108,6 +108,9 @@ pub(crate) enum FtAiError {
 
     #[error("Failed to encode the resampled WAV to OGG")]
     EncodeWavToOpus { source: ogg_opus::Error },
+
+    #[error("Не правильный ввод. Проверьте имя персонажа на сайте 15.ai, или правильность введеного текста")]
+    Service { source: Box<Error> },
 }
 
 /// Errors caused by interaction with the user.
@@ -131,11 +134,11 @@ pub(crate) enum UserError {
     #[error("Requested chat was not found in the database (chat_id: {chat_id})")]
     ChatNotFound { chat_id: ChatId },
 
-    #[error("Текст для 15.ai не должен содержать цифр")]
+    #[error("Текст для 15.ai не должен содержать цифр вне ARPAbet нотации")]
     FtaiTextContainsNumber,
 
     #[error(
-        "Текст для 15.ai должен быть не более 200 символов. Длина же заданого текста: {actual_len}"
+        "Текст для 15.ai должен быть не более 200 символов. Длина заданого текста: {actual_len}"
     )]
     FtaiTextTooLong { actual_len: usize },
 

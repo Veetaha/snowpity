@@ -59,7 +59,9 @@ impl FtaiService {
                 character,
                 emotion: "Contextual",
             })
-            .await?;
+            .await
+            .map_err(Box::new)
+            .map_err(err_ctx!(FtAiError::Service))?;
 
         let wav_file = res
             .wav_names

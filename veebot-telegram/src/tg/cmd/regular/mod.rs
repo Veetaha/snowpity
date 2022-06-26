@@ -17,7 +17,7 @@ pub(crate) enum Cmd {
     Help,
 
     #[command(description = "Сгенерировать аудио с помощью 15.ai: <персонаж>,<текст>")]
-    Ftai(FtaiCmd),
+    Ftai(String),
 }
 
 #[async_trait]
@@ -30,7 +30,7 @@ impl tg::cmd::Command for Cmd {
                     .disable_web_page_preview(false)
                     .await?;
             }
-            Cmd::Ftai(cmd) => cmd.handle(ctx, msg).await?,
+            Cmd::Ftai(cmd) => cmd.parse::<FtaiCmd>()?.handle(ctx, msg).await?,
         }
         Ok(())
     }

@@ -30,7 +30,7 @@ impl FromStr for FtaiCmd {
 
         let text = text.to_owned();
 
-        if text.chars().any(char::is_numeric) {
+        if !text.contains('{') && !text.contains('}') && text.chars().any(char::is_numeric) {
             return Err(err_val!(UserError::FtaiTextContainsNumber));
         }
 
