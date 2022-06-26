@@ -1,12 +1,11 @@
 //! Telegram commands root module
 
+mod captcha;
 mod cmd;
 mod updates;
-mod captcha;
 
 use crate::util;
 use crate::{Result, TgConfig};
-use cmd::Cmd;
 use dptree::di::DependencyMap;
 use teloxide::adaptors::{AutoSend, CacheMe, DefaultParseMode, Throttle, Trace};
 use teloxide::dispatching::UpdateFilterExt;
@@ -17,7 +16,9 @@ use tracing::info;
 
 type Bot = AutoSend<Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>>;
 
-pub(crate) async fn run_bot(di: DependencyMap, config: TgConfig) -> Result {
+pub(crate) async fn run_bot(mut di: DependencyMap, config: TgConfig) -> Result {
+    di.insert(config.clone());
+
     let http_client = util::create_http_client();
 
     let bot: Bot = teloxide::Bot::with_client(config.bot_token, http_client)
@@ -29,21 +30,46 @@ pub(crate) async fn run_bot(di: DependencyMap, config: TgConfig) -> Result {
 
     info!("Starting bot...");
 
-    bot.set_my_commands(Cmd::bot_commands()).await?;
+    bot.set_my_commands(cmd::regular::Cmd::bot_commands())
+        .await?;
 
     let handler = dptree::entry()
         .branch(
             Update::filter_message()
-                .filter_command::<Cmd>()
-                .endpoint(cmd::handle),
+                .chain(Message::filter_new_chat_members())
+                .endpoint(captcha::handle_new_chat_members),
         )
-        .branch(Update::filter_message().endpoint(updates::handle_message))
+        .branch(
+            Update::filter_message()
+                .chain(Message::filter_left_chat_member())
+                .endpoint(captcha::handle_left_chat_member),
+        )
+        .branch(
+            Update::filter_message()
+                .chain(dptree::filter_map(updates::filter_message_from_channel))
+                .endpoint(updates::handle_message_from_channel),
+        )
+        .branch(
+            Update::filter_message()
+                .filter_command::<cmd::regular::Cmd>()
+                .endpoint(cmd::handle(&cmd::regular::HandleImp)),
+        )
+        .branch(
+            Update::filter_message()
+                .filter_command::<cmd::maintainer::Cmd>()
+                .chain(dptree::filter(cmd::maintainer::is_maintainer))
+                .endpoint(cmd::handle(&cmd::maintainer::HandleImp)),
+        )
         // .branch(Update::filter_edited_message().endpoint(updates::handle_edited_message))
         .branch(Update::filter_my_chat_member().endpoint(updates::handle_my_chat_member))
         .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query));
 
     Dispatcher::builder(bot, handler)
         .dependencies(di)
+        // We don't handle all possible messages that users send,
+        // so to supress the warning that we don't do this we have
+        // a noop default handler here
+        .default_handler(|_| std::future::ready(()))
         .build()
         .setup_ctrlc_handler()
         .dispatch()

@@ -1,6 +1,6 @@
 use crate::db::db_constraints;
 use crate::util::prelude::*;
-use crate::util::{PgQuery, IntoApp, FromDb};
+use crate::util::{FromDb, IntoApp, PgQuery};
 use crate::Result;
 use crate::{err_val, UserError};
 use chrono::prelude::*;
@@ -78,7 +78,11 @@ impl TgChatsRepo {
             chat_id.into_db(),
         );
 
-        query.fetch_one(&self.pool).map_ok(IntoApp::into_app).err_into().await
+        query
+            .fetch_one(&self.pool)
+            .map_ok(IntoApp::into_app)
+            .err_into()
+            .await
     }
 
     /// Get all chats from tg_chats table

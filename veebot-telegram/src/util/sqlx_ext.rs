@@ -1,9 +1,9 @@
 use crate::{err_ctx, DbError, Result};
 use duplicate::duplicate;
+use easy_ext::ext;
 use sqlx::postgres::types::PgInterval;
 use std::time::Duration;
 use teloxide::types::{ChatId, UserId};
-use easy_ext::ext;
 
 pub(crate) type PgQuery<'a> = sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>;
 
@@ -85,7 +85,7 @@ duplicate! {
                 .parse()
                 .unwrap_or_else(|err| {
                     let ty = std::any::type_name::<Ty>();
-                    panic!("Invalid {ty} in database: {self:?}\n{err:#?}")
+                    panic!("Invalid {} in database: {:?}\n{:#?}", ty, str, err)
                 });
             Ty(id)
         }

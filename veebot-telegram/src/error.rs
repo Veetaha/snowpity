@@ -91,9 +91,8 @@ pub(crate) enum UserError {
     #[error("The specified image tags contain a comma (which is prohibited): {input}")]
     CommaInImageTag { input: String },
 
-    #[error("Invalid regular expression: {input:?}")]
-    InvalidRegex { input: String, source: regex::Error },
-
+    // #[error("Invalid regular expression: {input:?}")]
+    // InvalidRegex { input: String, source: regex::Error },
     #[error("Requested pattern already exists in the database: {pattern}")]
     BannedPatternAlreadyExists { pattern: Regex },
 
@@ -144,8 +143,8 @@ pub(crate) enum DbError {
     #[error("Duration can't be converted to database representation: {duration:?}")]
     InvalidDuration {
         duration: Duration,
-        source: Box<DynError>
-    }
+        source: Box<DynError>,
+    },
 }
 
 impl ErrorKind {

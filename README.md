@@ -3,16 +3,14 @@
 # veebot-telegram
 
 This is a Telegram bot for me and friends.
-It has assorted functionality:
-
-- Verify the chat for the presence of messages with banned patterns in them
+It has assorted functionality for managing our Telegram chat.
 
 
 # Development
 
-To build the bot from sources, we need to have [Rust toolchain installed][rust-toolchain].
+To build the bot from sources, there has to be [Rust toolchain installed][rust-toolchain].
 
-To build and run the bot in development mode with this:
+To build and run the bot in development mode run this:
 
 ```bash
 cargo run
@@ -21,5 +19,5 @@ cargo run
 # Configuration
 
 The bot is configured via the environment variables.
-Env variables can also be specified in `.env` file.
-See [`EXAMPLE.env`](EXAMPLE.env) for example and documentation of the config.
+The environment variables can also be specified in a `.env` file.
+See [`EXAMPLE.env`](EXAMPLE.env) as an example with documentation of the config.

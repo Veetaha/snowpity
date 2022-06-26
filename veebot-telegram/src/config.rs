@@ -1,13 +1,17 @@
 use serde::{de::DeserializeOwned, Deserialize};
+use teloxide::types::UserId;
 
 pub struct Config {
     pub(crate) tg: TgConfig,
     pub(crate) db: DbConfig,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub(crate) struct TgConfig {
     pub(crate) bot_token: String,
+
+    /// ID of the user, who owns the bot, and thus has full access to it
+    pub(crate) bot_maintainer: UserId,
 }
 
 #[derive(Deserialize)]

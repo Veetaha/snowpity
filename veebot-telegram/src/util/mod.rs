@@ -1,26 +1,26 @@
 //! Assorted utility functions (missing batteries).
 mod chrono_ext;
 mod sqlx_ext;
-mod teloxide_ext;
 mod std_ext;
+mod teloxide_ext;
 
-pub(crate) use chrono_ext::*;
+// pub(crate) use chrono_ext::*;
 pub(crate) use sqlx_ext::*;
-pub(crate) use teloxide_ext::*;
-pub(crate) use std_ext::*;
+// pub(crate) use teloxide_ext::*;
+// pub(crate) use std_ext::*;
 
 pub(crate) mod prelude {
-    pub(crate) use super::std_ext::OptionExt;
-    pub(crate) use super::std_ext::ResultExt;
+    // pub(crate) use super::std_ext::OptionExt;
     pub(crate) use super::chrono_ext::DateTimeExt as _;
     pub(crate) use super::sqlx_ext::ErrorExt as _;
-    pub(crate) use super::sqlx_ext::FromDb as _;
-    pub(crate) use super::sqlx_ext::IntoApp as _;
+    pub(crate) use super::std_ext::ResultExt;
+    // pub(crate) use super::sqlx_ext::FromDb as _;
+    // pub(crate) use super::sqlx_ext::IntoApp as _;
     pub(crate) use super::sqlx_ext::IntoDb as _;
     pub(crate) use super::sqlx_ext::TryIntoDb as _;
-    pub(crate) use super::teloxide_ext::MessageKindExt as _;
-    pub(crate) use super::teloxide_ext::UtilRequesterExt as _;
+    // pub(crate) use super::teloxide_ext::MessageKindExt as _;
     pub(crate) use super::teloxide_ext::UserExt as _;
+    pub(crate) use super::teloxide_ext::UtilRequesterExt as _;
 }
 
 use crate::{HttpError, UserError};
@@ -44,6 +44,11 @@ macro_rules! def_url_base {
 }
 
 pub(crate) use def_url_base;
+
+#[async_trait]
+trait MyTraitAsyn {
+    async fn my_async_method(&self, val: &u32, val2: &bool);
+}
 
 #[async_trait]
 pub(crate) trait ReqwestBuilderExt {
