@@ -1,2 +1,8 @@
 /target
 .env
+
+# Terraform state files
+terraform.tfstate*
+
+# Terraform plugins dir
+.terraform

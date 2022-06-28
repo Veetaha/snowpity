@@ -88,14 +88,16 @@ impl FtaiService {
 
         // This seems to give the best quality. The original samle rate
         // of 15.ai is 44_100.
-        let new_sample_rate = 48_000;
+        const SAMPLE_RATE: u32 = 48_000;
 
-        let data =
-            wav_io::resample::linear(data, header.channels, header.sample_rate, new_sample_rate);
+        let data = wav_io::resample::linear(data, header.channels, header.sample_rate, SAMPLE_RATE);
 
-        let wav_data: Vec<_> = data.into_iter().map(|f32| (f32 * 32767.0) as i16).collect();
+        let wav_data: Vec<_> = data
+            .into_iter()
+            .map(|f32| (f32 * i16::MAX as f32) as i16)
+            .collect();
 
-        let opus = ogg_opus::encode::<48000, 1>(&wav_data)
+        let opus = ogg_opus::encode::<SAMPLE_RATE, 1>(&wav_data)
             .map_err(err_ctx!(FtAiError::EncodeWavToOpus))?;
 
         Ok(Ogg { data: opus.into() })

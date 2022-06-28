@@ -138,7 +138,8 @@ pub(crate) enum UserError {
     FtaiTextContainsNumber,
 
     #[error(
-        "Текст для 15.ai должен быть не более 200 символов. Длина заданого текста: {actual_len}"
+        "Текст для 15.ai должен быть не более {} символов. Длина заданого текста: {actual_len}",
+        crate::ftai::MAX_TEXT_LENGTH
     )]
     FtaiTextTooLong { actual_len: usize },
 
