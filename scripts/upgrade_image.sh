@@ -4,7 +4,7 @@
 
 set -eu -o pipefail
 
-image="veetaha/veebot-telegram"
+IMAGE="veetaha/veebot-telegram"
 
 SCRIPTS=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 REPO="$SCRIPTS/.."
@@ -16,8 +16,9 @@ VERSION=$(\
     | jq -r '.packages[] | select(.name == "veebot-telegram") | .version' \
 )
 
-# docker build . --tag $image:$version --tag $image:latest
-# docker push $image:$version
+docker build . --tag $IMAGE:$VERSION --tag $IMAGE:latest
+docker push $IMAGE:$VERSION
+docker push $IMAGE:latest
 
 SERVER_IP=$(cd $REPO/deployment/hetzner && terraform output -json | jq -r '.server_ip.value')
 

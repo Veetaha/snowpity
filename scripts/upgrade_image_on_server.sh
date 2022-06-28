@@ -42,6 +42,6 @@ echo "Pulling image $IMAGE:$TAG"
 docker pull $IMAGE:$TAG
 
 echo "[Re]starting containers..."
-CURRENT_UID=$(id -u):$(id -g) docker compose up --detach --no-build
+TAG=$TAG CURRENT_UID=$(id -u):$(id -g) docker compose up --detach --no-build
 
 echo "Deployment done"
