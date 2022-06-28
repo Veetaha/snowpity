@@ -1,6 +1,6 @@
 services:
   telegram-bot:
-    image: veetaha/veebot-telegram:${tag-latest}
+    image: veetaha/veebot-telegram:${TAG-latest}
     env_file: .env
-    user: "${current_uid:?'Please run as follows: current_uid=$(id -u):$(id -g) docker-compose up'}"
+    user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker compose up'}"
     build: .

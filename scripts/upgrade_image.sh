@@ -6,12 +6,12 @@ set -eu -o pipefail
 
 image="veetaha/veebot-telegram"
 
-scripts=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-repo="$scripts/.."
+SCRIPTS=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+REPO="$SCRIPTS/.."
 
-cd $repo
+cd $REPO
 
-version=$(\
+VERSION=$(\
     cargo metadata --format-version=1 \
     | jq -r '.packages[] | select(.name == "veebot-telegram") | .version' \
 )
@@ -19,10 +19,10 @@ version=$(\
 # docker build . --tag $image:$version --tag $image:latest
 # docker push $image:$version
 
-server_ip=$(cd $repo/deployment/hetzner && terraform output -json | jq -r '.server_ip.value')
+SERVER_IP=$(cd $REPO/deployment/hetzner && terraform output -json | jq -r '.server_ip.value')
 
-echo "Server IP: $server_ip"
+echo "Server IP: $SERVER_IP"
 
-scp $repo/SERVER.env admin@$server_ip:/home/admin/app/.env
+scp $REPO/SERVER.env admin@$SERVER_IP:/home/admin/app/.env
 
-ssh admin@$server_ip "bash -s $version" < $scripts/upgrade_image_on_server.sh
+ssh admin@$SERVER_IP "bash -s $VERSION" < $SCRIPTS/upgrade_image_on_server.sh

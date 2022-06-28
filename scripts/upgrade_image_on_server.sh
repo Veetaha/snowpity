@@ -7,41 +7,41 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-tag=$1
+TAG=$1
 
-git_repo_name=veebot-telegram
-git_remote_repo_url="https://github.com/Veetaha/$git_repo_name.git"
-git_local_repo="$HOME/app/$git_repo_name"
+GIT_REPO_NAME=veebot-telegram
+GIT_REMOTE_REPO_URL="https://github.com/Veetaha/$GIT_REPO_NAME.git"
+GIT_LOCAL_REPO="$HOME/app/$GIT_REPO_NAME"
 
-if [ ! -d "$git_local_repo/.git" ]
+if [ ! -d "$GIT_LOCAL_REPO/.git" ]
 then
     echo "Cloning repo"
 
-    git clone $git_remote_repo_url $git_local_repo
-    cd $git_local_repo
+    git clone $GIT_REMOTE_REPO_URL $GIT_LOCAL_REPO
+    cd $GIT_LOCAL_REPO
 else
     echo "Pulling repo"
 
-    cd $git_local_repo
+    cd $GIT_LOCAL_REPO
     git pull origin master --ff-only
 fi
 
 # Copy the `.env` file config that was previously copied into the repo dir
 cp ../.env .env
 
-image="veetaha/veebot-telegram"
+IMAGE="veetaha/veebot-telegram"
 
-echo "Starting deployment for docker image $image:$tag"
+echo "Starting deployment for docker image $IMAGE:$TAG"
 
 echo "Removing containers, volume and networks older than 1 week..."
 
 docker system prune --force --filter "until=168h"
 
-echo "Pulling image $image:$tag"
+echo "Pulling image $IMAGE:$TAG"
 
-docker pull $image:$tag
+docker pull $IMAGE:$TAG
 
 echo "[Re]starting containers..."
-current_uid=$(id -u):$(id -g) docker compose up --detach --no-build
+CURRENT_UID=$(id -u):$(id -g) docker compose up --detach --no-build
 
 echo "Deployment done"
