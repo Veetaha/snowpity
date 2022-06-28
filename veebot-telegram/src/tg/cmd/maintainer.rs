@@ -1,6 +1,6 @@
 use crate::tg;
 use crate::util::prelude::*;
-use crate::{Result};
+use crate::Result;
 use async_trait::async_trait;
 use itertools::Itertools;
 use std::sync::Arc;

@@ -6,3 +6,6 @@ terraform.tfstate*
 
 # Terraform plugins dir
 .terraform
+
+# Real server environment variables
+SERVER.env

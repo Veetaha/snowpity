@@ -3,8 +3,8 @@ mod db;
 #[allow(unused)]
 mod derpibooru;
 mod error;
-mod tg;
 mod ftai;
+mod tg;
 
 pub mod util;
 

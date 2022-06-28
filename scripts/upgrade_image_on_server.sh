@@ -7,6 +7,8 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
+tag=$1
+
 git_repo_name=veebot-telegram
 git_remote_repo_url="https://github.com/Veetaha/$git_repo_name.git"
 git_local_repo="$HOME/app/$git_repo_name"
@@ -24,7 +26,9 @@ else
     git pull origin master --ff-only
 fi
 
-tag=$1
+# Copy the `.env` file config that was previously copied into the repo dir
+cp ../.env .env
+
 image="veetaha/veebot-telegram"
 
 echo "Starting deployment for docker image $image:$tag"
@@ -38,6 +42,6 @@ echo "Pulling image $image:$tag"
 docker pull $image:$tag
 
 echo "[Re]starting containers..."
-docker-compose up --detach
+current_uid=$(id -u):$(id -g) docker compose up --detach --no-build
 
 echo "Deployment done"
