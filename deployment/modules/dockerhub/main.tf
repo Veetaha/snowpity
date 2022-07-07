@@ -1,6 +1,3 @@
-# User DOCKER_USERNAME, DOCKER_PASSWORD for auth
-provider "dockerhub" {}
-
 resource "dockerhub_repository" "veebot_telegram" {
   namespace        = "veetaha"
   name             = "veebot-telegram"

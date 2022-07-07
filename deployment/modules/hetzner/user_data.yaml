@@ -1,0 +1,58 @@
+#cloud-config
+
+# Installs docker and docker-compose on the server
+# Based on instructions from https://docs.docker.com/engine/install/ubuntu/
+# and several github gists from here and there
+
+groups: [docker]
+
+users:
+  - name: admin
+    lock_passwd: true
+    shell: /bin/bash
+    ssh_authorized_keys: ["${ssh_public_key}"]
+    groups: docker
+    sudo: ALL=(ALL) NOPASSWD:ALL
+
+package_update: true
+package_upgrade: true
+package_reboot_if_required: true
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+
+write_files:
+  - encoding: gzip+base64
+    path: /etc/grafana-agent.yaml
+    content: "${grafana_agent_yaml}"
+
+runcmd:
+  - export DOCKER_GPG=/etc/apt/keyrings/docker.gpg
+  - export DOCKER_URL=https://download.docker.com/linux/ubuntu
+  - mkdir -p /etc/apt/keyrings
+  - curl -fsSL $DOCKER_URL/gpg | gpg --dearmor -o $DOCKER_GPG
+  - 'echo "deb [arch=$(dpkg --print-architecture) signed-by=$DOCKER_GPG] $DOCKER_URL $(lsb_release -cs) stable"
+    | tee /etc/apt/sources.list.d/docker.list > /dev/null'
+  - apt-get update -y
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  - systemctl start docker
+  - systemctl enable docker
+
+  # GA stands for grafana agent
+  # The installation steps were taken from the script in grafana/agent repo:
+  # <https://github.com/grafana/agent/blob/c07d3875cb402719e6003fefe694f26606ebb5d3/production/grafanacloud-install.sh#L1>
+
+  - export GA_RELEASE_VERSION="0.25.1"
+  - export GA_RELEASE_URL="https://github.com/grafana/agent/releases/download/v$GA_RELEASE_VERSION"
+  - export GA_DEB_URL="$GA_RELEASE_URL/grafana-agent-$GA_RELEASE_VERSION-1.amd64.deb"
+
+  - curl -L --progress-bar $GA_DEB_URL -o $HOME/grafana-agent.deb
+
+  # `confold` is used because `write_files` module stores `grafana-agent.yaml`
+  # before this installation script is running, therefore `dpkg` has to use the "old config"
+  - sudo dpkg -i --force-confold $HOME/grafana-agent.deb
+  - rm $HOME/grafana-agent.deb
+  - sudo systemctl enable grafana-agent.service
+  - sudo systemctl start grafana-agent.service

@@ -1,0 +1,22 @@
+module "hetzner" {
+  source = "../modules/hetzner"
+
+  prometheus_remote_write_url = grafana_cloud_stack.this.prometheus_remote_write_endpoint
+  prometheus_username         = grafana_cloud_stack.this.prometheus_user_id
+  prometheus_password         = var.grafana_cloud_api_key
+
+  loki_remote_write_url = "${grafana_cloud_stack.this.logs_url}/loki/api/v1/push"
+  loki_username         = grafana_cloud_stack.this.logs_user_id
+  loki_password         = var.grafana_cloud_api_key
+}
+
+module "grafana_cloud_stack" {
+  source = "../modules/grafana_cloud_stack"
+  providers = {
+    grafana = grafana.cloud_stack
+  }
+}
+
+module "dockerhub" {
+  source = "../modules/dockerhub"
+}

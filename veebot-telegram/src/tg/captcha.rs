@@ -137,12 +137,12 @@ pub(crate) async fn handle_new_chat_members(
                     mention,
                     markdown::escape(
                         "\nHi, new friend! Привет, поняша :3\n\n\
-                Ответь на капчу: "
+                        Ответь на капчу: "
                     ),
                     "*Путин это кто?*",
                     markdown::escape(&format!(
-                    "\n\nУ тебя {CAPTCHA_DURATION_TEXT} на правильный ответ, иначе будешь кикнут.",
-                ))
+                        "\n\nУ тебя {CAPTCHA_DURATION_TEXT} на правильный ответ, иначе будешь кикнут.",
+                    ))
                 );
 
                 let payload_allow = CaptchaReplyPayload {
@@ -290,3 +290,25 @@ async fn cancel_captcha_confirmation(bot: &Bot, chat_id: ChatId, user_id: UserId
 
     Ok(())
 }
+
+// TODO: encode the query callback data
+// fn encode_token() -> String {
+//     use aes_gcm_siv::aead::{Aead, NewAead};
+//     use aes_gcm_siv::{Aes256GcmSiv, Key, Nonce};
+
+//     let seed: [u8; 32] = rand::random();
+//     let cipher = Aes256GcmSiv::new(&seed.into());
+
+//     let nonce = Nonce::from_slice(b"unique nonce"); // 96-bits; unique per message
+
+//     let ciphertext = cipher
+//         .encrypt(nonce, b"plaintext message".as_ref())
+//         .expect("encryption failure");
+
+//     let plaintext = cipher
+//         .decrypt(nonce, ciphertext.as_ref())
+//         .expect("decryption failure");
+
+
+//     // assert_eq!(&plaintext, b"plaintext message");
+// }

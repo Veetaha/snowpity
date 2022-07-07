@@ -7,5 +7,9 @@ terraform.tfstate*
 # Terraform plugins dir
 .terraform
 
+# Terraform varialbes usually contain sensitive information
+terraform.tfvars
+terraform.tfvars.json
+
 # Real server environment variables
 SERVER.env

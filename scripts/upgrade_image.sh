@@ -9,6 +9,8 @@ IMAGE="veetaha/veebot-telegram"
 SCRIPTS=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 REPO="$SCRIPTS/.."
 
+. $SCRIPTS/server_ip.sh
+
 cd $REPO
 
 VERSION=$(\
@@ -19,10 +21,6 @@ VERSION=$(\
 docker build . --tag $IMAGE:$VERSION --tag $IMAGE:latest
 docker push $IMAGE:$VERSION
 docker push $IMAGE:latest
-
-SERVER_IP=$(cd $REPO/deployment/hetzner && terraform output -json | jq -r '.server_ip.value')
-
-echo "Server IP: $SERVER_IP"
 
 scp $REPO/SERVER.env admin@$SERVER_IP:/home/admin/app/.env
 
