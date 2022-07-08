@@ -7,7 +7,7 @@ variable "prometheus_username" {
 }
 
 variable "prometheus_password" {
-  type = string
+  type      = string
   sensitive = true
 }
 
@@ -20,6 +20,6 @@ variable "loki_username" {
 }
 
 variable "loki_password" {
-  type = string
+  type      = string
   sensitive = true
 }

@@ -1,8 +1,16 @@
 #cloud-config
 
-# Installs docker and docker-compose on the server
-# Based on instructions from https://docs.docker.com/engine/install/ubuntu/
-# and several github gists from here and there
+fs_setup:
+  - filesystem: ${volume_fs}
+    device: ${volume_device}
+
+mounts:
+  - - ${volume_device}
+    - ${volume_mount_point}
+    - ${volume_fs}
+    - discard,nofail,defaults
+    - "0"
+    - "0"
 
 groups: [docker]
 
@@ -29,6 +37,12 @@ write_files:
     content: "${grafana_agent_yaml}"
 
 runcmd:
+  - echo 'Installing docker...'
+
+  # Installs docker and docker-compose on the server
+  # Based on instructions from https://docs.docker.com/engine/install/ubuntu/
+  # and several github gists from here and there
+
   - export DOCKER_GPG=/etc/apt/keyrings/docker.gpg
   - export DOCKER_URL=https://download.docker.com/linux/ubuntu
   - mkdir -p /etc/apt/keyrings
@@ -39,6 +53,8 @@ runcmd:
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   - systemctl start docker
   - systemctl enable docker
+
+  - echo 'Installing grafana-agent...'
 
   # GA stands for grafana agent
   # The installation steps were taken from the script in grafana/agent repo:

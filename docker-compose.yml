@@ -1,6 +1,37 @@
 services:
-  telegram-bot:
-    image: veetaha/veebot-telegram:${TAG-latest}
-    env_file: .env
+  # telegram_bot:
+  #   image: veetaha/veebot-telegram:${TAG-latest}
+  #   env_file: .env
+  #   user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker compose up'}"
+  #   build: .
+  #   networks: [ postgres ]
+
+  postgres:
+    image: postgres:14.4
     user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker compose up'}"
-    build: .
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+
+    volumes:
+      - ${PGDATA:-./data/postgres}:/var/lib/postgresql/data
+      - /etc/passwd:/etc/passwd:ro
+
+    networks: [ postgres ]
+
+  # pgadmin:
+  #   user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker compose up'}"
+  #   image: dpage/pgadmin4:6.11
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
+  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+
+  #   volumes:
+  #      - ${PGADMIN_DATA:-./data/pgadmin}:/var/lib/pgadmin
+
+  #   ports:
+  #     - "${PGADMIN_PORT:-5050}:80"
+  #   networks: [ postgres ]
+
+networks:
+  postgres:
