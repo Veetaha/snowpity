@@ -70,8 +70,7 @@ impl LoggingConfig {
 
         labels.insert("source".to_owned(), "veebot".to_owned());
 
-        let (loki, task) =
-            tracing_loki::layer(loki_url, labels, HashMap::new()).unwrap();
+        let (loki, task) = tracing_loki::layer(loki_url, labels, HashMap::new()).unwrap();
 
         tokio::spawn(task);
 

@@ -309,6 +309,5 @@ async fn cancel_captcha_confirmation(bot: &Bot, chat_id: ChatId, user_id: UserId
 //         .decrypt(nonce, ciphertext.as_ref())
 //         .expect("decryption failure");
 
-
 //     // assert_eq!(&plaintext, b"plaintext message");
 // }

@@ -1,4 +1,4 @@
-use crate::util::{docker_compose_cmd};
+use crate::util::docker_compose_cmd;
 use clap::Parser;
 
 /// Build the image to run with `start` command.
