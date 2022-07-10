@@ -14,3 +14,12 @@ output "grafana_cloud_stack" {
     prometheus_status = grafana_cloud_stack.this.prometheus_status
   }
 }
+
+output "grafana_loki_creds" {
+  sensitive = true
+  value = {
+    loki_url       = grafana_cloud_stack.this.logs_url
+    loki_ursername = grafana_cloud_stack.this.logs_user_id
+    loki_password  = var.grafana_cloud_api_key
+  }
+}

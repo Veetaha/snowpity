@@ -1,3 +1,13 @@
+variable "veebot_tg_image_tag" {
+  type    = string
+  default = "latest"
+}
+
+variable "tg_bot_token" {
+  sensitive = true
+  type      = string
+}
+
 variable "hcloud_token" {
   sensitive = true
   type      = string

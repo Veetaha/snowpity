@@ -7,7 +7,7 @@ mod updates;
 use std::sync::Arc;
 
 use crate::ftai::FtaiService;
-use crate::{db, util};
+use crate::util;
 use crate::{Result, TgConfig};
 use dptree::di::DependencyMap;
 use teloxide::adaptors::{AutoSend, CacheMe, DefaultParseMode, Throttle, Trace};
@@ -26,7 +26,7 @@ pub(crate) struct Ctx {
     ftai: FtaiService,
 }
 
-pub(crate) async fn run_bot(_db: db::Repo, cfg: TgConfig) -> Result {
+pub(crate) async fn run_bot(cfg: TgConfig) -> Result {
     let mut di = DependencyMap::new();
 
     let http = util::create_http_client();

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "veebot-telegram",
+    "xtask",
 ]
 
 [profile.dev]

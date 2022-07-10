@@ -32,9 +32,11 @@ packages:
   - gnupg
 
 write_files:
+  %{~ for path, content in files ~}
   - encoding: gzip+base64
-    path: /etc/grafana-agent.yaml
-    content: "${grafana_agent_yaml}"
+    path: ${path}
+    content: ${content}
+  %{~ endfor ~}
 
 runcmd:
   - echo 'Installing docker...'
@@ -72,3 +74,9 @@ runcmd:
   - rm $HOME/grafana-agent.deb
   - sudo systemctl enable grafana-agent.service
   - sudo systemctl start grafana-agent.service
+
+  - echo 'Initializing postgres data directory if needed...'
+  - mkdir -p ${pgdata}
+
+  # Enable systemd services responsible for managing Docker Compose services
+  - systemctl enable --now veebot-tg.service

@@ -18,10 +18,6 @@ VERSION=$(\
     | jq -r '.packages[] | select(.name == "veebot-telegram") | .version' \
 )
 
-docker build . --tag $IMAGE:$VERSION --tag $IMAGE:latest
+docker build . --tag $IMAGE:$VERSION --tag $IMAGE:latest --build-arg RUST_BUILD_MODE=debug
 docker push $IMAGE:$VERSION
 docker push $IMAGE:latest
-
-scp $REPO/SERVER.env admin@$SERVER_IP:/home/admin/app/.env
-
-ssh admin@$SERVER_IP "bash -s $VERSION" < $SCRIPTS/upgrade_image_on_server.sh

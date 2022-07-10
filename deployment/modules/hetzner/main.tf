@@ -1,38 +1,98 @@
 locals {
-  volume_mount_point = "/mnt/master"
-  volume_fs          = "ext4"
   location           = "fsn1"
   ssh_public_key     = file("~/.ssh/id_rsa.pub")
+  hostname           = "hetzner-master"
+  volume_mount_point = "/mnt/master"
+  volume_fs          = "ext4"
+  pg_data            = "${local.volume_mount_point}/data/postgres"
 
-  grafana_agent_vars = {
-    prometheus_remote_write_url = var.prometheus_remote_write_url
-    prometheus_username         = var.prometheus_username
-    prometheus_password         = var.prometheus_password
+  veebot_tg_env_vars = {
+    VEEBOT_LOG = "debug,hyper=info,reqwest=info,rustls=info,sqlx=warn"
 
-    loki_remote_write_url = var.loki_remote_write_url
-    loki_username         = var.loki_username
-    loki_password         = var.loki_password
+    TG_BOT_MAINTAINER = "326348880"
+    TG_BOT_TOKEN      = var.tg_bot_token
+
+    LOKI_URL      = var.loki_url
+    LOKI_USERNAME = var.loki_username
+    LOKI_PASSWORD = var.loki_password
+
+    PGDATA = local.pg_data
+
+    VEEBOT_TG_IMAGE_TAG = var.veebot_tg_image_tag
+    VEEBOT_LOG_LABELS = jsonencode({
+      instance = local.hostname
+    })
   }
 
-  grafana_agent_config = templatefile("${path.module}/grafana-agent.yaml", local.grafana_agent_vars)
+  docker_compose_target_path = "/var/app/docker-compose.yml"
+  env_file_path              = "/var/app/.env"
+
+  templates = {
+    "grafana-agent.yaml" = {
+      target = "/etc/grafana-agent.yaml"
+      vars = {
+        prometheus_remote_write_url = var.prometheus_remote_write_url
+        prometheus_username         = var.prometheus_username
+        prometheus_password         = var.prometheus_password
+
+        loki_remote_write_url = "${var.loki_url}/loki/api/v1/push"
+        loki_username         = var.loki_username
+        loki_password         = var.loki_password
+
+        hostname = local.hostname
+      }
+    },
+    "veebot-tg.service" = {
+      target = "/etc/systemd/system/veebot-tg.service"
+      vars = {
+        docker_compose_cmd = "/usr/bin/env bash /var/app/docker-compose.sh"
+        env_file_path      = local.env_file_path
+      }
+    }
+    "docker-compose.sh" = {
+      target = "/var/app/docker-compose.sh"
+      vars   = {}
+    }
+  }
+
+  non_templates = {
+    "${local.docker_compose_target_path}" = file("${path.module}/../../../docker-compose.yml"),
+
+    "${local.env_file_path}" = join("\n", [for k, v in local.veebot_tg_env_vars : "${k}=${v}"]),
+  }
+
+  files = merge(
+    {
+      for template_source, template in local.templates : template.target => templatefile(
+        "${path.module}/templates/${template_source}", template.vars
+      )
+    },
+    local.non_templates
+  )
 
   user_data_vars = {
-    ssh_public_key     = local.ssh_public_key
-    grafana_agent_yaml = base64gzip(local.grafana_agent_config)
+    files          = { for path, content in local.files : path => base64gzip(content) }
+    ssh_public_key = local.ssh_public_key
+    pgdata         = local.pg_data
+
     volume_device      = hcloud_volume.master.linux_device
     volume_mount_point = local.volume_mount_point
     volume_fs          = local.volume_fs
+
+    loki_url      = var.loki_url
+    loki_username = var.loki_username
+    loki_password = var.loki_password
   }
 }
 
 data "cloudinit_config" "master" {
   part {
-    content = templatefile("${path.module}/user_data.yaml", local.user_data_vars)
+    content = templatefile("${path.module}/templates/user_data.yaml", local.user_data_vars)
   }
 }
 
 resource "hcloud_server" "master" {
-  name        = "master"
+  name        = local.hostname
   image       = "ubuntu-22.04"
   server_type = "cpx21"
   location    = local.location

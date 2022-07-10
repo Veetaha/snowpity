@@ -1,6 +1,6 @@
 [package]
 name = "veebot-telegram"
-version = "0.3.1"
+version = "0.4.0-dev"
 authors = ["Veetaha <veetaha2@gmail.com>"]
 edition = "2021"
 publish = false
@@ -15,7 +15,7 @@ backtrace = "0.3"
 base64 = "0.13"
 bytes = "1.1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
-display-error-chain = "=0.1.0" # TODO(Veetaha): make `elastio/stdx` open-source :facepalm:
+display-error-chain = "=0.1.1" # TODO(Veetaha): make `elastio/stdx` open-source :facepalm:
 dotenv = "0.15"
 dptree = "0.2"
 duplicate = "0.4"
@@ -33,6 +33,7 @@ regex = "1.5"
 reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "json"] }
 serde = "1.0"
 serde_json = "1.0"
+serde_with = { version = "1.14", features = ["json"] }
 sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "postgres", "macros", "chrono", "offline"] }
 thiserror = "1.0"
 timeago = { version = "0.3", features = ["chrono"] }
@@ -40,6 +41,7 @@ tokio = { version = "1.19", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
 tracing-futures = "0.2"
 tracing-log = "0.1"
+tracing-loki = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = { version = "2.2", features = ["serde"] }
 wav_io = "0.1"

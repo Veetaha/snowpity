@@ -6,7 +6,7 @@ integrations:
   node_exporter:
     enabled: true
     relabel_configs:
-      - replacement: hetzner-master
+      - replacement: ${hostname}
         source_labels: [__address__]
         target_label: instance
   prometheus_remote_write:
@@ -31,7 +31,7 @@ logs:
         - job_name: integrations/node_exporter_journal_scrape
           journal:
             labels:
-              instance: hetzner-master
+              instance: ${hostname}
               job: integrations/node_exporter
             max_age: 24h
           relabel_configs:
