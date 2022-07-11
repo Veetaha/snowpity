@@ -2767,7 +2767,7 @@ checksum = "c4808a28789238714a29163e4cb8031f0f050dd670f7a0cc74b6d80f3ce343fa"
 
 [[package]]
 name = "veebot-telegram"
-version = "0.4.0-dev"
+version = "0.4.0"
 dependencies = [
  "aes-gcm-siv",
  "anyhow",
