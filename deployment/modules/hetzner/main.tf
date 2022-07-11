@@ -1,11 +1,4 @@
 locals {
-  location           = "fsn1"
-  ssh_public_key     = file("~/.ssh/id_rsa.pub")
-  hostname           = "hetzner-master"
-  volume_mount_point = "/mnt/master"
-  volume_fs          = "ext4"
-  pg_data            = "${local.volume_mount_point}/data/postgres"
-
   veebot_tg_env_vars = {
     VEEBOT_LOG = "debug,hyper=info,reqwest=info,rustls=info,sqlx=warn"
 
@@ -23,6 +16,13 @@ locals {
       instance = local.hostname
     })
   }
+
+  location           = "fsn1"
+  ssh_public_key     = file("~/.ssh/id_rsa.pub")
+  hostname           = "hetzner-master"
+  volume_mount_point = "/mnt/master"
+  volume_fs          = "ext4"
+  pg_data            = "${local.volume_mount_point}/data/postgres"
 
   docker_compose_target_path = "/var/app/docker-compose.yml"
   env_file_path              = "/var/app/.env"

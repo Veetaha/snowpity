@@ -96,7 +96,7 @@ pub(crate) enum FtAiError {
     MissingWavFile,
 
     #[error(
-        "Failed to create a WAV reader, that is probably a bug, it must be infallibe: {message}"
+        "Failed to create a WAV reader, that is probably a bug, it must be infallible: {message}"
     )]
     CreateWavReader { message: &'static str },
 

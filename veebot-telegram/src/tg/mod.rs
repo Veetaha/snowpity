@@ -86,7 +86,7 @@ pub(crate) async fn run_bot(cfg: TgConfig) -> Result {
     Dispatcher::builder(bot, handler)
         .dependencies(di)
         // We don't handle all possible messages that users send,
-        // so to supress the warning that we don't do this we have
+        // so to suppress the warning that we don't do this we have
         // a noop default handler here
         .default_handler(|_| std::future::ready(()))
         .build()
