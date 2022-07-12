@@ -32,7 +32,7 @@ cargo xtask stop
 
 The bot is deployed using [terraform]. All tf projects reside under `deployment/` directory.
 
-The application is hosted by [Hetzner Cloud][hetzner]. It is delivered to the server via a [Dockerhub repository], and covered with telemetry exfiltration by a [Grafana Cloud Stack][grafana-cloud]. The bot services are orchestrated by [docker-compose], which is in turn bootstrapped via [cloud-init] and [systemd].
+The application is hosted by [Hetzner Cloud][hetzner]. It is delivered to the server via a [Dockerhub repository][dockerhub-repo], and covered with telemetry exfiltration by a [Grafana Cloud Stack][grafana-cloud]. The bot services are orchestrated by [docker-compose], which is in turn bootstrapped via [cloud-init] and [systemd].
 
 To deploy the bot, you need to manually create several accounts at:
 
@@ -74,7 +74,7 @@ cd deployment/prod terraform destroy --target module.hetzner
 
 [terraform]: https://www.terraform.io/
 [hetzner]: https://www.hetzner.com/
-[dockerhub]: https://hub.docker.com/repository/docker/veetaha/veebot-telegram
+[dockerhub-repo]: https://hub.docker.com/repository/docker/veetaha/veebot-telegram
 [grafana-cloud]: https://grafana.com/products/cloud/
 [docker-compose]: https://docs.docker.com/compose/
 [cloud-init]: https://cloudinit.readthedocs.io/en/latest/

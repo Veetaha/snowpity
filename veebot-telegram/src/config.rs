@@ -66,9 +66,18 @@ impl LoggingConfig {
         loki_url.set_username(&self.loki_username).unwrap();
         loki_url.set_password(Some(&self.loki_password)).unwrap();
 
-        let mut labels = self.veebot_log_labels;
+        let additional_labels = [
+            ("app_version", env!("VERGEN_BUILD_SEMVER")),
+            ("app_git_commit", env!("VERGEN_GIT_SHA")),
+            ("source", "veebot"),
+        ];
 
-        labels.insert("source".to_owned(), "veebot".to_owned());
+        let mut labels = self.veebot_log_labels;
+        labels.extend(
+            additional_labels
+                .into_iter()
+                .map(|(k, v)| (k.to_owned(), v.to_owned())),
+        );
 
         let (loki, task) = tracing_loki::layer(loki_url, labels, HashMap::new()).unwrap();
 
