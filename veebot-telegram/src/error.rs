@@ -7,6 +7,7 @@ use regex::Regex;
 use teloxide::types::ChatId;
 use thiserror::Error;
 use tracing::trace;
+// use tracing_error::SpanTrace;
 
 pub type Result<T = (), E = Error> = std::result::Result<T, E>;
 
@@ -50,6 +51,7 @@ pub struct Error {
     /// It is mentioned in the chat when the error happens.
     /// This way we as developers can copy it and lookup the logs using this id.
     pub(crate) id: String,
+    // pub(crate) spantrace: SpanTrace,
     pub(crate) backtrace: Option<Backtrace>,
     pub(crate) kind: ErrorKind,
 }
@@ -82,6 +84,12 @@ pub(crate) enum ErrorKind {
 
     #[error(transparent)]
     Db { source: DbError },
+
+    #[error(transparent)]
+    Deserialize {
+        #[from]
+        source: DeserializeError,
+    },
 }
 
 impl<T: Into<DbError>> From<T> for ErrorKind {
@@ -188,6 +196,33 @@ pub(crate) enum DbError {
     },
 }
 
+#[derive(Debug, Error)]
+pub(crate) enum DeserializeError {
+    #[error("Failed to parse JSON as `{target_ty}`, input surrounded by backticks:\n```\n{input:?}\n```")]
+    Json {
+        target_ty: &'static str,
+        input: String,
+        source: serde_json::Error,
+    },
+
+    #[error(
+        "Failed to decode the input as base64, input surrounded by backticks:\n```\n{input:?}\n```"
+    )]
+    Base64 {
+        input: String,
+        source: base64::DecodeError,
+    },
+
+    #[error(
+        "The input is not a valid UTF8 sequence, input in base64: {}",
+        base64::encode(&input),
+    )]
+    Utf8 {
+        input: Vec<u8>,
+        source: std::str::Utf8Error,
+    },
+}
+
 impl ErrorKind {
     pub(crate) fn is_user_error(&self) -> bool {
         matches!(self, Self::User { .. })
@@ -231,6 +266,7 @@ impl<T: Into<ErrorKind>> From<T> for Error {
             kind,
             id: nanoid::nanoid!(6),
             backtrace,
+            // spantrace: SpanTrace::capture()
         };
 
         trace!(err = tracing_err(&err), "Created an error");

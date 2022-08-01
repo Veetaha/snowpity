@@ -8,7 +8,7 @@ use display_error_chain::DisplayErrorChain;
 use futures::future::BoxFuture;
 use std::fmt;
 use std::sync::Arc;
-use teloxide::types::Message;
+use teloxide::types::{Message, User};
 use teloxide::utils::markdown;
 use tracing::{info_span, warn, warn_span};
 use tracing_futures::Instrument;
@@ -23,8 +23,10 @@ pub(crate) fn handle<'a, C: Command>(
     move |ctx, msg, cmd| {
         let info = info_span!(
             "handle_message",
+            sender = msg.from().map(User::debug_id).as_deref(),
             // TODO: Project only text() and sender info to reduce verbosity
-            msg = format_args!("{msg:#?}"),
+            msg_text = msg.text(),
+            chat = msg.chat.debug_id().as_str(),
             cmd = format_args!("{cmd:#?}")
         );
 

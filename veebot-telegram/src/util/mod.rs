@@ -5,6 +5,8 @@ mod sqlx_ext;
 mod std_ext;
 mod teloxide_ext;
 
+pub(crate) mod encoding;
+
 // pub(crate) use chrono_ext::*;
 pub(crate) use reqwest_ext::*;
 pub(crate) use sqlx_ext::*;
@@ -15,6 +17,7 @@ pub(crate) mod prelude {
     // pub(crate) use super::std_ext::OptionExt;
     pub(crate) use super::chrono_ext::DateTimeExt as _;
     pub(crate) use super::sqlx_ext::ErrorExt as _;
+    pub(crate) use super::std_ext::ErrorExt as _;
     pub(crate) use super::std_ext::ResultExt;
     // pub(crate) use super::sqlx_ext::FromDb as _;
     // pub(crate) use super::sqlx_ext::IntoApp as _;
@@ -22,6 +25,7 @@ pub(crate) mod prelude {
     pub(crate) use super::sqlx_ext::TryIntoDb as _;
     // pub(crate) use super::teloxide_ext::MessageKindExt as _;
     pub(crate) use super::reqwest_ext::ReqwestBuilderExt as _;
+    pub(crate) use super::teloxide_ext::ChatExt as _;
     pub(crate) use super::teloxide_ext::UserExt as _;
     pub(crate) use super::teloxide_ext::UtilRequesterExt as _;
 }

@@ -1,4 +1,5 @@
 use crate::tg::Bot;
+use crate::util;
 use crate::util::prelude::*;
 use crate::util::DynError;
 use crate::Error;
@@ -20,6 +21,7 @@ use tokio::sync::oneshot;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
+use tracing::info_span;
 use tracing::instrument;
 use tracing::trace;
 use tracing::warn;
@@ -39,7 +41,7 @@ static UNVERIFIED_USERS: SyncLazy<
     SyncMutex<HashMap<(ChatId, UserId), (i32, oneshot::Sender<()>)>>,
 > = SyncLazy::new(Default::default);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct CaptchaReplyPayload {
     expected_user_id: UserId,
     allowed: bool,
@@ -48,10 +50,8 @@ struct CaptchaReplyPayload {
 #[instrument(
     skip(bot, callback_query),
     fields(
-        id = callback_query.id.as_str(),
-        from = %callback_query.from.id,
+        from = callback_query.from.debug_id().as_str(),
         msg = callback_query.message.as_ref().and_then(|msg| msg.text()),
-        data = callback_query.data.as_deref(),
     )
 )]
 pub(crate) async fn handle_callback_query(
@@ -77,40 +77,47 @@ pub(crate) async fn handle_callback_query(
             }
         };
 
-        let payload: CaptchaReplyPayload = serde_json::from_str(&callback_data).unwrapx();
+        let payload: CaptchaReplyPayload = util::encoding::secure_decode(&callback_data)?;
 
-        if payload.expected_user_id != callback_query.from.id {
-            info!(
-                user_id = %callback_query.from.id,
-                "User tried to reply to a capcha not meant for them",
-            );
-            return Ok(());
-        }
+        let payload_span = info_span!("handle_callback_query_payload", ?payload);
 
-        let user_id = callback_query.from.id;
-        let chat_id = captcha_message.chat.id;
-
-        cancel_captcha_confirmation(&bot, chat_id, user_id).await?;
-
-        if !payload.allowed {
-            kick_user_due_to_captcha(&bot, chat_id, user_id).await?;
-            return Ok(());
-        }
-
-        info!("User passed captcha");
-
-        let default_perms = match bot.get_chat(chat_id).await?.permissions() {
-            Some(perms) => perms,
-            None => {
-                warn!("Could not get default chat member permissions",);
+        async {
+            if payload.expected_user_id != callback_query.from.id {
+                info!(
+                    user_id = %callback_query.from.id,
+                    "User tried to reply to a capcha not meant for them",
+                );
                 return Ok(());
             }
-        };
 
-        bot.restrict_chat_member(chat_id, user_id, default_perms)
-            .await?;
+            let user_id = callback_query.from.id;
+            let chat_id = captcha_message.chat.id;
 
-        return Ok::<_, Error>(());
+            cancel_captcha_confirmation(&bot, chat_id, user_id).await?;
+
+            if !payload.allowed {
+                info!("User chose wrong answer in captcha, kicking them...");
+                kick_user_due_to_captcha(&bot, chat_id, user_id).await?;
+                return Ok(());
+            }
+
+            info!("User passed captcha");
+
+            let default_perms = match bot.get_chat(chat_id).await?.permissions() {
+                Some(perms) => perms,
+                None => {
+                    warn!("Could not get default chat member permissions",);
+                    return Ok(());
+                }
+            };
+
+            bot.restrict_chat_member(chat_id, user_id, default_perms)
+                .await?;
+
+            Ok::<_, Error>(())
+        }
+        .instrument(payload_span)
+        .await
     }
     .await
     .map_err(Into::into)
@@ -128,8 +135,9 @@ pub(crate) async fn handle_new_chat_members(
             let mention = user.md_link();
             let chat_id = msg.chat.id;
             let user_id = user.id;
+            let chat_username = msg.chat.username();
 
-            let span = tracing::info_span!("handle_new_chat_member", %user_id, %chat_id, %mention);
+            let span = tracing::info_span!("handle_new_chat_members", %chat_id, chat_username, %mention);
 
             async {
                 let caption = format!(
@@ -155,8 +163,8 @@ pub(crate) async fn handle_new_chat_members(
                     allowed: false,
                 };
 
-                let payload_allow = serde_json::to_string(&payload_allow).unwrapx();
-                let payload_deny = serde_json::to_string(&payload_deny).unwrapx();
+                let payload_allow = util::encoding::secure_encode(&payload_allow);
+                let payload_deny = util::encoding::secure_encode(&payload_deny);
 
                 let buttons = [[
                     InlineKeyboardButton::callback("Хуйло! 😉", payload_allow),
@@ -290,24 +298,3 @@ async fn cancel_captcha_confirmation(bot: &Bot, chat_id: ChatId, user_id: UserId
 
     Ok(())
 }
-
-// TODO: encode the query callback data
-// fn encode_token() -> String {
-//     use aes_gcm_siv::aead::{Aead, NewAead};
-//     use aes_gcm_siv::{Aes256GcmSiv, Key, Nonce};
-
-//     let seed: [u8; 32] = rand::random();
-//     let cipher = Aes256GcmSiv::new(&seed.into());
-
-//     let nonce = Nonce::from_slice(b"unique nonce"); // 96-bits; unique per message
-
-//     let ciphertext = cipher
-//         .encrypt(nonce, b"plaintext message".as_ref())
-//         .expect("encryption failure");
-
-//     let plaintext = cipher
-//         .decrypt(nonce, ciphertext.as_ref())
-//         .expect("decryption failure");
-
-//     // assert_eq!(&plaintext, b"plaintext message");
-// }

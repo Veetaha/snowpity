@@ -35,3 +35,13 @@ where
         }
     }
 }
+
+#[ext(ErrorExt)]
+pub(crate) impl<E> E
+where
+    E: std::error::Error + ?Sized,
+{
+    fn display_chain(&self) -> display_error_chain::DisplayErrorChain<'_, Self> {
+        display_error_chain::DisplayErrorChain::new(self)
+    }
+}

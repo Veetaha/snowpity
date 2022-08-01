@@ -89,8 +89,10 @@ pub(crate) async fn run_bot(cfg: TgConfig) -> Result {
         // so to suppress the warning that we don't do this we have
         // a noop default handler here
         .default_handler(|_| std::future::ready(()))
+        // TODO: better log the error
+        // .error_handler(handler)
+        .enable_ctrlc_handler()
         .build()
-        .setup_ctrlc_handler()
         .dispatch()
         .await;
 

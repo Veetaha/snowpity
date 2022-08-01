@@ -2,7 +2,7 @@ use assert_matches::assert_matches;
 use easy_ext::ext;
 use teloxide::payloads::setters::*;
 use teloxide::prelude::*;
-use teloxide::types::{Message, MessageCommon, MessageKind, User};
+use teloxide::types::{Chat, Message, MessageCommon, MessageKind, User};
 use teloxide::utils::markdown;
 
 #[ext(MessageKindExt)]
@@ -33,5 +33,20 @@ pub(crate) impl User {
         let mention_text =
             markdown::escape(&self.username.clone().unwrap_or_else(|| self.full_name()));
         format!("[{mention_text}]({})", self.url())
+    }
+
+    fn debug_id(&self) -> String {
+        let full_name = self.full_name();
+        let id = self.id;
+        format!("{id} {full_name}")
+    }
+}
+
+#[ext(ChatExt)]
+pub(crate) impl Chat {
+    fn debug_id(&self) -> String {
+        let username = self.username().unwrap_or("{{unknown_chat_username}}");
+        let id = self.id;
+        format!("{id} {username}")
     }
 }
