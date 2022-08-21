@@ -1,3 +1,9 @@
+# 0.4.1
+
+## Changed
+
+- Updated captcha question to a more straighforward one without swearwords
+
 # 0.4.0
 
 ## Changed

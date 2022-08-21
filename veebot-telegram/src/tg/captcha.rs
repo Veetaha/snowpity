@@ -147,7 +147,7 @@ pub(crate) async fn handle_new_chat_members(
                         "\nHi, new friend! Привет, поняша :3\n\n\
                         Ответь на капчу: "
                     ),
-                    "*Путин это кто?*",
+                    "*Кто должен победить в войне?*",
                     markdown::escape(&format!(
                         "\n\nУ тебя {CAPTCHA_DURATION_TEXT} на правильный ответ, иначе будешь кикнут.",
                     ))
@@ -167,8 +167,8 @@ pub(crate) async fn handle_new_chat_members(
                 let payload_deny = util::encoding::secure_encode(&payload_deny);
 
                 let buttons = [[
-                    InlineKeyboardButton::callback("Хуйло! 😉", payload_allow),
-                    InlineKeyboardButton::callback("Молодец (бан)! 🤨", payload_deny),
+                    InlineKeyboardButton::callback("Украина 😉", payload_allow),
+                    InlineKeyboardButton::callback("Россия (бан) 🤨", payload_deny),
                 ]];
 
                 bot.restrict_chat_member(chat_id, user.id, ChatPermissions::empty())
