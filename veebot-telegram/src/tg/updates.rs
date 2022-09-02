@@ -9,20 +9,6 @@ use teloxide::types::{ChatMemberUpdated, Message};
 use teloxide::utils::markdown;
 use tracing::info;
 
-pub(crate) async fn handle_my_chat_member(
-    bot: Bot,
-    upd: ChatMemberUpdated,
-) -> Result<(), Box<DynError>> {
-    // TODO: Send this message only when bot is invited to a chat
-    bot.send_message(
-        upd.chat.id,
-        markdown::escape("Hello everyone! I am going to be your overmare."),
-    )
-    .await?;
-
-    Ok(())
-}
-
 // #[instrument(skip(bot, msg, _db), fields(msg_text = msg.text()))]
 // pub(crate) async fn handle_message(
 //     bot: Bot,
@@ -50,7 +36,7 @@ pub(crate) async fn handle_my_chat_member(
 //         // };
 
 //         // let banned_pattern = db
-//         //     .tg_chat_banned_patterns
+//         //     .tg_chat_banned_words
 //         //     .get_all_by_chat_id(msg.chat.id)
 //         //     .try_collect::<Vec<_>>()
 //         //     .await?

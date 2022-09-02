@@ -1,9 +1,9 @@
 use std::fmt;
 use std::time::Duration;
 
+use crate::banned_words;
 use crate::util::{tracing_err, DynError};
 use backtrace::Backtrace;
-use regex::Regex;
 use teloxide::types::ChatId;
 use thiserror::Error;
 use tracing::trace;
@@ -128,18 +128,28 @@ pub(crate) enum UserError {
     #[error("The specified image tags contain a comma (which is prohibited): {input}")]
     CommaInImageTag { input: String },
 
-    // #[error("Invalid regular expression: {input:?}")]
-    // InvalidRegex { input: String, source: regex::Error },
-    #[error("Requested pattern already exists in the database: {pattern}")]
-    BannedPatternAlreadyExists { pattern: Regex },
+    #[error(
+        "Запрещенное слово должно состоять только из букв, цифр, подчеркиваний и тире без пробелов"
+    )]
+    BannedWordMalformed { word: String },
 
-    #[error("Requested pattern was not found in the database: {pattern}")]
-    BannedPatternNotFound { pattern: Regex },
+    #[error(
+        "Запрещенное слово не должно превышать {} символов (длина заданого слова: {}, слово: {word})",
+        crate::banned_words::MAX_WORD_LENGTH,
+        word.len(),
+    )]
+    BannedWordTooLong { word: String },
 
-    #[error("Requested chat already exists in the database (chat_id: {chat_id})")]
+    #[error("Запрет на слово уже существует (слово: {word})")]
+    BannedWordAlreadyExists { word: banned_words::Word },
+
+    #[error("Запрета на слово не существует (слово: {word})")]
+    BannedWordNotFound { word: banned_words::Word },
+
+    #[error("Чат уже существует в базе (chat_id: {chat_id})")]
     ChatAlreadyExists { chat_id: ChatId },
 
-    #[error("Requested chat was not found in the database (chat_id: {chat_id})")]
+    #[error("Чат не был найден в базе (chat_id: {chat_id})")]
     ChatNotFound { chat_id: ChatId },
 
     #[error("Текст для 15.ai не должен содержать цифр вне ARPAbet нотации")]

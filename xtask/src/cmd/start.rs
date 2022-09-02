@@ -14,6 +14,19 @@ impl cmd::Cmd for Start {
         self.build.run()?;
 
         fs::create_dir_all(repo_abs_path(["data", "postgres"]))?;
+        // let pg_admin_dir = repo_abs_path(["data", "pgadmin"]);
+
+        // if pg_admin_dir.exists() {
+
+
+        //     fs::create_dir_all(pg_admin_dir);
+        //     // std::os::unix::fs::chown(dir, uid, gid)
+
+
+        //     std::sys::fs::chown(path, uid, gid);
+        // }
+
+        // fs::create_dir_all(pg_admin_dir)?;
 
         docker_compose_cmd()?.arg("up").run()?;
 

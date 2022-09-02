@@ -11,6 +11,9 @@ module "hetzner" {
   loki_url      = grafana_cloud_stack.this.logs_url
   loki_username = grafana_cloud_stack.this.logs_user_id
   loki_password = var.grafana_cloud_api_key
+
+  pg_password      = var.pg_password
+  pgadmin_password = var.pgadmin_password
 }
 
 module "grafana_cloud_stack" {

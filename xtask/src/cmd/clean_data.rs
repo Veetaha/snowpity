@@ -9,8 +9,7 @@ pub struct CleanData {}
 
 impl crate::cmd::Cmd for CleanData {
     fn run(self) -> anyhow::Result<()> {
-        fs::remove_dir_all(repo_abs_path(["data", "postgres"]))?;
-
+        fs::remove_dir_all_if_exists(&repo_abs_path(["data", "postgres"]))?;
         Ok(())
     }
 }

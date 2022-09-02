@@ -7,7 +7,7 @@ mod updates;
 use std::sync::Arc;
 
 use crate::ftai::FtaiService;
-use crate::util;
+use crate::{db, util};
 use crate::{Result, TgConfig};
 use dptree::di::DependencyMap;
 use teloxide::adaptors::{AutoSend, CacheMe, DefaultParseMode, Throttle, Trace};
@@ -21,12 +21,12 @@ type Bot = AutoSend<Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>>;
 
 pub(crate) struct Ctx {
     bot: Bot,
-    // db: db::Repo,
+    db: db::Repo,
     cfg: TgConfig,
     ftai: FtaiService,
 }
 
-pub(crate) async fn run_bot(cfg: TgConfig) -> Result {
+pub(crate) async fn run_bot(cfg: TgConfig, db: db::Repo) -> Result {
     let mut di = DependencyMap::new();
 
     let http = util::create_http_client();
@@ -42,7 +42,7 @@ pub(crate) async fn run_bot(cfg: TgConfig) -> Result {
 
     di.insert(Arc::new(Ctx {
         bot: bot.clone(),
-        // db,
+        db,
         cfg,
         ftai,
     }));
@@ -80,7 +80,6 @@ pub(crate) async fn run_bot(cfg: TgConfig) -> Result {
                 .endpoint(cmd::handle::<cmd::maintainer::Cmd>()),
         )
         // .branch(Update::filter_edited_message().endpoint(updates::handle_edited_message))
-        .branch(Update::filter_my_chat_member().endpoint(updates::handle_my_chat_member))
         .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query));
 
     Dispatcher::builder(bot, handler)

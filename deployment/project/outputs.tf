@@ -1,6 +1,6 @@
 output "server" {
   value = {
-    ip                 = module.hetzner.server_ip
+    ipv6               = module.hetzner.server_ipv6
     status             = module.hetzner.server_status
     volume_mount_point = module.hetzner.volume_mount_point
   }

@@ -20,7 +20,7 @@ pub(crate) mod prelude {
     pub(crate) use super::std_ext::ErrorExt as _;
     pub(crate) use super::std_ext::ResultExt;
     // pub(crate) use super::sqlx_ext::FromDb as _;
-    // pub(crate) use super::sqlx_ext::IntoApp as _;
+    pub(crate) use super::sqlx_ext::IntoApp as _;
     pub(crate) use super::sqlx_ext::IntoDb as _;
     pub(crate) use super::sqlx_ext::TryIntoDb as _;
     // pub(crate) use super::teloxide_ext::MessageKindExt as _;

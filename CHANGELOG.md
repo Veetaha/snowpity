@@ -2,7 +2,7 @@
 
 ## Changed
 
-- Updated captcha question to a more straighforward one without swearwords
+- Updated captcha question to a more straightforward one without swearwords
 
 # 0.4.0
 

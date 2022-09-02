@@ -12,7 +12,7 @@ macro_rules! def_constraints {
 
 def_constraints! {
     TG_CHATS_PK = "tg_chats_pk";
-    TG_CHAT_AND_PATTERN_COMPOSITE_PK = "tg_chat_and_pattern_composite_pk";
+    TG_CHAT_AND_BANNED_WORD_COMPOSITE_PK = "tg_chat_and_banned_word_composite_pk";
     TG_CHATS_FK = "tg_chats_fk";
 }
 

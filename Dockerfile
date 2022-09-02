@@ -39,8 +39,9 @@ COPY --from=builder /app/target/${RUST_BUILD_MODE}/veebot-telegram /usr/local/bi
 # Not an expert in SSL, but this seems to be required for all SSL-encrypted communication.
 # Thanks to this guy for help:
 # https://github.com/debuerreotype/docker-debian-artifacts/issues/15#issuecomment-634423712
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends ca-certificates \
-    libopus0
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates libopus0 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["/usr/local/bin/veebot-telegram"]

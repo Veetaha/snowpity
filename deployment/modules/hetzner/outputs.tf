@@ -1,5 +1,5 @@
-output "server_ip" {
-  value = hcloud_server.master.ipv4_address
+output "server_ipv6" {
+  value = hcloud_server.master.ipv6_address
 }
 
 output "server_status" {

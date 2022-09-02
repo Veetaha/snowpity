@@ -1,3 +1,4 @@
+mod banned_words;
 mod config;
 mod db;
 #[allow(unused)]
@@ -13,9 +14,9 @@ pub use config::*;
 
 /// Run the telegram bot processing loop
 pub async fn run(config: Config) -> Result<()> {
-    let _ = db::init(config.db);
+    let db = db::init(config.db).await?;
 
-    tg::run_bot(config.tg).await?;
+    tg::run_bot(config.tg, db).await?;
 
     Ok(())
 }

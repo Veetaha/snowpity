@@ -80,7 +80,7 @@
         ]
       }
     },
-    "query": "SELECT pattern, created_at, created_by\n            FROM tg_chat_banned_patterns WHERE tg_chat_id = $1"
+    "query": "SELECT pattern, created_at, created_by\n            FROM tg_chat_banned_words WHERE tg_chat_id = $1"
   },
   "736f5bdc9f6e29558efac5426fe072b971ed4972aa5efd43d456dcf2d30d2096": {
     "describe": {
@@ -156,7 +156,7 @@
         ]
       }
     },
-    "query": "DELETE FROM tg_chat_banned_patterns\n            WHERE tg_chat_id = $1 AND pattern = $2"
+    "query": "DELETE FROM tg_chat_banned_words\n            WHERE tg_chat_id = $1 AND pattern = $2"
   },
   "ec4249b49ec813068045442242cefb69b12171df98ba1abb867a61caebdf5a9c": {
     "describe": {
@@ -188,6 +188,6 @@
         ]
       }
     },
-    "query": "INSERT INTO tg_chat_banned_patterns (tg_chat_id, pattern, created_by)\n            VALUES ($1, $2, $3)"
+    "query": "INSERT INTO tg_chat_banned_words (tg_chat_id, pattern, created_by)\n            VALUES ($1, $2, $3)"
   }
 }

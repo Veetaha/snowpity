@@ -191,7 +191,7 @@ pub(crate) async fn handle_new_chat_members(
                         if let Err(err) = recv_result {
                             warn!("BUG: captcha confirmation timeout channel closed: {err:#?}");
                         } else {
-                            trace!("Captcha confirmation timeout succefully cancelled");
+                            trace!("Captcha confirmation timeout successfully cancelled");
                         }
                         return;
                     }
