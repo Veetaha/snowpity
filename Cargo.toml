@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "censy",
     "veebot-telegram",
     "xtask",
 ]

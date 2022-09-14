@@ -1,4 +1,3 @@
-mod banned_words;
 mod config;
 mod db;
 #[allow(unused)]

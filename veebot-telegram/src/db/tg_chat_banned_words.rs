@@ -63,7 +63,7 @@ impl TgChatBannedWordsRepo {
             .map_ok(|record| BannedWord {
                 word: record.word,
                 created_at: record.created_at,
-                created_by: record.created_by.into_app(),
+                created_by: record.created_by.into_app_or_panic(),
             })
             .err_into()
     }

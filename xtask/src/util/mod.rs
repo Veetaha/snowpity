@@ -21,6 +21,7 @@ pub(crate) fn repo_root() -> PathBuf {
         .to_owned()
 }
 
+// FIXME: remove this commentted code
 // TODO: when adding pgadmin support, we need to create the pgadmin user on host
 // to be able to bind map pgadmin's configuration files
 //

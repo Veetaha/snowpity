@@ -128,18 +128,6 @@ pub(crate) enum UserError {
     #[error("The specified image tags contain a comma (which is prohibited): {input}")]
     CommaInImageTag { input: String },
 
-    #[error(
-        "Запрещенное слово должно состоять только из букв, цифр, подчеркиваний и тире без пробелов"
-    )]
-    BannedWordMalformed { word: String },
-
-    #[error(
-        "Запрещенное слово не должно превышать {} символов (длина заданого слова: {}, слово: {word})",
-        crate::banned_words::MAX_WORD_LENGTH,
-        word.len(),
-    )]
-    BannedWordTooLong { word: String },
-
     #[error("Запрет на слово уже существует (слово: {word})")]
     BannedWordAlreadyExists { word: banned_words::Word },
 

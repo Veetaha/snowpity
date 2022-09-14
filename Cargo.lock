@@ -211,6 +211,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "censy"
+version = "0.1.0"
+dependencies = [
+ "itertools 0.10.3",
+ "once_cell",
+ "thiserror",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1317,9 +1326,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.12.0"
+version = "1.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7709cef83f0c1f58f666e746a08b21e0085f7440fa6a29cc194d68aac97a4225"
+checksum = "2f7254b99e31cad77da24b08ebf628882739a608578bb1bcdfc1f9c21260d7c0"
 
 [[package]]
 name = "openssl"
@@ -2775,6 +2784,7 @@ dependencies = [
  "backtrace",
  "base64",
  "bytes",
+ "censy",
  "chrono",
  "display-error-chain",
  "dotenv",
@@ -3073,6 +3083,7 @@ dependencies = [
  "clap",
  "devx-cmd",
  "fs-err",
+ "itertools 0.10.3",
  "tracing",
  "tracing-log",
  "tracing-subscriber",

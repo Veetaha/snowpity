@@ -1,0 +1,9 @@
+[package]
+name = "censy"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+once_cell = "1.14"
+thiserror = "1.0"
+itertools = "0.10"

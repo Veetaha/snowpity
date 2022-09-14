@@ -1,6 +1,6 @@
 use crate::db::db_constraints;
 use crate::util::prelude::*;
-use crate::util::{FromDb, IntoApp, PgQuery};
+use crate::util::{FromDbOrPanic, IntoAppOrPanic, PgQuery};
 use crate::Result;
 use crate::{err_val, UserError};
 use chrono::prelude::*;
@@ -24,13 +24,13 @@ struct TgChatRecord {
     banned_pattern_mute_duration: Option<PgInterval>,
 }
 
-impl FromDb<TgChatRecord> for TgChat {
-    fn from_db(record: TgChatRecord) -> Self {
+impl FromDbOrPanic<TgChatRecord> for TgChat {
+    fn from_db_or_panic(record: TgChatRecord) -> Self {
         TgChat {
-            id: record.id.into_app(),
+            id: record.id.into_app_or_panic(),
             created_at: record.created_at,
-            created_by: record.created_by.into_app(),
-            banned_pattern_mute_duration: record.banned_pattern_mute_duration.into_app(),
+            created_by: record.created_by.into_app_or_panic(),
+            banned_pattern_mute_duration: record.banned_pattern_mute_duration.into_app_or_panic(),
         }
     }
 }
@@ -56,7 +56,7 @@ impl TgChatsRepo {
             VALUES ($1, $2, $3)",
             chat_id.into_db(),
             created_by.into_db(),
-            banned_pattern_mute_duration.try_into_db()?,
+            banned_pattern_mute_duration.into_db_or_err()?,
         );
 
         query.execute(&self.pool).await.map_err(|err| {
@@ -80,7 +80,7 @@ impl TgChatsRepo {
 
         query
             .fetch_one(&self.pool)
-            .map_ok(IntoApp::into_app)
+            .map_ok(IntoAppOrPanic::into_app_or_panic)
             .err_into()
             .await
     }
@@ -96,7 +96,7 @@ impl TgChatsRepo {
 
         query
             .fetch(&self.pool)
-            .map_ok(IntoApp::into_app)
+            .map_ok(IntoAppOrPanic::into_app_or_panic)
             .try_collect()
             .await
             .map_err(Into::into)
@@ -114,7 +114,7 @@ impl TgChatsRepo {
             "UPDATE tg_chats
             SET banned_pattern_mute_duration = $1
             WHERE id = $2",
-            duration.try_into_db()?,
+            duration.into_db_or_err()?,
             chat_id.to_string(),
         );
         self.execute_or_chat_not_found(chat_id, query).await
