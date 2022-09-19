@@ -1,7 +1,6 @@
 use std::fmt;
 use std::time::Duration;
 
-use crate::banned_words;
 use crate::util::{tracing_err, DynError};
 use backtrace::Backtrace;
 use teloxide::types::ChatId;
@@ -10,6 +9,7 @@ use tracing::trace;
 // use tracing_error::SpanTrace;
 
 pub type Result<T = (), E = Error> = std::result::Result<T, E>;
+pub type DynResult<T = (), E = Box<DynError>> = std::result::Result<T, E>;
 
 /// Macro to reduce the boilerplate of creating crate-level errors.
 /// It directly accepts the body of [`ErrorKind`] variant without type name qualification.
@@ -128,11 +128,11 @@ pub(crate) enum UserError {
     #[error("The specified image tags contain a comma (which is prohibited): {input}")]
     CommaInImageTag { input: String },
 
-    #[error("Запрет на слово уже существует (слово: {word})")]
-    BannedWordAlreadyExists { word: banned_words::Word },
+    // #[error("Запрет на слово уже существует (слово: {word})")]
+    // BannedWordAlreadyExists { word: banned_words::Word },
 
-    #[error("Запрета на слово не существует (слово: {word})")]
-    BannedWordNotFound { word: banned_words::Word },
+    // #[error("Запрета на слово не существует (слово: {word})")]
+    // BannedWordNotFound { word: banned_words::Word },
 
     #[error("Чат уже существует в базе (chat_id: {chat_id})")]
     ChatAlreadyExists { chat_id: ChatId },
@@ -187,10 +187,30 @@ pub(crate) enum DbError {
         source: sqlx::Error,
     },
 
-    #[error("Duration can't be converted to database representation: {duration:?}")]
-    InvalidDuration {
-        duration: Duration,
+    #[error(
+        "Failed to serialize app value into db repr.\n\
+        App type: {app_ty}\n\
+        Db type: {db_ty}\n\
+        App value: {app_val:#?}"
+    )]
+    Serialize {
         source: Box<DynError>,
+        app_ty: &'static str,
+        db_ty: &'static str,
+        app_val: Box<dyn fmt::Debug + Send + Sync>,
+    },
+
+    #[error(
+        "Failed to deserialize db value into app repr.\n\
+        App type: {app_ty}\n\
+        Db type: {db_ty}\n\
+        Db value: {db_val:#?}"
+    )]
+    Deserialize {
+        source: Box<DynError>,
+        app_ty: &'static str,
+        db_ty: &'static str,
+        db_val: Box<dyn fmt::Debug + Send + Sync>,
     },
 }
 

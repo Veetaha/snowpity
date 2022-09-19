@@ -25,6 +25,13 @@ where
             .reply_to_message_id(msg.id)
             .allow_sending_without_reply(true)
     }
+
+    fn reply_help_md<Cmd: teloxide::utils::command::BotCommands>(
+        &self,
+        msg: &Message,
+    ) -> Self::SendMessage {
+        self.reply_chunked(&msg, markdown::escape(&Cmd::descriptions().to_string()))
+    }
 }
 
 #[ext(UserExt)]

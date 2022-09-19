@@ -1,4 +1,5 @@
 use serde::{de::DeserializeOwned, Deserialize};
+use serde_with::serde_as;
 use std::collections::HashMap;
 use teloxide::types::UserId;
 use tracing_subscriber::prelude::*;
@@ -40,12 +41,13 @@ impl Config {
     }
 }
 
+#[serde_as]
 #[derive(Deserialize)]
 pub struct LoggingConfig {
     loki_url: url::Url,
     loki_username: String,
     loki_password: String,
-    #[serde(with = "serde_with::json::nested")]
+    #[serde_as(as = "serde_with::json::JsonString")]
     veebot_log_labels: HashMap<String, String>,
 }
 

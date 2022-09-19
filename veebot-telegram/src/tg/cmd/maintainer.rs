@@ -15,7 +15,7 @@ use teloxide::utils::markdown;
     description = "These commands are supported for the bot maintainer:"
 )]
 pub(crate) enum Cmd {
-    #[command(description = "display this text.")]
+    #[command(description = "display this text")]
     MaintainerHelp,
 
     #[command(description = "display version info")]
@@ -27,11 +27,7 @@ impl tg::cmd::Command for Cmd {
     async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result {
         match self {
             Cmd::MaintainerHelp => {
-                ctx.bot
-                    .reply_chunked(&msg, Cmd::descriptions().to_string())
-                    .disable_web_page_preview(true)
-                    .parse_mode(ParseMode::Html)
-                    .await?;
+                ctx.bot.reply_help_md::<Cmd>(&msg).await?;
             }
             Cmd::Version => {
                 /// Generate the key-value pairs with vergen metadata

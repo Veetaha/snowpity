@@ -1,3 +1,4 @@
+pub(crate) mod admin;
 pub(crate) mod maintainer;
 pub(crate) mod regular;
 use crate::tg;

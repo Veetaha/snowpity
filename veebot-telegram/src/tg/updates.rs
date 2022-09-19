@@ -1,70 +1,87 @@
-use crate::tg::Bot;
+use crate::tg::{Bot, Ctx};
 use crate::util::DynError;
+use crate::DynResult;
 use crate::Error;
 use crate::Result;
 use futures::prelude::*;
+use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::Chat;
 use teloxide::types::{ChatMemberUpdated, Message};
-use teloxide::utils::markdown;
+// use teloxide::utils::markdown;
 use tracing::info;
+use tracing::instrument;
 
-// #[instrument(skip(bot, msg, _db), fields(msg_text = msg.text()))]
-// pub(crate) async fn handle_message(
-//     bot: Bot,
-//     msg: Message,
-//     _db: Arc<db::Repo>,
-// ) -> Result<(), Box<DynError>> {
-//     async {
-//         match &msg.kind {
-//             MessageKind::NewChatMembers(members) => {
-//                 return captcha::handle_new_chat_members(bot, &msg, members).await;
-//             }
+enum PhrasesFilterRequest {
+    ValidateMessage {
+        msg: Message,
+        response: tokio::sync::oneshot::Receiver<censy::ValidationOutput>,
+    },
+    ListBannedPhrases {
+        response: tokio::sync::oneshot::Receiver<Vec<censy::TemplatePhrase>>,
+    },
+}
 
-//             MessageKind::LeftChatMember(member) => {
-//                 return captcha::handle_left_chat_member(bot, &msg, member).await;
-//             }
+struct PhrasesFilterService {
+    db: Arc<crate::db::Repo>,
+}
 
-//             _ => {}
-//         }
+impl PhrasesFilterService {
+    fn phrases_filter_service(
+        requests: impl Stream<Item = PhrasesFilterRequest> + Unpin + Send + 'static,
+    ) -> tokio::task::JoinHandle<()> {
+        tokio::spawn(async {
+            loop {
+                let request = match requests.next().await {
+                    Some(request) => {}
+                    None => {
+                        info!("Phrases filter service is shutting down since the requests stream has ended");
+                        break;
+                    }
+                };
+            }
+        })
+    }
+}
 
-//         // TODO: handling of banned patterns here:
+#[instrument(skip(ctx, msg), fields(msg_text = msg.text()))]
+pub(crate) async fn handle_message(ctx: Arc<Ctx>, msg: Message) -> DynResult {
+    async {
+        // let text = match msg.text() {
+        //     Some(text) => text,
+        //     None => return Ok(()),
+        // };
 
-//         // let text = match msg.text() {
-//         //     Some(text) => text,
-//         //     None => return Ok(()),
-//         // };
+        // let banned_pattern = db
+        //     .tg_chat_banned_words
+        //     .get_all_by_chat_id(msg.chat.id)
+        //     .try_collect::<Vec<_>>()
+        //     .await?
+        //     .into_iter()
+        //     .find(|pattern| pattern.pattern.is_match(text));
 
-//         // let banned_pattern = db
-//         //     .tg_chat_banned_words
-//         //     .get_all_by_chat_id(msg.chat.id)
-//         //     .try_collect::<Vec<_>>()
-//         //     .await?
-//         //     .into_iter()
-//         //     .find(|pattern| pattern.pattern.is_match(text));
+        // let pattern = match banned_pattern {
+        //     Some(pattern) => pattern,
+        //     None => return Ok(()),
+        // };
 
-//         // let pattern = match banned_pattern {
-//         //     Some(pattern) => pattern,
-//         //     None => return Ok(()),
-//         // };
+        // let chat = db.tg_chats.get_by_id(msg.chat.id).await?;
 
-//         // let chat = db.tg_chats.get_by_id(msg.chat.id).await?;
+        // // Reply with a message to warn the user
+        // {
+        //     let pattern = markdown::code_inline(pattern.pattern.as_str());
+        //     let reply_msg = format!("The pattern {pattern} was banned in this chat");
 
-//         // // Reply with a message to warn the user
-//         // {
-//         //     let pattern = markdown::code_inline(pattern.pattern.as_str());
-//         //     let reply_msg = format!("The pattern {pattern} was banned in this chat");
+        //     bot.reply_chunked(&msg, reply_msg).await?;
+        // }
 
-//         //     bot.reply_chunked(&msg, reply_msg).await?;
-//         // }
+        // bot.restrict_chat_member()
 
-//         // // bot.restrict_chat_member()
-
-//         Ok::<_, Error>(())
-//     }
-//     .err_into()
-//     .await
-// }
+        Ok::<_, Error>(())
+    }
+    .err_into()
+    .await
+}
 
 pub(crate) fn filter_message_from_channel<'m>(msg: Message) -> Option<Chat> {
     msg.sender_chat().cloned().filter(|sender_chat| {
@@ -78,7 +95,7 @@ pub(crate) async fn handle_message_from_channel(
     bot: Bot,
     msg: Message,
     sender_chat: Chat,
-) -> Result<(), Box<DynError>> {
+) -> DynResult {
     async {
         info!(
             sender_chat = format_args!("{sender_chat:#?}"),
