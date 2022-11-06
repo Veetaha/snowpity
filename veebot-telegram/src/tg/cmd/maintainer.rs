@@ -5,7 +5,6 @@ use async_trait::async_trait;
 use itertools::Itertools;
 use std::sync::Arc;
 use teloxide::prelude::*;
-use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
 use teloxide::utils::markdown;
 
@@ -27,7 +26,7 @@ impl tg::cmd::Command for Cmd {
     async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result {
         match self {
             Cmd::MaintainerHelp => {
-                ctx.bot.reply_help_md::<Cmd>(&msg).await?;
+                ctx.bot.reply_help_md_escaped::<Cmd>(&msg).await?;
             }
             Cmd::Version => {
                 /// Generate the key-value pairs with vergen metadata

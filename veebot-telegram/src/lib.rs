@@ -13,9 +13,9 @@ pub use config::*;
 
 /// Run the telegram bot processing loop
 pub async fn run(config: Config) -> Result<()> {
-    let db = db::init(config.db).await?;
+    let _ = db::init(config.db);
 
-    tg::run_bot(config.tg, db).await?;
+    tg::run_bot(config.tg).await?;
 
     Ok(())
 }

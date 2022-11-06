@@ -1,3 +1,12 @@
+#![allow(unused)]
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+
 use crate::tg::{Bot, Ctx};
 use crate::util::DynError;
 use crate::DynResult;
@@ -15,10 +24,10 @@ use tracing::instrument;
 enum PhrasesFilterRequest {
     ValidateMessage {
         msg: Message,
-        response: tokio::sync::oneshot::Receiver<censy::ValidationOutput>,
+        // response: tokio::sync::oneshot::Receiver<censy::ValidationOutput>,
     },
     ListBannedPhrases {
-        response: tokio::sync::oneshot::Receiver<Vec<censy::TemplatePhrase>>,
+        // response: tokio::sync::oneshot::Receiver<Vec<censy::TemplatePhrase>>,
     },
 }
 
@@ -31,15 +40,15 @@ impl PhrasesFilterService {
         requests: impl Stream<Item = PhrasesFilterRequest> + Unpin + Send + 'static,
     ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async {
-            loop {
-                let request = match requests.next().await {
-                    Some(request) => {}
-                    None => {
-                        info!("Phrases filter service is shutting down since the requests stream has ended");
-                        break;
-                    }
-                };
-            }
+            // loop {
+            //     let request = match requests.next().await {
+            //         Some(request) => {}
+            //         None => {
+            //             info!("Phrases filter service is shutting down since the requests stream has ended");
+            //             break;
+            //         }
+            //     };
+            // }
         })
     }
 }

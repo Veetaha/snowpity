@@ -26,7 +26,7 @@ where
             .allow_sending_without_reply(true)
     }
 
-    fn reply_help_md<Cmd: teloxide::utils::command::BotCommands>(
+    fn reply_help_md_escaped<Cmd: teloxide::utils::command::BotCommands>(
         &self,
         msg: &Message,
     ) -> Self::SendMessage {
@@ -45,7 +45,7 @@ pub(crate) impl User {
     fn debug_id(&self) -> String {
         let full_name = self.full_name();
         let id = self.id;
-        format!("{id} {full_name}")
+        format!("{full_name} ({id})")
     }
 }
 
@@ -54,6 +54,6 @@ pub(crate) impl Chat {
     fn debug_id(&self) -> String {
         let username = self.username().unwrap_or("{{unknown_chat_username}}");
         let id = self.id;
-        format!("{id} {username}")
+        format!("{username} ({id})")
     }
 }

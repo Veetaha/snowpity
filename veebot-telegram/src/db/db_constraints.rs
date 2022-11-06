@@ -44,21 +44,22 @@ impl DbConstraints {
     }
 
     async fn fetch_all(&self) -> Result<HashSet<String>> {
-        let query = sqlx::query!(
-            r#"
-            SELECT conname as "constraint!"
-            FROM pg_catalog.pg_constraint con
-            INNER JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid
-            INNER JOIN pg_catalog.pg_namespace nsp ON nsp.oid = connamespace
-            WHERE nsp.nspname = 'public'
-        "#
-        );
+        // let query = sqlx::query!(
+        //     r#"
+        //     SELECT conname as "constraint!"
+        //     FROM pg_catalog.pg_constraint con
+        //     INNER JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid
+        //     INNER JOIN pg_catalog.pg_namespace nsp ON nsp.oid = connamespace
+        //     WHERE nsp.nspname = 'public'
+        // "#
+        // );
 
-        query
-            .fetch(&self.pool)
-            .map_ok(|record| record.constraint)
-            .try_collect()
-            .err_into()
-            .await
+        // query
+        //     .fetch(&self.pool)
+        //     .map_ok(|record| record.constraint)
+        //     .try_collect()
+        //     .err_into()
+        //     .await
+        todo!()
     }
 }

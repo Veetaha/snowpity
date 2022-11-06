@@ -7,23 +7,23 @@ use teloxide::types::{ChatId, UserId};
 
 use super::{DbRepresentable, TryFromDbImp, TryIntoDbImp, IntoDb};
 
-impl DbRepresentable for censy::TemplatePhrase {
-    type DbRepr = String;
-}
+// impl DbRepresentable for censy::TemplatePhrase {
+//     type DbRepr = String;
+// }
 
-impl IntoDb for censy::TemplatePhrase {
-    fn into_db(self) -> Self::DbRepr {
-        self.into_string()
-    }
-}
+// impl IntoDb for censy::TemplatePhrase {
+//     fn into_db(self) -> Self::DbRepr {
+//         self.into_string()
+//     }
+// }
 
-impl TryFromDbImp for censy::TemplatePhrase {
-    type Err = censy::TemplatePhraseError;
+// impl TryFromDbImp for censy::TemplatePhrase {
+//     type Err = censy::TemplatePhraseError;
 
-    fn try_from_db_imp(db_val: Self::DbRepr) -> Result<Self, Self::Err> {
-        Self::new(&db_val)
-    }
-}
+//     fn try_from_db_imp(db_val: Self::DbRepr) -> Result<Self, Self::Err> {
+//         Self::new(&db_val)
+//     }
+// }
 
 duplicate! {
     [Ty; [ChatId]; [UserId]]

@@ -6,7 +6,6 @@ use crate::Result;
 use async_trait::async_trait;
 use teloxide::prelude::*;
 use teloxide::utils::command::BotCommands;
-use teloxide::utils::markdown;
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(
@@ -41,7 +40,7 @@ impl tg::cmd::Command for Cmd {
     async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result {
         match self {
             Cmd::AdminHelp => {
-                ctx.bot.reply_help_md::<Cmd>(&msg).await?;
+                ctx.bot.reply_help_md_escaped::<Cmd>(&msg).await?;
             }
             Cmd::AddBannedPhrase(phrase) => {
                 banned_phrases::add_banned_phrase(ctx, msg, phrase).await?;

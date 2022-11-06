@@ -38,7 +38,7 @@ services:
       - "5000:80"
 
     volumes:
-       - ./pgadmin4/servers.json:/pgadmin4/servers.json:ro
+      - ./pgadmin4/servers.json:/pgadmin4/servers.json:ro
       # `pgadmin4` hardcodes the assumption that the user 5050:5050 has write permissions
       # to that directory and stores some mutable configuration state there;
       # It makes it very problematic to bind-mount to host, so we don't do that

@@ -43,7 +43,7 @@ static UNVERIFIED_USERS: SyncLazy<
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CaptchaReplyPayload {
-    expected_user_id: UserId,
+    expected_user: User,
     allowed: bool,
 }
 
@@ -79,10 +79,12 @@ pub(crate) async fn handle_callback_query(
 
         let payload: CaptchaReplyPayload = util::encoding::secure_decode(&callback_data)?;
 
-        let payload_span = info_span!("handle_callback_query_payload", ?payload);
+        let expected_user = payload.expected_user.debug_id().as_str();
+
+        let payload_span = info_span!("handle_callback_query_payload", expected_user,);
 
         async {
-            if payload.expected_user_id != callback_query.from.id {
+            if payload.expected_user.id != callback_query.from.id {
                 info!(
                     user_id = %callback_query.from.id,
                     "User tried to reply to a capcha not meant for them",
@@ -131,7 +133,7 @@ pub(crate) async fn handle_new_chat_members(
     async {
         let image_url: Url = GREETING_ANIMATION_URL.parse().unwrapx();
 
-        let futs = users.iter().map(|user| async {
+        let futs = users.into_iter().map(|user| async {
             let mention = user.md_link();
             let chat_id = msg.chat.id;
             let user_id = user.id;
@@ -154,12 +156,12 @@ pub(crate) async fn handle_new_chat_members(
                 );
 
                 let payload_allow = CaptchaReplyPayload {
-                    expected_user_id: user_id,
+                    expected_user: user.clone(),
                     allowed: true,
                 };
 
                 let payload_deny = CaptchaReplyPayload {
-                    expected_user_id: user_id,
+                    expected_user: user,
                     allowed: false,
                 };
 
@@ -171,7 +173,7 @@ pub(crate) async fn handle_new_chat_members(
                     InlineKeyboardButton::callback("Россия (бан) 🤨", payload_deny),
                 ]];
 
-                bot.restrict_chat_member(chat_id, user.id, ChatPermissions::empty())
+                bot.restrict_chat_member(chat_id, user_id, ChatPermissions::empty())
                     .await?;
 
                 let captcha_message_id = bot

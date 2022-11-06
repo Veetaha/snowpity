@@ -1,11 +1,20 @@
-use crate::tg::{self, cmd, Bot};
+#![allow(unused)]
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+// FIXME: remove this ^
+
+use crate::tg::{self};
 use crate::util::prelude::*;
-use crate::{db, err_val, Result, UserError};
-use async_trait::async_trait;
-use lazy_regex::regex_is_match;
+use crate::Result;
 use teloxide::prelude::*;
-use teloxide::types::ParseMode;
-use teloxide::utils::command::BotCommands;
+// use teloxide::types::ParseMode;
+// use teloxide::utils::command::BotCommands;
 
 pub(crate) async fn add_exceptional_phrase(ctx: &tg::Ctx, msg: &Message, phrase: String) -> Result {
     todo!()
@@ -13,17 +22,18 @@ pub(crate) async fn add_exceptional_phrase(ctx: &tg::Ctx, msg: &Message, phrase:
 pub(crate) async fn add_banned_phrase(ctx: &tg::Ctx, msg: &Message, phrase: String) -> Result {
     let created_by = msg.from().unwrap().id;
 
-    governor::Quota::allow_burst(self, max_burst)
+    // governor::Quota::allow_burst(self, max_burst)
 
     // ctx.db.tg_chat_banned_phrases
     //     .create(msg.chat.id, &phrase, created_by)
     //     .await?;
 
-    ctx.bot.reply_chunked(&msg, "Слово успешно добавлено в список запрещённых").await?;
+    ctx.bot
+        .reply_chunked(&msg, "Слово успешно добавлено в список запрещённых")
+        .await?;
 
     todo!()
 }
-
 
 pub(crate) async fn list_exceptional_phrases(ctx: &tg::Ctx, msg: &Message) -> Result {
     todo!()
@@ -65,7 +75,11 @@ pub(crate) async fn list_banned_phrases(ctx: &tg::Ctx, msg: &Message) -> Result 
     Ok(())
 }
 
-pub(crate) async fn delete_exceptional_phrase(ctx: &tg::Ctx, msg: &Message, phrase: String) -> Result {
+pub(crate) async fn delete_exceptional_phrase(
+    ctx: &tg::Ctx,
+    msg: &Message,
+    phrase: String,
+) -> Result {
     todo!()
 }
 pub(crate) async fn delete_banned_phrase(ctx: &tg::Ctx, msg: &Message, phrase: String) -> Result {

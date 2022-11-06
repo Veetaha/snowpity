@@ -1,9 +1,6 @@
+use std::backtrace::Backtrace;
 use std::fmt;
-use std::time::Duration;
-
 use crate::util::{tracing_err, DynError};
-use backtrace::Backtrace;
-use teloxide::types::ChatId;
 use thiserror::Error;
 use tracing::trace;
 // use tracing_error::SpanTrace;
@@ -134,11 +131,11 @@ pub(crate) enum UserError {
     // #[error("Запрета на слово не существует (слово: {word})")]
     // BannedWordNotFound { word: banned_words::Word },
 
-    #[error("Чат уже существует в базе (chat_id: {chat_id})")]
-    ChatAlreadyExists { chat_id: ChatId },
+    // #[error("Чат уже существует в базе (chat_id: {chat_id})")]
+    // ChatAlreadyExists { chat_id: ChatId },
 
-    #[error("Чат не был найден в базе (chat_id: {chat_id})")]
-    ChatNotFound { chat_id: ChatId },
+    // #[error("Чат не был найден в базе (chat_id: {chat_id})")]
+    // ChatNotFound { chat_id: ChatId },
 
     #[error("Текст для 15.ai не должен содержать цифр вне ARPAbet нотации")]
     FtaiTextContainsNumber,
@@ -275,7 +272,7 @@ impl<T: Into<ErrorKind>> From<T> for Error {
         let backtrace = if !kind.is_user_error() {
             // We don't use `bool::then` adapter to reduce the backtrace
             None
-            // Some(Backtrace::new())
+            // Some(Backtrace::force_capture())
         } else {
             None
         };

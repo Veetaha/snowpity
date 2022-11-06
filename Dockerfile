@@ -1,30 +1,34 @@
+# syntax = docker/dockerfile:1.2
+
 # Possible values: debug or release
 ARG RUST_BUILD_MODE="debug"
 
-FROM lukemathwalker/cargo-chef:0.1.35-rust-1.61.0 AS chef
+FROM rust:1.65.0-bullseye as build_base
+
+ENV CARGO_NET_RETRY=50
+ENV CARGO_TERM_COLOR=always
+
 WORKDIR /app
 
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
 # Conditional block for compilation in either debug or release mode
-FROM chef as rust_debug_builder
+FROM build_base as build_debug
 ENV RUST_RELEASE_FLAG=""
 
-FROM chef as rust_release_builder
+FROM build_base as build_release
 ENV RUST_RELEASE_FLAG="--release"
 
-FROM rust_${RUST_BUILD_MODE}_builder as builder
-COPY --from=planner /app/recipe.json recipe.json
-
-# Build dependencies - this is the caching Docker layer!
-RUN cargo chef cook ${RUST_RELEASE_FLAG} --recipe-path recipe.json
+FROM build_${RUST_BUILD_MODE} as build
 
 # Build application
 COPY . .
 
-RUN cargo build ${RUST_RELEASE_FLAG} -p veebot-telegram --bin veebot-telegram
+RUN --mount=type=cache,sharing=private,target=/usr/local/cargo/git \
+    --mount=type=cache,sharing=private,target=/usr/local/cargo/registry \
+    --mount=type=cache,sharing=private,target=/app/target \
+    cargo build ${RUST_RELEASE_FLAG} -p veebot-telegram --bin veebot-telegram \
+    # The buildkit's cache dir (`target`) isn't part of docker layers, so we need to
+    # copy the binary out of that dir into somewhere where it will be part of the layer.
+    cp /app/target/${RUST_BUILD_MODE}/veebot-telegram /usr/bin/
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:11-slim AS runtime
@@ -34,14 +38,17 @@ ARG RUST_BUILD_MODE
 
 WORKDIR /app
 
-COPY --from=builder /app/target/${RUST_BUILD_MODE}/veebot-telegram /usr/local/bin
+COPY scripts/install-runtime-deps.sh /app
 
-# Not an expert in SSL, but this seems to be required for all SSL-encrypted communication.
-# Thanks to this guy for help:
-# https://github.com/debuerreotype/docker-debian-artifacts/issues/15#issuecomment-634423712
+# The apt caching setup is inspired by https://vsupalov.com/buildkit-cache-mount-dockerfile/
+#
+# Debian docker image contains configurations to delete cached files after a successful install
+# Using a cache mount would not make sense with this configuration in place, as the files would
+# be deleted during the install step.
+RUN rm -f /etc/apt/apt.conf.d/docker-clean
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates libopus0 && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/var/cache/apt /app/install-runtime-deps.sh
 
-ENTRYPOINT ["/usr/local/bin/veebot-telegram"]
+COPY --from=builder /usr/bin/veebot-telegram /usr/bin
+
+ENTRYPOINT ["/usr/bin/veebot-telegram"]
