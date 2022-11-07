@@ -13,7 +13,7 @@ terraform {
   required_providers {
     hcloud = {
       source  = "hetznercloud/hcloud"
-      version = "~> 1.34.3"
+      version = "~> 1.35.2"
     }
 
     cloudinit = {
@@ -23,7 +23,7 @@ terraform {
 
     grafana = {
       source  = "grafana/grafana"
-      version = "~> 1.24.0"
+      version = "~> 1.30.0"
     }
 
     dockerhub = {
