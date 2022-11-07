@@ -1,6 +1,6 @@
 use crate::db::db_constraints;
 use crate::util::prelude::*;
-use crate::util::{FromDb, IntoApp, PgQuery};
+use crate::util::{TryFromDb, TryFromDb, PgQuery};
 use crate::Result;
 use crate::{err_val, UserError};
 use chrono::prelude::*;
@@ -24,13 +24,13 @@ struct TgChatRecord {
     banned_pattern_mute_duration: Option<PgInterval>,
 }
 
-impl FromDb<TgChatRecord> for TgChat {
-    fn from_db(record: TgChatRecord) -> Self {
+impl TryFromDb<TgChatRecord> for TgChat {
+    fn unwrap_from_db(record: TgChatRecord) -> Self {
         TgChat {
-            id: record.id.into_app(),
+            id: record.id.into_app_or_panic(),
             created_at: record.created_at,
-            created_by: record.created_by.into_app(),
-            banned_pattern_mute_duration: record.banned_pattern_mute_duration.into_app(),
+            created_by: record.created_by.into_app_or_panic(),
+            banned_pattern_mute_duration: record.banned_pattern_mute_duration.into_app_or_panic(),
         }
     }
 }
@@ -51,13 +51,42 @@ impl TgChatsRepo {
         created_by: UserId,
         banned_pattern_mute_duration: Option<Duration>,
     ) -> Result {
-        let query = sqlx::query!(
-            "INSERT INTO tg_chats (id, created_by, banned_pattern_mute_duration)
-            VALUES ($1, $2, $3)",
-            chat_id.into_db(),
-            created_by.into_db(),
-            banned_pattern_mute_duration.try_into_db()?,
-        );
+
+// Recursive expansion of query! macro
+// ====================================
+
+{
+    {
+        {
+
+            use ::sqlx::ty_match::{MatchBorrowExt as _, WrapSameExt as _};
+            use ::sqlx::Arguments as _;
+            let arg0 = &(chat_id.into_db());
+            let arg1 = &(created_by.into_db());
+            let arg2 = &(banned_pattern_mute_duration.try_into_db()?);
+            let mut query_args =  <sqlx::postgres::Postgres as ::sqlx::database::HasArguments> ::Arguments::default();
+            query_args.reserve(
+                3usize,
+                0 + ::sqlx::encode::Encode::<sqlx::postgres::Postgres>::size_hint(arg0)
+                    + ::sqlx::encode::Encode::<sqlx::postgres::Postgres>::size_hint(arg1)
+                    + ::sqlx::encode::Encode::<sqlx::postgres::Postgres>::size_hint(arg2),
+            );
+            query_args.add(arg0);
+            query_args.add(arg1);
+            query_args.add(arg2);
+            ::sqlx::query_with:: <sqlx::postgres::Postgres,_>("INSERT INTO tg_chats (id, created_by, banned_pattern_mute_duration)\n            VALUES ($1, $2, $3)",query_args)
+        }
+    }
+}
+
+
+        // let query = sqlx::query!(
+        //     "INSERT INTO tg_chats (id, created_by, banned_pattern_mute_duration)
+        //     VALUES ($1, $2, $3)",
+        //     chat_id.into_db(),
+        //     created_by.into_db(),
+        //     banned_pattern_mute_duration.try_into_db()?,
+        // );
 
         query.execute(&self.pool).await.map_err(|err| {
             if err.is_constraint_violation(db_constraints::TG_CHATS_PK) {
@@ -80,7 +109,7 @@ impl TgChatsRepo {
 
         query
             .fetch_one(&self.pool)
-            .map_ok(IntoApp::into_app)
+            .map_ok(IntoAppOrErr::into_app_or_panic)
             .err_into()
             .await
     }
@@ -96,7 +125,7 @@ impl TgChatsRepo {
 
         query
             .fetch(&self.pool)
-            .map_ok(IntoApp::into_app)
+            .map_ok(IntoAppOrErr::into_app_or_panic)
             .try_collect()
             .await
             .map_err(Into::into)

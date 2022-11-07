@@ -42,7 +42,7 @@ To deploy the bot, you need to manually create several accounts at:
 
 You also need to retrieve the bot token from [@BotFather] in Telegram.
 
-Then, create a file `deployment/prod/terraform.tfvars` with the secrets and credentials:
+Then, create a file `deployment/project/terraform.tfvars` with the secrets and credentials:
 
 ```hcl
 tg_bot_token          = "9999999999:AAaa9-9AAaa99AAaa99AAaa99AAaa99AAaa"
@@ -55,13 +55,13 @@ docker_password       = "password"
 After that, you will be able to run the following command to deploy the entire stack with the Dockerhub repo, Hetzner server and Grafana Cloud Stack.
 
 ```bash
-cd deployment/prod && terraform apply
+cd deployment/project && terraform apply
 ```
 
 To clean everything up and get rid of the bot run:
 
 ```bash
-cd deployment/prod && terraform destroy
+cd deployment/project && terraform destroy
 ```
 
 To destroy only part of the stack you can use [`--target` parameter][tf-targeting]. For example, to remove all Hetzner infrastructure run this:
@@ -69,7 +69,7 @@ To destroy only part of the stack you can use [`--target` parameter][tf-targetin
 > ⚠️ Warning! This will destroy the NAS volume of the database, basically resulting in data loss!
 
 ```bash
-cd deployment/prod terraform destroy --target module.hetzner
+cd deployment/project terraform destroy --target module.hetzner
 ```
 
 [terraform]: https://www.terraform.io/

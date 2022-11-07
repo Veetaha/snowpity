@@ -9,6 +9,9 @@ locals {
     LOKI_USERNAME = var.loki_username
     LOKI_PASSWORD = var.loki_password
 
+    PG_PASSWORD      = var.pg_password
+    PGADMIN_PASSWORD = var.pgadmin_password
+
     PGDATA = local.pg_data
 
     VEEBOT_TG_IMAGE_TAG = var.veebot_tg_image_tag
@@ -19,13 +22,13 @@ locals {
 
   location           = "fsn1"
   ssh_public_key     = file("~/.ssh/id_rsa.pub")
-  hostname           = "hetzner-master"
+  hostname           = "hetzner-master${module.workspace.id_suffix}"
   volume_mount_point = "/mnt/master"
   volume_fs          = "ext4"
-  pg_data            = "${local.volume_mount_point}/data/postgres"
 
-  docker_compose_target_path = "/var/app/docker-compose.yml"
-  env_file_path              = "/var/app/.env"
+  pg_data = "${local.volume_mount_point}/data/postgres"
+
+  env_file_path = "/var/app/.env"
 
   templates = {
     "grafana-agent.yaml" = {
@@ -56,7 +59,8 @@ locals {
   }
 
   non_templates = {
-    "${local.docker_compose_target_path}" = file("${path.module}/../../../docker-compose.yml"),
+    "/var/app/docker-compose.yml" = file("${path.module}/../../../docker-compose.yml"),
+    "/var/app/pgadmin4/servers.json" = file("${path.module}/../../../pgadmin4/servers.json"),
 
     "${local.env_file_path}" = join("\n", [for k, v in local.veebot_tg_env_vars : "${k}=${v}"]),
   }
@@ -85,6 +89,10 @@ locals {
   }
 }
 
+module "workspace" {
+  source = "../workspace"
+}
+
 data "cloudinit_config" "master" {
   part {
     content = templatefile("${path.module}/templates/user_data.yaml", local.user_data_vars)
@@ -94,20 +102,26 @@ data "cloudinit_config" "master" {
 resource "hcloud_server" "master" {
   name        = local.hostname
   image       = "ubuntu-22.04"
-  server_type = "cpx21"
+  server_type = module.workspace.kind == "prod" ? "cpx21" : "cx11"
   location    = local.location
   ssh_keys    = [hcloud_ssh_key.admin.id]
   user_data   = data.cloudinit_config.master.rendered
+
+  public_net {
+    # Not having IPv4 enabled reduces the cost
+    ipv4_enabled = false
+    ipv6_enabled = true
+  }
 }
 
 resource "hcloud_ssh_key" "admin" {
-  name       = "admin"
+  name       = "admin${module.workspace.id_suffix}"
   public_key = local.ssh_public_key
 }
 
 resource "hcloud_volume" "master" {
-  name     = "master"
-  size     = 50
+  name     = "master${module.workspace.id_suffix}"
+  size     = module.workspace.kind == "prod" ? 50 : 10
   location = local.location
 }
 

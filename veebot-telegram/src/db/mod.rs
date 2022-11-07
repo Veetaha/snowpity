@@ -2,20 +2,20 @@
 #![allow(unused)]
 
 mod db_constraints;
-mod tg_chat_banned_patterns;
-mod tg_chats;
+// mod tg_chat_banned_words;
+// mod tg_chats;
 
 use crate::{err_ctx, DbConfig, DbError, Result};
 use dptree::di::DependencyMap;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 
-pub(crate) use tg_chat_banned_patterns::*;
-pub(crate) use tg_chats::*;
+// pub(crate) use tg_chat_banned_words::*;
+// pub(crate) use tg_chats::*;
 
 pub(crate) struct Repo {
-    pub(crate) tg_chats: TgChatsRepo,
-    pub(crate) tg_chat_banned_patterns: TgChatBannedPatternsRepo,
+    // pub(crate) tg_chats: TgChatsRepo,
+    // pub(crate) tg_chat_banned_words: TgChatBannedWordsRepo,
 }
 
 pub(crate) async fn init(config: DbConfig) -> Result<Repo> {
@@ -39,7 +39,7 @@ pub(crate) async fn init(config: DbConfig) -> Result<Repo> {
         .await;
 
     Ok(Repo {
-        tg_chat_banned_patterns: TgChatBannedPatternsRepo::new(pool.clone()),
-        tg_chats: TgChatsRepo::new(pool),
+        // tg_chat_banned_words: TgChatBannedWordsRepo::new(pool.clone()),
+        // tg_chats: TgChatsRepo::new(pool),
     })
 }

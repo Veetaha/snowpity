@@ -21,38 +21,6 @@ pub(crate) fn repo_root() -> PathBuf {
         .to_owned()
 }
 
-// TODO: when adding pgadmin support, we need to create the pgadmin user on host
-// to be able to bind map pgadmin's configuration files
-//
-// fn linux_user_exists(username: &str) -> Result<bool> {
-//     let code = std::process::Command::new("id")
-//         .arg("-u")
-//         .arg(username)
-//         .stdin(Stdio::null())
-//         .stdout(Stdio::null())
-//         .stderr(Stdio::null())
-//         .status()?
-//         .code();
-
-//     match code {
-//         Some(0) => Ok(true),
-//         Some(1) => Ok(false),
-//         _ => anyhow::bail!("unexpected exit code from `id`: {code:?}"),
-//     }
-// }
-
-// #[instrument]
-// fn create_linux_user_if_not_exists(username: &str) -> Result<()> {
-//     if linux_user_exists(username)? {
-//         tracing::debug!("user already exists");
-//         return Ok(());
-//     }
-
-//     run!("useradd", username)?;
-
-//     Ok(())
-// }
-
 fn read_silent_trimmed(cmd: devx_cmd::Cmd) -> Result<String> {
     Ok({ cmd }.log_cmd(None).read()?.trim().to_string())
 }

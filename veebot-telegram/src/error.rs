@@ -1,15 +1,12 @@
-use std::fmt;
-use std::time::Duration;
-
 use crate::util::{tracing_err, DynError};
-use backtrace::Backtrace;
-use regex::Regex;
-use teloxide::types::ChatId;
+use std::backtrace::Backtrace;
+use std::fmt;
 use thiserror::Error;
 use tracing::trace;
 // use tracing_error::SpanTrace;
 
 pub type Result<T = (), E = Error> = std::result::Result<T, E>;
+pub type DynResult<T = (), E = Box<DynError>> = std::result::Result<T, E>;
 
 /// Macro to reduce the boilerplate of creating crate-level errors.
 /// It directly accepts the body of [`ErrorKind`] variant without type name qualification.
@@ -128,20 +125,17 @@ pub(crate) enum UserError {
     #[error("The specified image tags contain a comma (which is prohibited): {input}")]
     CommaInImageTag { input: String },
 
-    // #[error("Invalid regular expression: {input:?}")]
-    // InvalidRegex { input: String, source: regex::Error },
-    #[error("Requested pattern already exists in the database: {pattern}")]
-    BannedPatternAlreadyExists { pattern: Regex },
+    // #[error("Запрет на слово уже существует (слово: {word})")]
+    // BannedWordAlreadyExists { word: banned_words::Word },
 
-    #[error("Requested pattern was not found in the database: {pattern}")]
-    BannedPatternNotFound { pattern: Regex },
+    // #[error("Запрета на слово не существует (слово: {word})")]
+    // BannedWordNotFound { word: banned_words::Word },
 
-    #[error("Requested chat already exists in the database (chat_id: {chat_id})")]
-    ChatAlreadyExists { chat_id: ChatId },
+    // #[error("Чат уже существует в базе (chat_id: {chat_id})")]
+    // ChatAlreadyExists { chat_id: ChatId },
 
-    #[error("Requested chat was not found in the database (chat_id: {chat_id})")]
-    ChatNotFound { chat_id: ChatId },
-
+    // #[error("Чат не был найден в базе (chat_id: {chat_id})")]
+    // ChatNotFound { chat_id: ChatId },
     #[error("Текст для 15.ai не должен содержать цифр вне ARPAbet нотации")]
     FtaiTextContainsNumber,
 
@@ -153,6 +147,9 @@ pub(crate) enum UserError {
 
     #[error("Команда для 15.ai должна иметь название персонажа и текст через запятую: <персонаж>,<текст>")]
     FtaiInvalidFormat,
+
+    #[error("No reply message in describe command")]
+    NoReplyMessageInDescribe,
 }
 
 /// Errors at the layer of the HTTP API
@@ -189,10 +186,30 @@ pub(crate) enum DbError {
         source: sqlx::Error,
     },
 
-    #[error("Duration can't be converted to database representation: {duration:?}")]
-    InvalidDuration {
-        duration: Duration,
+    #[error(
+        "Failed to serialize app value into db repr.\n\
+        App type: {app_ty}\n\
+        Db type: {db_ty}\n\
+        App value: {app_val:#?}"
+    )]
+    Serialize {
         source: Box<DynError>,
+        app_ty: &'static str,
+        db_ty: &'static str,
+        app_val: Box<dyn fmt::Debug + Send + Sync>,
+    },
+
+    #[error(
+        "Failed to deserialize db value into app repr.\n\
+        App type: {app_ty}\n\
+        Db type: {db_ty}\n\
+        Db value: {db_val:#?}"
+    )]
+    Deserialize {
+        source: Box<DynError>,
+        app_ty: &'static str,
+        db_ty: &'static str,
+        db_val: Box<dyn fmt::Debug + Send + Sync>,
     },
 }
 
@@ -257,7 +274,7 @@ impl<T: Into<ErrorKind>> From<T> for Error {
         let backtrace = if !kind.is_user_error() {
             // We don't use `bool::then` adapter to reduce the backtrace
             None
-            // Some(Backtrace::new())
+            // Some(Backtrace::force_capture())
         } else {
             None
         };

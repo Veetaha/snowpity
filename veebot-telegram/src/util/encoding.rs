@@ -45,8 +45,19 @@ pub(crate) fn from_json_string<'a, T: Deserialize<'a>>(input: &'a str) -> Result
     }))
 }
 
+pub(crate) fn to_json_string_pretty<T: Serialize + ?Sized>(data: &T) -> String {
+    to_json_string_imp(data, serde_json::to_string_pretty)
+}
+
 pub(crate) fn to_json_string<T: Serialize + ?Sized>(data: &T) -> String {
-    serde_json::to_string(&data).unwrap_or_else(|err| {
+    to_json_string_imp(data, serde_json::to_string)
+}
+
+fn to_json_string_imp<T: Serialize + ?Sized>(
+    data: &T,
+    imp: fn(&T) -> serde_json::Result<String>,
+) -> String {
+    imp(&data).unwrap_or_else(|err| {
         let data_type = type_name::<T>();
         panic!(
             "Can't serialize data of type {data_type}: {}",

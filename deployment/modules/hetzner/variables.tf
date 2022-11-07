@@ -32,3 +32,13 @@ variable "loki_password" {
   type      = string
   sensitive = true
 }
+
+variable "pg_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "pgadmin_password" {
+  type      = string
+  sensitive = true
+}

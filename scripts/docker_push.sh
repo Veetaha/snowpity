@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# TODO: rewrite this in Rust
+# TODO: rewrite this in nushell
 
 set -eu -o pipefail
 

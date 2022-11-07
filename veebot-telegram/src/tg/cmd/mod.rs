@@ -1,3 +1,4 @@
+pub(crate) mod admin;
 pub(crate) mod maintainer;
 pub(crate) mod regular;
 use crate::tg;
@@ -10,7 +11,7 @@ use std::fmt;
 use std::sync::Arc;
 use teloxide::types::{Message, User};
 use teloxide::utils::markdown;
-use tracing::{info_span, warn, warn_span};
+use tracing::{debug, info_span, warn, warn_span};
 use tracing_futures::Instrument;
 
 #[async_trait]
@@ -31,6 +32,8 @@ pub(crate) fn handle<'a, C: Command>(
         );
 
         let fut = async move {
+            debug!("Processing command");
+
             let result = cmd.handle(&ctx, &msg).await;
             if let Err(err) = &result {
                 let span = warn_span!("err", err = tracing_err(err), id = err.id.as_str());
