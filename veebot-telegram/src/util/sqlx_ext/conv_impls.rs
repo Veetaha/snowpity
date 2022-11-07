@@ -5,7 +5,7 @@ use sqlx::postgres::types::PgInterval;
 use std::time::Duration;
 use teloxide::types::{ChatId, UserId};
 
-use super::{DbRepresentable, TryFromDbImp, TryIntoDbImp, IntoDb};
+use super::{DbRepresentable, IntoDb, TryFromDbImp, TryIntoDbImp};
 
 // impl DbRepresentable for censy::TemplatePhrase {
 //     type DbRepr = String;

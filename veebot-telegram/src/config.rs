@@ -56,7 +56,7 @@ impl LoggingConfig {
         from_env_or_panic("")
     }
 
-    pub fn init_logging(self) {
+    pub fn init_logging(self) -> tokio::task::JoinHandle<()> {
         let env_filter = tracing_subscriber::EnvFilter::from_env("VEEBOT_LOG");
 
         let fmt = tracing_subscriber::fmt::layer()
@@ -83,13 +83,15 @@ impl LoggingConfig {
 
         let (loki, task) = tracing_loki::layer(loki_url, labels, HashMap::new()).unwrap();
 
-        tokio::spawn(task);
+        let join_handle = tokio::spawn(task);
 
         tracing_subscriber::registry()
             .with(fmt)
             .with(loki)
             .with(env_filter)
             .init();
+
+        join_handle
     }
 }
 

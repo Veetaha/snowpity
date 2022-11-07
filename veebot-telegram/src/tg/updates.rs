@@ -13,6 +13,7 @@ use crate::DynResult;
 use crate::Error;
 use crate::Result;
 use futures::prelude::*;
+use std::future::IntoFuture;
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::Chat;
@@ -112,8 +113,9 @@ pub(crate) async fn handle_message_from_channel(
         );
 
         futures::try_join!(
-            bot.delete_message(msg.chat.id, msg.id),
-            bot.ban_chat_sender_chat(msg.chat.id, sender_chat.id),
+            bot.delete_message(msg.chat.id, msg.id).into_future(),
+            bot.ban_chat_sender_chat(msg.chat.id, sender_chat.id)
+                .into_future(),
         )?;
 
         Ok::<_, Error>(())

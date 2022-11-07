@@ -11,7 +11,7 @@ use std::fmt;
 use std::sync::Arc;
 use teloxide::types::{Message, User};
 use teloxide::utils::markdown;
-use tracing::{info_span, warn, warn_span, debug};
+use tracing::{debug, info_span, warn, warn_span};
 use tracing_futures::Instrument;
 
 #[async_trait]

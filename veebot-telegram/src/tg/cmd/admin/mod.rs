@@ -9,7 +9,7 @@ use teloxide::utils::command::BotCommands;
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(
-    rename = "snake_case",
+    rename_rule = "snake_case",
     description = "Следующие команды доступны для администраторов:"
 )]
 pub(crate) enum Cmd {

@@ -2,7 +2,7 @@ use assert_matches::assert_matches;
 use easy_ext::ext;
 use teloxide::payloads::setters::*;
 use teloxide::prelude::*;
-use teloxide::types::{Chat, Message, MessageCommon, MessageKind, User};
+use teloxide::types::{Chat, Message, MessageCommon, MessageKind, User, MessageId};
 use teloxide::utils::markdown;
 
 #[ext(MessageKindExt)]
@@ -52,8 +52,18 @@ pub(crate) impl User {
 #[ext(ChatExt)]
 pub(crate) impl Chat {
     fn debug_id(&self) -> String {
+        let title = self.title().unwrap_or("{{unknown_chat_title}}");
         let username = self.username().unwrap_or("{{unknown_chat_username}}");
         let id = self.id;
-        format!("{username} ({id})")
+        format!("{title} ({username}, {id})")
+    }
+}
+
+#[ext(MessageIdExt)]
+pub(crate) impl MessageId {
+    /// FIXME: this is a temporary gag. Use native display impl once the following
+    /// issue is closed in teloxide: https://github.com/teloxide/teloxide/issues/760
+    fn to_tracing(&self) -> &dyn tracing::Value {
+        &self.0
     }
 }

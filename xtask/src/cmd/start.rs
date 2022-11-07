@@ -18,10 +18,8 @@ impl cmd::Cmd for Start {
 
         // if pg_admin_dir.exists() {
 
-
         //     fs::create_dir_all(pg_admin_dir);
         //     // std::os::unix::fs::chown(dir, uid, gid)
-
 
         //     std::sys::fs::chown(path, uid, gid);
         // }

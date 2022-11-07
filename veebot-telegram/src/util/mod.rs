@@ -26,6 +26,7 @@ pub(crate) mod prelude {
     // pub(crate) use super::teloxide_ext::MessageKindExt as _;
     pub(crate) use super::reqwest_ext::ReqwestBuilderExt as _;
     pub(crate) use super::teloxide_ext::ChatExt as _;
+    pub(crate) use super::teloxide_ext::MessageIdExt as _;
     pub(crate) use super::teloxide_ext::UserExt as _;
     pub(crate) use super::teloxide_ext::UtilRequesterExt as _;
 }

@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use teloxide::prelude::*;
 use teloxide::types::{
-    ChatPermissions, InlineKeyboardButton, InputFile, Message, ReplyMarkup, User,
+    ChatPermissions, InlineKeyboardButton, InputFile, Message, MessageId, ReplyMarkup, User,
 };
 use teloxide::utils::markdown;
 use tokio::sync::oneshot;
@@ -38,12 +38,12 @@ const CAPTCHA_BAN_DURATION: Duration = Duration::from_secs(60 * 2);
 const GREETING_ANIMATION_URL: &str = "https://derpicdn.net/img/2021/12/19/2767482/small.gif";
 
 static UNVERIFIED_USERS: SyncLazy<
-    SyncMutex<HashMap<(ChatId, UserId), (i32, oneshot::Sender<()>)>>,
+    SyncMutex<HashMap<(ChatId, UserId), (User, MessageId, oneshot::Sender<()>)>>,
 > = SyncLazy::new(Default::default);
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CaptchaReplyPayload {
-    expected_user: User,
+    expected_user_id: UserId,
     allowed: bool,
 }
 
@@ -52,6 +52,7 @@ struct CaptchaReplyPayload {
     fields(
         from = callback_query.from.debug_id().as_str(),
         msg = callback_query.message.as_ref().and_then(|msg| msg.text()),
+        chat = callback_query.message.as_ref().map(|msg| msg.chat.debug_id()).as_deref().unwrap_or("{{unkown_chat}}"),
     )
 )]
 pub(crate) async fn handle_callback_query(
@@ -61,30 +62,37 @@ pub(crate) async fn handle_callback_query(
     async {
         debug!("Processing callback query");
 
-        let callback_data = match callback_query.data {
-            Some(data) => data,
-            None => {
-                warn!("Received empty callback data");
-                return Ok(());
-            }
+        let Some(callback_data) = callback_query.data else {
+            warn!("Received empty callback data");
+            return Ok(());
         };
 
-        let captcha_message = match callback_query.message {
-            Some(message) => message,
-            None => {
-                warn!("Received empty callback message");
-                return Ok(());
-            }
+        let Some(captcha_message) = callback_query.message else {
+            warn!("Received empty callback message");
+            return Ok(());
         };
 
         let payload: CaptchaReplyPayload = util::encoding::secure_decode(&callback_data)?;
 
-        let expected_user = payload.expected_user.debug_id().as_str();
+        let user_id = callback_query.from.id;
+        let chat_id = captcha_message.chat.id;
 
-        let payload_span = info_span!("handle_callback_query_payload", expected_user,);
+        let payload_span = {
+            let expected_user = UNVERIFIED_USERS
+                .lock()
+                .get(&(chat_id, user_id))
+                .map(|(user, _, _)| user.debug_id())
+                .unwrap_or_else(|| "{{user_not_in_unverified_users_map}}".to_owned());
+
+            info_span!(
+                "handle_callback_query_payload",
+                expected_user = expected_user.as_str(),
+                allowed = payload.allowed,
+            )
+        };
 
         async {
-            if payload.expected_user.id != callback_query.from.id {
+            if payload.expected_user_id != callback_query.from.id {
                 info!(
                     user_id = %callback_query.from.id,
                     "User tried to reply to a capcha not meant for them",
@@ -92,10 +100,7 @@ pub(crate) async fn handle_callback_query(
                 return Ok(());
             }
 
-            let user_id = callback_query.from.id;
-            let chat_id = captcha_message.chat.id;
-
-            cancel_captcha_confirmation(&bot, chat_id, user_id).await?;
+            finalize_captcha_confirmation(&bot, chat_id, user_id).await?;
 
             if !payload.allowed {
                 info!("User chose wrong answer in captcha, kicking them...");
@@ -105,12 +110,9 @@ pub(crate) async fn handle_callback_query(
 
             info!("User passed captcha");
 
-            let default_perms = match bot.get_chat(chat_id).await?.permissions() {
-                Some(perms) => perms,
-                None => {
-                    warn!("Could not get default chat member permissions",);
-                    return Ok(());
-                }
+            let Some(default_perms) = bot.get_chat(chat_id).await?.permissions() else {
+                warn!("Could not get default chat member permissions");
+                return Ok(());
             };
 
             bot.restrict_chat_member(chat_id, user_id, default_perms)
@@ -125,6 +127,7 @@ pub(crate) async fn handle_callback_query(
     .map_err(Into::into)
 }
 
+#[instrument(skip_all, fields(chat = msg.chat.debug_id().as_str()))]
 pub(crate) async fn handle_new_chat_members(
     bot: Bot,
     msg: Message,
@@ -133,15 +136,13 @@ pub(crate) async fn handle_new_chat_members(
     async {
         let image_url: Url = GREETING_ANIMATION_URL.parse().unwrapx();
 
-        let futs = users.into_iter().map(|user| async {
-            let mention = user.md_link();
-            let chat_id = msg.chat.id;
-            let user_id = user.id;
-            let chat_username = msg.chat.username();
-
-            let span = tracing::info_span!("handle_new_chat_members", %chat_id, chat_username, %mention);
-
+        let futs = users.into_iter().map(|user| {
+            let span = tracing::info_span!("user", user = user.debug_id().as_str());
             async {
+                let mention = user.md_link();
+                let chat_id = msg.chat.id;
+                let user_id = user.id;
+
                 let caption = format!(
                     "{}{}{}{}",
                     mention,
@@ -151,17 +152,18 @@ pub(crate) async fn handle_new_chat_members(
                     ),
                     "*Кто должен победить в войне?*",
                     markdown::escape(&format!(
-                        "\n\nУ тебя {CAPTCHA_DURATION_TEXT} на правильный ответ, иначе будешь кикнут.",
+                        "\n\nУ тебя {CAPTCHA_DURATION_TEXT} на правильный ответ, \
+                        иначе будешь кикнут.",
                     ))
                 );
 
                 let payload_allow = CaptchaReplyPayload {
-                    expected_user: user.clone(),
+                    expected_user_id: user_id,
                     allowed: true,
                 };
 
                 let payload_deny = CaptchaReplyPayload {
-                    expected_user: user,
+                    expected_user_id: user_id,
                     allowed: false,
                 };
 
@@ -173,7 +175,7 @@ pub(crate) async fn handle_new_chat_members(
                     InlineKeyboardButton::callback("Россия (бан) 🤨", payload_deny),
                 ]];
 
-                bot.restrict_chat_member(chat_id, user_id, ChatPermissions::empty())
+                bot.restrict_chat_member(chat_id, user.id, ChatPermissions::empty())
                     .await?;
 
                 let captcha_message_id = bot
@@ -204,7 +206,7 @@ pub(crate) async fn handle_new_chat_members(
                     );
 
                     let (delete_message_result, kick_result) = futures::join!(
-                        cancel_captcha_confirmation(&bot, chat_id, user_id),
+                        finalize_captcha_confirmation(&bot, chat_id, user_id),
                         kick_user_due_to_captcha(&bot, chat_id, user_id)
                     );
 
@@ -224,12 +226,11 @@ pub(crate) async fn handle_new_chat_members(
 
                 UNVERIFIED_USERS
                     .lock()
-                    .insert((chat_id, user_id), (captcha_message_id, send));
+                    .insert((chat_id, user_id), (user, captcha_message_id, send));
 
-                Ok::<_, Error>(())
+                Ok::<(), Error>(())
             }
             .instrument(span)
-            .await
         });
 
         future::join_all(futs)
@@ -243,7 +244,7 @@ pub(crate) async fn handle_new_chat_members(
     .await
 }
 
-#[instrument(skip(bot))]
+#[instrument(skip_all)]
 async fn kick_user_due_to_captcha(bot: &Bot, chat_id: ChatId, user_id: UserId) -> Result {
     let ban_timeout = Utc::now() + chrono::Duration::from_std(CAPTCHA_BAN_DURATION).unwrapx();
 
@@ -256,6 +257,10 @@ async fn kick_user_due_to_captcha(bot: &Bot, chat_id: ChatId, user_id: UserId) -
     Ok(())
 }
 
+#[instrument(skip_all, fields(
+    chat = msg.chat.debug_id().as_str(),
+    user = user.debug_id().as_str(),
+))]
 pub(crate) async fn handle_left_chat_member(
     bot: Bot,
     msg: Message,
@@ -265,9 +270,12 @@ pub(crate) async fn handle_left_chat_member(
         let user_id = user.id;
         let chat_id = msg.chat.id;
 
-        info!("Chat member left, canceling captcha confirmation if they didn't pass it");
+        info!(
+            "Chat member left, canceling captcha confirmation \
+            if one is still pending for them"
+        );
 
-        cancel_captcha_confirmation(&bot, chat_id, user_id).await?;
+        finalize_captcha_confirmation(&bot, chat_id, user_id).await?;
 
         Ok::<_, Error>(())
     }
@@ -275,25 +283,22 @@ pub(crate) async fn handle_left_chat_member(
     .await
 }
 
-#[instrument(skip(bot))]
-async fn cancel_captcha_confirmation(bot: &Bot, chat_id: ChatId, user_id: UserId) -> Result {
+#[instrument(skip_all)]
+async fn finalize_captcha_confirmation(bot: &Bot, chat_id: ChatId, user_id: UserId) -> Result {
     let result = UNVERIFIED_USERS.lock().remove(&(chat_id, user_id));
 
-    let (msg_id, send) = match result {
-        Some(res) => res,
-        None => {
-            debug!("User was not in unverified users map, thus no captcha to cancel");
-            return Ok(());
-        }
+    let Some((_, msg_id, send)) = result else {
+        debug!("User was not in unverified users map, thus no captcha to cancel");
+        return Ok(());
     };
 
     if let Err(()) = send.send(()) {
-        debug!("Failed to cancel captcha time out (receiver dropped)");
+        debug!("Captcha time out task already finished (receiver dropped)");
     }
 
     info!(
-        %msg_id,
-        "Cancelled captcha confirmation, deleting captcha message"
+        msg_id = msg_id.to_tracing(),
+        "Finalized captcha confirmation, deleting captcha message"
     );
 
     bot.delete_message(chat_id, msg_id).await?;

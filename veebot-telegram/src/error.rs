@@ -1,6 +1,6 @@
+use crate::util::{tracing_err, DynError};
 use std::backtrace::Backtrace;
 use std::fmt;
-use crate::util::{tracing_err, DynError};
 use thiserror::Error;
 use tracing::trace;
 // use tracing_error::SpanTrace;
@@ -136,7 +136,6 @@ pub(crate) enum UserError {
 
     // #[error("Чат не был найден в базе (chat_id: {chat_id})")]
     // ChatNotFound { chat_id: ChatId },
-
     #[error("Текст для 15.ai не должен содержать цифр вне ARPAbet нотации")]
     FtaiTextContainsNumber,
 
@@ -148,6 +147,9 @@ pub(crate) enum UserError {
 
     #[error("Команда для 15.ai должна иметь название персонажа и текст через запятую: <персонаж>,<текст>")]
     FtaiInvalidFormat,
+
+    #[error("No reply message in describe command")]
+    NoReplyMessageInDescribe,
 }
 
 /// Errors at the layer of the HTTP API

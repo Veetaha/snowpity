@@ -1,16 +1,18 @@
-use crate::tg;
-use crate::util::prelude::*;
+use crate::util::{encoding, prelude::*};
 use crate::Result;
+use crate::{err_val, tg, UserError};
 use async_trait::async_trait;
 use itertools::Itertools;
 use std::sync::Arc;
 use teloxide::prelude::*;
+use teloxide::types::ChatMemberKind;
 use teloxide::utils::command::BotCommands;
 use teloxide::utils::markdown;
+use tracing::info;
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(
-    rename = "snake_case",
+    rename_rule = "snake_case",
     description = "These commands are supported for the bot maintainer:"
 )]
 pub(crate) enum Cmd {
@@ -19,6 +21,9 @@ pub(crate) enum Cmd {
 
     #[command(description = "display version info")]
     Version,
+
+    #[command(description = "dump detailed diagnostic data about the message that was replied to")]
+    Describe,
 }
 
 #[async_trait]
@@ -27,6 +32,41 @@ impl tg::cmd::Command for Cmd {
         match self {
             Cmd::MaintainerHelp => {
                 ctx.bot.reply_help_md_escaped::<Cmd>(&msg).await?;
+            }
+            Cmd::Describe => {
+                let reply = msg
+                    .reply_to_message()
+                    .ok_or_else(|| err_val!(UserError::NoReplyMessageInDescribe))?;
+
+                let sender = if let Some(sender) = reply.from() {
+                    Some(ctx.bot.get_chat_member(msg.chat.id, sender.id).await?.kind)
+                } else {
+                    None
+                };
+
+                info!(
+                    msg_id = msg.id.to_tracing(),
+                    msg = %encoding::to_json_string_pretty(reply),
+                    sender = %encoding::to_json_string_pretty(&sender),
+                    "/describe"
+                );
+
+                #[derive(serde::Serialize)]
+                struct Info<'a> {
+                    message: &'a Message,
+
+                    #[serde(skip_serializing_if = "Option::is_none")]
+                    sender: Option<&'a ChatMemberKind>,
+                }
+
+                let info = encoding::to_json_string_pretty(&Info {
+                    message: reply,
+                    sender: sender.as_ref(),
+                });
+
+                let info = markdown::code_block_with_lang(&info, "json");
+
+                ctx.bot.reply_chunked(&msg, info).await?;
             }
             Cmd::Version => {
                 /// Generate the key-value pairs with vergen metadata

@@ -22,25 +22,27 @@ impl crate::cmd::Cmd for FmtAliases {
                         // Then make cyrillic characters appear first
                         use std::cmp::Ordering::*;
 
-                        let a = match a.chars().exactly_one() {
-                            Ok(a) => a,
-                            Err(_) => return if b.chars().count() == 1 { Greater } else { a.cmp(b) },
+                        let Ok(a) = a.chars().exactly_one() else {
+                            return if b.chars().count() == 1 {
+                                Greater
+                            } else {
+                                a.cmp(b)
+                            }
                         };
 
-                        let b = match b.chars().exactly_one() {
-                            Ok(b) => b,
-                            Err(_) => return Less,
+                        let Ok(b) = b.chars().exactly_one() else {
+                            return Less
                         };
 
                         if is_cyrillic(a) {
                             if is_cyrillic(b) {
                                 return a.cmp(&b);
                             }
-                            return Less
+                            return Less;
                         }
 
                         if is_cyrillic(b) {
-                            return Greater
+                            return Greater;
                         }
 
                         a.cmp(&b)
@@ -49,7 +51,10 @@ impl crate::cmd::Cmd for FmtAliases {
             })
             .join("\n");
 
-        fs::write(repo_abs_path(["censy", "src", "aliases-formatted.csv"]), aliases)?;
+        fs::write(
+            repo_abs_path(["censy", "src", "aliases-formatted.csv"]),
+            aliases,
+        )?;
 
         Ok(())
     }

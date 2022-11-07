@@ -10,14 +10,14 @@ use crate::ftai::FtaiService;
 use crate::util;
 use crate::{Result, TgConfig};
 use dptree::di::DependencyMap;
-use teloxide::adaptors::{AutoSend, CacheMe, DefaultParseMode, Throttle, Trace};
+use teloxide::adaptors::{CacheMe, DefaultParseMode, Throttle, Trace};
 use teloxide::dispatching::UpdateFilterExt;
 use teloxide::prelude::*;
 use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
 use tracing::info;
 
-type Bot = AutoSend<Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>>;
+type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
 
 pub(crate) struct Ctx {
     bot: Bot,
@@ -35,8 +35,7 @@ pub(crate) async fn run_bot(cfg: TgConfig /*db: db::Repo*/) -> Result {
         .throttle(Default::default())
         .parse_mode(ParseMode::MarkdownV2)
         .cache_me()
-        .trace(teloxide::adaptors::trace::Settings::all())
-        .auto_send();
+        .trace(teloxide::adaptors::trace::Settings::all());
 
     let ftai = FtaiService::new(http);
 
