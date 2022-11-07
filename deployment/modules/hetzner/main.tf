@@ -108,8 +108,9 @@ resource "hcloud_server" "master" {
   user_data   = data.cloudinit_config.master.rendered
 
   public_net {
-    # Not having IPv4 enabled reduces the cost
-    ipv4_enabled = false
+    # Not having IPv4 enabled reduces the cost, but we need it because we are
+    # downloading some stuff from the public internet during the provisioning.
+    ipv4_enabled = true
     ipv6_enabled = true
   }
 }

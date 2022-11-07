@@ -3,6 +3,7 @@ name = "censy"
 
 edition = "2021"
 
+authors = { workspace = true }
 license = { workspace = true }
 publish = { workspace = true }
 version = { workspace = true }

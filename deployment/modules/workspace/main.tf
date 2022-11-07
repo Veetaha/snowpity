@@ -8,10 +8,10 @@ output "id_suffix" {
     Beware that it will be empty for production workspace.
   EOF
 
-  value = var.workspace == "default" ? "" : "-dev"
+  value = terraform.workspace == "default" ? "" : "-dev"
 }
 
 output "kind" {
   description = "Discrimnator to take apart real production workspace and non-production workspaces"
-  value       = var.workspace == "default" ? "prod" : "dev"
+  value       = terraform.workspace == "default" ? "prod" : "dev"
 }
