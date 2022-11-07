@@ -9,7 +9,10 @@ use teloxide::prelude::*;
 use teloxide::utils::command::BotCommands;
 
 #[derive(BotCommands, Clone, Debug)]
-#[command(rename_rule = "snake_case", description = "Следующие команды доступны:")]
+#[command(
+    rename_rule = "snake_case",
+    description = "Следующие команды доступны:"
+)]
 pub(crate) enum Cmd {
     #[command(description = "показать этот текст")]
     Help,

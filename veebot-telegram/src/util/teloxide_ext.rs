@@ -2,7 +2,7 @@ use assert_matches::assert_matches;
 use easy_ext::ext;
 use teloxide::payloads::setters::*;
 use teloxide::prelude::*;
-use teloxide::types::{Chat, Message, MessageCommon, MessageKind, User, MessageId};
+use teloxide::types::{Chat, Message, MessageCommon, MessageId, MessageKind, User};
 use teloxide::utils::markdown;
 
 #[ext(MessageKindExt)]
