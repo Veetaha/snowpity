@@ -18,6 +18,6 @@ VERSION=$(\
     | jq -r '.packages[] | select(.name == "veebot-telegram") | .version' \
 )
 
-docker build . --tag $IMAGE:$VERSION --tag $IMAGE:latest --build-arg RUST_BUILD_MODE=release
+DOCKER_BUILDKIT=1 docker build . --tag $IMAGE:$VERSION --tag $IMAGE:latest --build-arg RUST_BUILD_MODE=release
 docker push $IMAGE:$VERSION
 docker push $IMAGE:latest

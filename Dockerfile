@@ -19,13 +19,15 @@ ENV RUST_RELEASE_FLAG="--release"
 
 FROM build_${RUST_BUILD_MODE} as build
 
+ARG RUST_BUILD_MODE
+
 # Build application
 COPY . .
 
 RUN --mount=type=cache,sharing=private,target=/usr/local/cargo/git \
     --mount=type=cache,sharing=private,target=/usr/local/cargo/registry \
     --mount=type=cache,sharing=private,target=/app/target \
-    cargo build ${RUST_RELEASE_FLAG} -p veebot-telegram --bin veebot-telegram \
+    cargo build ${RUST_RELEASE_FLAG} -p veebot-telegram --bin veebot-telegram && \
     # The buildkit's cache dir (`target`) isn't part of docker layers, so we need to
     # copy the binary out of that dir into somewhere where it will be part of the layer.
     cp /app/target/${RUST_BUILD_MODE}/veebot-telegram /usr/bin/
@@ -49,6 +51,6 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean
 
 RUN --mount=type=cache,target=/var/cache/apt /app/install-runtime-deps.sh
 
-COPY --from=builder /usr/bin/veebot-telegram /usr/bin
+COPY --from=build /usr/bin/veebot-telegram /usr/bin
 
 ENTRYPOINT ["/usr/bin/veebot-telegram"]

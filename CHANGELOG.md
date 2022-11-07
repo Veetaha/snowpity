@@ -1,3 +1,16 @@
+# 0.4.2
+
+## Changed
+
+- Updated `teloxide` from `0.10` to `0.11`. This should fix some parsing bugs
+- Improved logging in captcha module
+- Made the teardown in development mode instant by skipping teloxide's shutdown logic
+- Waiting for tracing-loki to flush logs for 3 seconds before teardown heuristically in release mode
+- Changed the deployment folder to use terraform workspace for production and development
+- Started working on the ingretaion of the database and censoring logic (not finished yet)
+- Migrated to Rust 1.65.0
+- Added maintainer `/details` command for debugging of the messages and their senders
+
 # 0.4.1
 
 ## Changed
