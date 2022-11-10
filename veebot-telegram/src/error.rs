@@ -80,12 +80,20 @@ pub(crate) enum ErrorKind {
     },
 
     #[error(transparent)]
-    Db { source: DbError },
+    Db {
+        source: DbError,
+    },
 
     #[error(transparent)]
     Deserialize {
         #[from]
         source: DeserializeError,
+    },
+
+    // FIXME: display chain using human-readable format
+    #[error("Multiple errors occured: {errs:#?}")]
+    Multiple {
+        errs: Vec<Error>,
     },
 }
 

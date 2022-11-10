@@ -27,7 +27,7 @@ pub(crate) fn handle<'a, C: Command>(
             sender = msg.from().map(User::debug_id).as_deref(),
             // TODO: Project only text() and sender info to reduce verbosity
             msg_text = msg.text(),
-            chat = msg.chat.debug_id().as_str(),
+            chat = %msg.chat.debug_id(),
             cmd = format_args!("{cmd:#?}")
         );
 

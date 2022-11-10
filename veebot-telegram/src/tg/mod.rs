@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use crate::ftai::FtaiService;
 use crate::util;
+use captcha::CaptchaCtx;
 use crate::{Result, TgConfig};
 use dptree::di::DependencyMap;
 use teloxide::adaptors::{CacheMe, DefaultParseMode, Throttle, Trace};
@@ -24,6 +25,7 @@ pub(crate) struct Ctx {
     // db: db::Repo,
     cfg: TgConfig,
     ftai: FtaiService,
+    captcha: CaptchaCtx,
 }
 
 pub(crate) async fn run_bot(cfg: TgConfig /*db: db::Repo*/) -> Result {
@@ -44,6 +46,7 @@ pub(crate) async fn run_bot(cfg: TgConfig /*db: db::Repo*/) -> Result {
         // db,
         cfg,
         ftai,
+        captcha: Default::default(),
     }));
 
     info!("Starting bot...");

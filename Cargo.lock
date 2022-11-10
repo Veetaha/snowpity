@@ -2459,7 +2459,7 @@ dependencies = [
 [[package]]
 name = "teloxide-core"
 version = "0.8.0"
-source = "git+https://github.com/Veetaha/teloxide-core?branch=feat/add-missing-restricted-fields#9163a600e9a051540a6b5b5bbd1771b53a298db3"
+source = "git+https://github.com/Veetaha/teloxide?branch=feat/add-missing-restricted-fields#30439d6d28873ff99c030c33abfe3018bf2f7b2c"
 dependencies = [
  "bitflags",
  "bytes",

@@ -12,8 +12,8 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [patch.crates-io]
-# FIXME: remove this once https://github.com/teloxide/teloxide-core/pull/261 is merged and available
-teloxide-core = { git = "https://github.com/Veetaha/teloxide-core", branch = "feat/add-missing-restricted-fields" }
+# FIXME: remove this once https://github.com/teloxide/teloxide/pull/764 is merged and available
+teloxide-core = { git = "https://github.com/Veetaha/teloxide", branch = "feat/add-missing-restricted-fields" }
 
 [workspace.dependencies]
 anyhow              = "1.0"
@@ -22,6 +22,7 @@ async-recursion     = "1.0"
 async-trait         = "0.1"
 base64              = "0.13"
 bytes               = "1.1"
+derive_more         = "0.99"
 devx-cmd            = "0.5"
 display-error-chain = "=0.1.1"
 dotenv              = "0.15"
