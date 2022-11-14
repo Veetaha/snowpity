@@ -24,6 +24,8 @@ else
     build_mode=debug
 fi
 
+echo "Building docker image $image:$version in $build_mode mode"
+
 DOCKER_BUILDKIT=1 docker build . --tag $image:$version --tag $image:latest --build-arg RUST_BUILD_MODE=$build_mode
 docker push $image:$version
 docker push $image:latest
