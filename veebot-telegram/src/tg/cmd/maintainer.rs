@@ -65,7 +65,7 @@ impl tg::cmd::Command for Cmd {
                     .collect()
                     .await;
 
-                let unverified = unverified
+                let mut unverified = unverified
                     .iter()
                     .map(|(chat_id, user)| {
                         let chat = &chats[chat_id];
@@ -73,6 +73,10 @@ impl tg::cmd::Command for Cmd {
                         format!("{user} 👉 {chat}")
                     })
                     .join("\n");
+
+                if unverified.is_empty() {
+                    unverified = "No unverified users".to_owned();
+                }
 
                 info!("Unverified users:\n{unverified}");
 
