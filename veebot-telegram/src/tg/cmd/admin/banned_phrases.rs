@@ -29,7 +29,7 @@ pub(crate) async fn add_banned_phrase(ctx: &tg::Ctx, msg: &Message, phrase: Stri
     //     .await?;
 
     ctx.bot
-        .reply_chunked(&msg, "Слово успешно добавлено в список запрещённых")
+        .reply_chunked(msg, "Слово успешно добавлено в список запрещённых")
         .await?;
 
     todo!()

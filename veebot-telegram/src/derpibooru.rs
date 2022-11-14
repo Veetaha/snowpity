@@ -59,7 +59,7 @@ util::def_url_base!(derpibooru, "https://derpibooru.org");
 
 impl rpc::Image {
     pub(crate) fn webpage_url(&self) -> Url {
-        derpibooru(&["images", &self.id.to_string()])
+        derpibooru(["images", &self.id.to_string()])
     }
 }
 
@@ -122,7 +122,7 @@ impl DerpibooruService {
 
         let res: rpc::search::Response = self
             .http_client
-            .get(derpibooru_api(&["search", "images"]))
+            .get(derpibooru_api(["search", "images"]))
             .query(&query)
             .read_json()
             .await?;

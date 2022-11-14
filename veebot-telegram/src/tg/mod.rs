@@ -5,6 +5,7 @@ mod cmd;
 mod updates;
 
 use crate::ftai::FtaiService;
+use crate::sysinfo::SysInfoService;
 use crate::util;
 use crate::{Result, TgConfig};
 use captcha::CaptchaCtx;
@@ -16,7 +17,6 @@ use teloxide::prelude::*;
 use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
 use tracing::info;
-use crate::sysinfo::SysInfoService;
 
 type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
 

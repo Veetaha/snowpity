@@ -43,7 +43,7 @@ impl tg::cmd::Command for Cmd {
     async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result {
         match self {
             Cmd::MaintainerHelp => {
-                ctx.bot.reply_help_md_escaped::<Cmd>(&msg).await?;
+                ctx.bot.reply_help_md_escaped::<Cmd>(msg).await?;
             }
             Cmd::ListUnverified => {
                 let unverified = ctx.captcha.list_unverified();
@@ -57,7 +57,7 @@ impl tg::cmd::Command for Cmd {
                             .map(|chat| chat.debug_id_markdown_escaped())
                             .unwrap_or_else(|err| {
                                 error!("Couldn't get chat info: {err:#?}");
-                                format!("{{{{unkown_chat: {chat_id}}}}}")
+                                format!("{{{{unknown_chat: {chat_id}}}}}")
                             });
                         (chat_id, chat_debug)
                     })
@@ -86,7 +86,7 @@ impl tg::cmd::Command for Cmd {
             }
             Cmd::Sys => {
                 let info = markdown::code_block(&ctx.sysinfo.to_human_readable());
-                ctx.bot.reply_chunked(&msg, info).await?;
+                ctx.bot.reply_chunked(msg, info).await?;
             }
             Cmd::Describe => {
                 let reply = msg
@@ -121,7 +121,7 @@ impl tg::cmd::Command for Cmd {
 
                 let info = markdown::code_block_with_lang(&info, "json");
 
-                ctx.bot.reply_chunked(&msg, info).await?;
+                ctx.bot.reply_chunked(msg, info).await?;
             }
             Cmd::Version => {
                 /// Generate the key-value pairs with vergen metadata
@@ -160,7 +160,7 @@ impl tg::cmd::Command for Cmd {
 
                 let metadata = format!("```\n{metadata}\n```",);
 
-                ctx.bot.reply_chunked(&msg, metadata).await?;
+                ctx.bot.reply_chunked(msg, metadata).await?;
             }
         };
 

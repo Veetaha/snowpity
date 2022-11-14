@@ -22,7 +22,6 @@ async-recursion     = "1.0"
 async-trait         = "0.1"
 base64              = "0.13"
 bytes               = "1.1"
-derive_more         = "0.99"
 devx-cmd            = "0.5"
 display-error-chain = "=0.1.1"
 dotenv              = "0.15"
@@ -58,7 +57,6 @@ tracing-loki        = "0.2"
 url                 = "2.2"
 wav_io              = "0.1"
 xshell              = "0.2"
-
 
 # Deps with feature overrides
 chrono             = { version = "0.4", features = ["clock", "std"], default-features = false }

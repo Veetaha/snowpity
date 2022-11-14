@@ -58,7 +58,7 @@ where
     T: Serialize + ?Sized,
     E: std::error::Error,
 {
-    imp(&data).unwrap_or_else(|err| {
+    imp(data).unwrap_or_else(|err| {
         let data_type = type_name::<T>();
         panic!(
             "Can't serialize data of type {data_type}: {}",

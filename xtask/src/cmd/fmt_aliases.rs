@@ -11,7 +11,7 @@ impl crate::cmd::Cmd for FmtAliases {
         let file = fs::read_to_string(repo_abs_path(["censy", "src", "aliases.csv"]))?;
 
         let aliases = file
-            .split_terminator("\n")
+            .split_terminator('\n')
             .filter(|line| !line.is_empty())
             .map(|line| {
                 line.split_terminator(' ')

@@ -4,8 +4,8 @@ mod db;
 mod derpibooru;
 mod error;
 mod ftai;
-mod tg;
 mod sysinfo;
+mod tg;
 
 pub mod util;
 

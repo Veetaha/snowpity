@@ -80,9 +80,7 @@ pub(crate) enum ErrorKind {
     },
 
     #[error(transparent)]
-    Db {
-        source: DbError,
-    },
+    Db { source: DbError },
 
     #[error(transparent)]
     Deserialize {
@@ -91,10 +89,8 @@ pub(crate) enum ErrorKind {
     },
 
     // FIXME: display chain using human-readable format
-    #[error("Multiple errors occured: {errs:#?}")]
-    Multiple {
-        errs: Vec<Error>,
-    },
+    #[error("Multiple errors occurred: {errs:#?}")]
+    Multiple { errs: Vec<Error> },
 }
 
 impl<T: Into<DbError>> From<T> for ErrorKind {
@@ -240,7 +236,7 @@ pub(crate) enum DeserializeError {
 
     #[error(
         "The input is not a valid UTF8 sequence, input in base64: {}",
-        base64::encode(&input),
+        base64::encode(input)
     )]
     Utf8 {
         input: Vec<u8>,
@@ -279,18 +275,18 @@ impl<T: Into<ErrorKind>> From<T> for Error {
         // No need for a backtrace if the error is an expected one
         // TODO: add ability to send multiple message to overcome message limit
         // or truncate the backtrace
-        let backtrace = if !kind.is_user_error() {
-            // We don't use `bool::then` adapter to reduce the backtrace
-            None
-            // Some(Backtrace::force_capture())
-        } else {
-            None
-        };
+        // let backtrace = if !kind.is_user_error() {
+        //     // We don't use `bool::then` adapter to reduce the backtrace
+        //     None
+        //     // Some(Backtrace::force_capture())
+        // } else {
+        //     None
+        // };
 
         let err = Self {
             kind,
             id: nanoid::nanoid!(6),
-            backtrace,
+            backtrace: None,
             // spantrace: SpanTrace::capture()
         };
 

@@ -26,7 +26,7 @@ impl tg::cmd::Command for Cmd {
     async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result {
         match self {
             Cmd::Help => {
-                ctx.bot.reply_help_md_escaped::<Cmd>(&msg).await?;
+                ctx.bot.reply_help_md_escaped::<Cmd>(msg).await?;
             }
             Cmd::Ftai(cmd) => cmd.parse::<FtaiCmd>()?.handle(ctx, msg).await?,
         }
