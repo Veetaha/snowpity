@@ -51,7 +51,7 @@ async fn main() -> ExitCode {
     // Let's await for three seconds heuristically to let the logging task
     // flush some data to the logging backend.
     //
-    // Unfortunatelly, we can't guarantee the flush happens because no such
+    // Unfortunately, we can't guarantee the flush happens because no such
     // API exists in `tracing_loki`: https://github.com/hrxi/tracing-loki/issues/9
     if !cfg!(debug_assertions) {
         info!("Waiting for the logging task to finish nicely...");

@@ -1,3 +1,23 @@
+# 0.4.3
+
+# Added
+
+- `/sys` maintainer command displays the current diagnostic system information
+- `/list_unverified` maintainer command displays the list of users in unverified users map
+- `/clear_unverified` clears the unverified users map and cancels captcha timeouts
+- Different `prod` and `dev` deployments workspaces are now fully supported and working correctly.
+  It is now possible to deploy the entire dockerhub repo / grafana stack / hetzner infrastructure
+  independently for production and development end-to-end testing purposes.
+
+# Changed
+
+- Improved the debug representation of `Chat` and `User` objects by using their ultimate telegram links. It is now possible to just click the link in the logs to open the chat or user profile in telegram.
+
+# Fixed
+
+- Fixed remaining bugs in captcha. The bot now save the information about the user rights when they joined the chat and restrores them when captcha finishes. The bot doesn't restore the original permissions when the user's rights were changed during the captcha process by some other admin.
+
+
 # 0.4.2
 
 ## Changed
@@ -9,7 +29,7 @@
 - Changed the deployment folder to use terraform workspace for production and development
 - Started working on the ingretaion of the database and censoring logic (not finished yet)
 - Migrated to Rust 1.65.0
-- Added maintainer `/details` command for debugging of the messages and their senders
+- Added maintainer `/describe` command for debugging of the messages and their senders
 
 # 0.4.1
 

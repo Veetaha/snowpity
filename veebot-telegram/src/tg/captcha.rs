@@ -62,7 +62,7 @@ struct CaptchaReplyPayload {
     chat = callback_query.message.as_ref()
         .map(|msg| msg.chat.debug_id())
         .as_deref()
-        .unwrap_or("{{unkown_chat}}"),
+        .unwrap_or("{{unknown_chat}}"),
 ))]
 pub(crate) async fn handle_callback_query(
     ctx: Arc<tg::Ctx>,
@@ -493,7 +493,7 @@ fn restricted_to_chat_perms(restricted: &Restricted) -> ChatPermissions {
         .collect()
 }
 
-/// The following methods are used only for maintainance purposes as an escape
+/// The following methods are used only for maintenance purposes as an escape
 /// hatch to try remediate the system in case of a bug.
 impl CaptchaCtx {
     pub(crate) fn list_unverified(&self) -> Vec<(ChatId, User)> {

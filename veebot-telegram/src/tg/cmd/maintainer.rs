@@ -57,7 +57,7 @@ impl tg::cmd::Command for Cmd {
                             .map(|chat| chat.debug_id_markdown_escaped())
                             .unwrap_or_else(|err| {
                                 error!("Couldn't get chat info: {err:#?}");
-                                format!("{{{{unkown_chat: {chat_id}}}}}")
+                                format!("{{{{unknown_chat: {chat_id}}}}}")
                             });
                         (chat_id, chat_debug)
                     })
