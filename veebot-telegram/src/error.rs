@@ -236,7 +236,7 @@ pub(crate) enum DeserializeError {
 
     #[error(
         "The input is not a valid UTF8 sequence, input in base64: {}",
-        base64::encode(input),
+        base64::encode(input)
     )]
     Utf8 {
         input: Vec<u8>,
