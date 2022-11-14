@@ -48,7 +48,7 @@ runcmd:
   - export DOCKER_GPG=/etc/apt/keyrings/docker.gpg
   - export DOCKER_URL=https://download.docker.com/linux/ubuntu
   - mkdir -p /etc/apt/keyrings
-  - curl -fsSL $DOCKER_URL/gpg | gpg --dearmor -o $DOCKER_GPG
+  - curl --retry 5 --retry-connrefused -fsSL $DOCKER_URL/gpg | gpg --dearmor -o $DOCKER_GPG
   - 'echo "deb [arch=$(dpkg --print-architecture) signed-by=$DOCKER_GPG] $DOCKER_URL $(lsb_release -cs) stable"
     | tee /etc/apt/sources.list.d/docker.list > /dev/null'
   - apt-get update -y
@@ -56,17 +56,22 @@ runcmd:
   - systemctl start docker
   - systemctl enable docker
 
+  # Log in to be able to pull the image from the private dockerhub repo in development workspace
+  # `runuser` is required here, because `docker login` stores the creds in $HOME
+  # and our systemd service will run on behalf of `admin` user
+  - runuser -u admin -- docker login --username ${docker_username} --password ${docker_password}
+
   - echo 'Installing grafana-agent...'
 
   # GA stands for grafana agent
   # The installation steps were taken from the script in grafana/agent repo:
   # <https://github.com/grafana/agent/blob/c07d3875cb402719e6003fefe694f26606ebb5d3/production/grafanacloud-install.sh#L1>
 
-  - export GA_RELEASE_VERSION="0.25.1"
+  - export GA_RELEASE_VERSION="0.29.0"
   - export GA_RELEASE_URL="https://github.com/grafana/agent/releases/download/v$GA_RELEASE_VERSION"
   - export GA_DEB_URL="$GA_RELEASE_URL/grafana-agent-$GA_RELEASE_VERSION-1.amd64.deb"
 
-  - curl -L --progress-bar $GA_DEB_URL -o $HOME/grafana-agent.deb
+  - curl --retry 5 --retry-connrefused -L --progress-bar $GA_DEB_URL -o $HOME/grafana-agent.deb
 
   # `confold` is used because `write_files` module stores `grafana-agent.yaml`
   # before this installation script is running, therefore `dpkg` has to use the "old config"

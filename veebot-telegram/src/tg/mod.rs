@@ -4,19 +4,19 @@ mod captcha;
 mod cmd;
 mod updates;
 
-use std::sync::Arc;
-
 use crate::ftai::FtaiService;
 use crate::util;
-use captcha::CaptchaCtx;
 use crate::{Result, TgConfig};
+use captcha::CaptchaCtx;
 use dptree::di::DependencyMap;
+use std::sync::Arc;
 use teloxide::adaptors::{CacheMe, DefaultParseMode, Throttle, Trace};
 use teloxide::dispatching::UpdateFilterExt;
 use teloxide::prelude::*;
 use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
 use tracing::info;
+use crate::sysinfo::SysInfoService;
 
 type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
 
@@ -26,6 +26,7 @@ pub(crate) struct Ctx {
     cfg: TgConfig,
     ftai: FtaiService,
     captcha: CaptchaCtx,
+    sysinfo: SysInfoService,
 }
 
 pub(crate) async fn run_bot(cfg: TgConfig /*db: db::Repo*/) -> Result {
@@ -47,6 +48,7 @@ pub(crate) async fn run_bot(cfg: TgConfig /*db: db::Repo*/) -> Result {
         cfg,
         ftai,
         captcha: Default::default(),
+        sysinfo: SysInfoService::new(),
     }));
 
     info!("Starting bot...");

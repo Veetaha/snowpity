@@ -14,7 +14,8 @@ locals {
 
     PGDATA = local.pg_data
 
-    VEEBOT_TG_IMAGE_TAG = var.veebot_tg_image_tag
+    VEEBOT_TG_IMAGE_NAME = var.veebot_tg_image_name
+    VEEBOT_TG_IMAGE_TAG  = var.veebot_tg_image_tag
     VEEBOT_LOG_LABELS = jsonencode({
       instance = local.hostname
     })
@@ -59,7 +60,7 @@ locals {
   }
 
   non_templates = {
-    "/var/app/docker-compose.yml" = file("${path.module}/../../../docker-compose.yml"),
+    "/var/app/docker-compose.yml"    = file("${path.module}/../../../docker-compose.yml"),
     "/var/app/pgadmin4/servers.json" = file("${path.module}/../../../pgadmin4/servers.json"),
 
     "${local.env_file_path}" = join("\n", [for k, v in local.veebot_tg_env_vars : "${k}=${v}"]),
@@ -86,6 +87,9 @@ locals {
     loki_url      = var.loki_url
     loki_username = var.loki_username
     loki_password = var.loki_password
+
+    docker_username = var.docker_username
+    docker_password = var.docker_password
   }
 }
 

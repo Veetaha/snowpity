@@ -7,7 +7,7 @@
 
 provider "grafana" {
   alias         = "cloud"
-  cloud_api_key = var.grafana_cloud_api_key
+  cloud_api_key = local.grafana_cloud_api_key
 }
 
 provider "grafana" {
@@ -21,7 +21,7 @@ resource "grafana_cloud_stack" "this" {
   provider = grafana.cloud
 
   name        = "veebot-telegram"
-  slug        = "vtg"
+  slug        = "vtg${module.workspace.id_suffix_alnum}"
   region_slug = "eu"
 }
 

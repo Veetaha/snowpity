@@ -5,6 +5,7 @@ mod derpibooru;
 mod error;
 mod ftai;
 mod tg;
+mod sysinfo;
 
 pub mod util;
 

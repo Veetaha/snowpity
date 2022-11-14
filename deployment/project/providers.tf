@@ -1,5 +1,5 @@
 provider "hcloud" {
-  token = var.hcloud_token
+  token = local.hcloud_token
 }
 
 provider "dockerhub" {

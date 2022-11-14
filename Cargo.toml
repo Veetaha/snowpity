@@ -5,7 +5,7 @@ members = ["censy", "veebot-telegram", "xtask"]
 debug = 0
 
 [workspace.package]
-version = "0.4.2"
+version = "0.4.3"
 
 authors = ["Veetaha <veetaha2@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -35,6 +35,7 @@ fs-err              = "2.7"
 futures             = "0.3"
 governor            = "0.5"
 hmac                = "0.12"
+humansize           = "2.1"
 itertools           = "0.10"
 lazy-regex          = "2.3"
 nanoid              = "0.4"
@@ -42,8 +43,10 @@ ogg-opus            = "0.1"
 once_cell           = "1.14"
 parking_lot         = "0.12"
 rand                = "0.8"
-serde_json          = "1.0"
+serde_json          = { version = "1.0", features = ["preserve_order"] }
+serde_yaml          = "0.9"
 sqlx                = "0.6"
+sysinfo             = "0.26"
 teloxide            = "0.11"
 thiserror           = "1.0"
 tokio               = "1.21"
@@ -55,6 +58,7 @@ tracing-loki        = "0.2"
 url                 = "2.2"
 wav_io              = "0.1"
 xshell              = "0.2"
+
 
 # Deps with feature overrides
 chrono             = { version = "0.4", features = ["clock", "std"], default-features = false }

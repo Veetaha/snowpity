@@ -23,16 +23,16 @@ use tracing_futures::Instrument;
 
 /// Duration for the new users to solve the captcha. If they don't reply
 /// in this time, they will be kicked.
-const CAPTCHA_VERIFICATION_TIMEOUT: Duration = Duration::from_secs(60 * 3);
+const CAPTCHA_VERIFICATION_TIMEOUT: Duration = Duration::from_secs(3 * 60);
 const CAPTCHA_VERIFICATION_TIMEOUT_TEXT: &str = "3 минуты";
 
 /// Duration that is added to [`CAPTCHA_VERIFICATION_TIMEOUT`] to guarantee that
-/// the restrictions for the user will be lifted after the timeout if the bot
+/// the restrictions for the user will be lifted after the timeout of the bot
 /// doesn't lift them earlier.
 const CAPTCHA_RESTRICTIONS_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Duration for the ban of the users that didn't pass captcha.
-const CAPTCHA_BAN_DURATION: Duration = Duration::from_secs(60 * 2);
+const CAPTCHA_BAN_DURATION: Duration = Duration::from_secs(2 * 60);
 
 const GREETING_ANIMATION_URL: &str = "https://derpicdn.net/img/2021/12/19/2767482/small.gif";
 
@@ -43,7 +43,7 @@ pub(crate) struct CaptchaCtx {
 }
 
 #[derive(Debug)]
-struct UnverifiedUser {
+pub(crate) struct UnverifiedUser {
     member: ChatMember,
     chat_id: ChatId,
     captcha_msg_id: MessageId,
@@ -93,7 +93,10 @@ pub(crate) async fn handle_callback_query(
                 .captcha
                 .unverified_users
                 .lock()
-                .get(&(chat_id, user_id))
+                .values()
+                .find(|unverified| {
+                    unverified.captcha_msg_id == captcha_msg.id && unverified.chat_id == chat_id
+                })
                 .as_ref()
                 .map(|unverified| unverified.member.user.debug_id())
                 .unwrap_or_else(|| "{{user_not_in_unverified_users_map}}".to_owned());
@@ -120,7 +123,12 @@ pub(crate) async fn handle_callback_query(
                 return Ok(());
             }
 
-            kick_user_due_to_captcha(&bot, chat_id, user_id).await?;
+            kick_user_due_to_captcha(&bot, chat_id, user_id)
+                .instrument(info_span!(
+                    "kick_reason",
+                    kick_reason = "captcha_wrong_answer"
+                ))
+                .await?;
 
             Ok::<_, Error>(())
         }
@@ -185,10 +193,11 @@ pub(crate) async fn handle_new_chat_members(
                     let restrictions_timeout =
                         CAPTCHA_VERIFICATION_TIMEOUT + CAPTCHA_RESTRICTIONS_TIMEOUT;
 
-                    // Telegram works at seconds resoltuin, so we need to round up.
-                    let now = Utc::now().round_subsecs(0);
+                    let restrictions_timeout =
+                        chrono::Duration::from_std(restrictions_timeout).unwrap();
 
-                    now + chrono::Duration::from_std(restrictions_timeout).unwrap()
+                    // Telegram works at seconds resolution, so we need to round up.
+                    (Utc::now() + restrictions_timeout).round_subsecs(0)
                 };
 
                 let member = async {
@@ -226,17 +235,15 @@ pub(crate) async fn handle_new_chat_members(
                         return;
                     }
 
-                    debug!(
+                    info!(
                         captcha_timeout = format_args!("{CAPTCHA_VERIFICATION_TIMEOUT:.2?}"),
                         "Timed out waiting for captcha confirmation"
                     );
 
-                    let delete_msg_result =
-                        UnverifiedUser::delete(&ctx, chat_id, user_id, DeleteReason::Timeout);
-
                     let (delete_msg_result, kick_result) = futures::join!(
-                        delete_msg_result,
+                        UnverifiedUser::delete(&ctx, chat_id, user_id, DeleteReason::Timeout),
                         kick_user_due_to_captcha(&ctx.bot, chat_id, user_id)
+                            .instrument(info_span!("kick_reason", kick_reason = "captcha_timeout"))
                     );
 
                     if let Err(err) = delete_msg_result {
@@ -292,7 +299,7 @@ pub(crate) async fn handle_new_chat_members(
 async fn kick_user_due_to_captcha(bot: &Bot, chat_id: ChatId, user_id: UserId) -> Result {
     let ban_timeout = Utc::now() + chrono::Duration::from_std(CAPTCHA_BAN_DURATION).unwrapx();
 
-    info!(until = %ban_timeout.to_ymd_hms(), "User chose wrong answer in captcha, kicking them...");
+    info!(until = %ban_timeout.to_ymd_hms(), "Kicking the user due to captcha...");
 
     bot.kick_chat_member(chat_id, user_id)
         .until_date(ban_timeout)
@@ -340,7 +347,7 @@ impl UnverifiedUser {
     ) -> Result {
         let Some(mut unverified) = Self::delete_from_map(&ctx, chat_id, user_id) else {
             if let DeleteReason::UserReplied = delete_reason {
-                warn!("User replied to captcha, but it wasn't in the unverified users map");
+                warn!("User replied to captcha, but they weren't in the unverified users map");
             }
             return Ok(());
         };
@@ -369,10 +376,10 @@ impl UnverifiedUser {
 
         let errs: Vec<_> = a.err().into_iter().chain(b.err()).collect();
 
-        match errs.len() {
-            0 => Ok(()),
-            1 => Err(errs.into_iter().next().unwrap()),
-            _ => Err(err_val!(ErrorKind::Multiple { errs })),
+        match <[_; 1]>::try_from(errs) {
+            Err(errs) if errs.is_empty() => Ok(()),
+            Ok([err]) => Err(err),
+            Err(errs) => Err(err_val!(ErrorKind::Multiple { errs })),
         }
     }
 
@@ -385,7 +392,7 @@ impl UnverifiedUser {
             .remove(&(chat_id, user_id));
 
         if unverified.is_none() {
-            debug!("User was not in unverified users map, thus no captcha to proceed with");
+            debug!("User was not in unverified users map, thus no captcha to resolve");
         }
 
         unverified
@@ -398,6 +405,12 @@ impl UnverifiedUser {
 
         let current = bot.get_chat_member(chat_id, user_id).await?;
 
+        self.restore_original_perms_with_current(bot, &current)
+            .await
+    }
+
+    #[instrument(skip_all, fields(current_user = format_args!("{current:#?}")))]
+    async fn restore_original_perms_with_current(&self, bot: &Bot, current: &ChatMember) -> Result {
         let user_modified = !matches!(
             &current.kind,
             ChatMemberKind::Restricted(restricted)
@@ -405,18 +418,13 @@ impl UnverifiedUser {
                 && restricted_to_chat_perms(restricted) == ChatPermissions::empty()
         );
 
-        debug!(
-            current = format_args!("{current:#?}"),
-            "Current user permissions"
-        );
-
         if user_modified {
-            info!(
-                current = format_args!("{current:#?}"),
-                "Unverified user was modified, so not restoring original permissions"
-            );
+            info!("Unverified user was modified, so not restoring original permissions");
             return Ok(());
         };
+
+        let chat_id = self.chat_id;
+        let user_id = self.member.user.id;
 
         match &self.member.kind {
             ChatMemberKind::Member => {
@@ -483,4 +491,33 @@ fn restricted_to_chat_perms(restricted: &Restricted) -> ChatPermissions {
         .filter(|(&enabled, _)| enabled)
         .map(|(_, perm)| perm)
         .collect()
+}
+
+/// The following methods are used only for maintainance purposes as an escape
+/// hatch to try remediate the system in case of a bug.
+impl CaptchaCtx {
+    pub(crate) fn list_unverified(&self) -> Vec<(ChatId, User)> {
+        self.unverified_users
+            .lock()
+            .values()
+            .map(|unverified| (unverified.chat_id, unverified.member.user.clone()))
+            .collect()
+    }
+
+    #[instrument(skip_all)]
+    pub(crate) fn clear_unverified(&self) {
+        info!("Clearing all unverified users");
+        let unverified_users = std::mem::take(&mut *self.unverified_users.lock());
+        for mut unverified in unverified_users.into_values() {
+            let Some(cancel) = unverified.captcha_timeout_cancel.take() else {
+                continue
+            };
+            if let Err(()) = cancel.send(()) {
+                let user = unverified.member.user.debug_id();
+                let chat_id = unverified.chat_id;
+                let msg_id = unverified.captcha_msg_id;
+                warn!(%user, %chat_id, %msg_id, "Failed to cancel captcha timeout");
+            }
+        }
+    }
 }

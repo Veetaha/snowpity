@@ -1,44 +1,71 @@
 variable "veebot_tg_image_tag" {
-  type = string
+  nullable = false
+  type     = string
+}
+
+variable "veebot_tg_image_name" {
+  nullable = false
+  type     = string
 }
 
 variable "tg_bot_token" {
+  nullable  = false
   type      = string
   sensitive = true
 }
 
 variable "prometheus_remote_write_url" {
-  type = string
+  nullable = false
+  type     = string
 }
 
 variable "prometheus_username" {
-  type = string
+  nullable = false
+  type     = string
 }
 
 variable "prometheus_password" {
+  nullable  = false
   type      = string
   sensitive = true
 }
 
 variable "loki_url" {
-  type = string
+  nullable = false
+  type     = string
 }
 
 variable "loki_username" {
-  type = string
+  nullable = false
+  type     = string
 }
 
 variable "loki_password" {
+  nullable  = false
   type      = string
   sensitive = true
 }
 
 variable "pg_password" {
+  nullable  = false
   type      = string
   sensitive = true
 }
 
 variable "pgadmin_password" {
+  nullable  = false
   type      = string
   sensitive = true
+}
+
+variable "docker_username" {
+  nullable  = false
+  sensitive = true
+  type      = string
+}
+
+variable "docker_password" {
+  nullable  = false
+  sensitive = true
+  type      = string
 }
