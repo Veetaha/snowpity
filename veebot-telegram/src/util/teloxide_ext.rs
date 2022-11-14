@@ -30,7 +30,7 @@ where
         &self,
         msg: &Message,
     ) -> Self::SendMessage {
-        self.reply_chunked(&msg, markdown::escape(&Cmd::descriptions().to_string()))
+        self.reply_chunked(msg, markdown::escape(&Cmd::descriptions().to_string()))
     }
 }
 
@@ -70,7 +70,7 @@ fn chat_debug_id_imp(chat: &Chat, escape: fn(&str) -> String) -> String {
         .unwrap_or_default();
 
     let id = chat.id;
-    let title = escape(&title);
+    let title = escape(title);
     let suffix = escape(&format!("({username}{id})"));
 
     chat.invite_link()

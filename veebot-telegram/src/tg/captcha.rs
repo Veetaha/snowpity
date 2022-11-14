@@ -123,7 +123,7 @@ pub(crate) async fn handle_callback_query(
                 return Ok(());
             }
 
-            kick_user_due_to_captcha(&bot, chat_id, user_id)
+            kick_user_due_to_captcha(bot, chat_id, user_id)
                 .instrument(info_span!(
                     "kick_reason",
                     kick_reason = "captcha_wrong_answer"
@@ -268,16 +268,16 @@ pub(crate) async fn handle_new_chat_members(
                     restricted_until_date,
                 };
 
-                captcha
+                if let Some(old_unverified) = captcha
                     .unverified_users
                     .lock()
                     .insert((chat_id, user_id), unverified)
-                    .map(|old_unverified| {
-                        warn!(
-                            old_unverified = format_args!("{old_unverified:#?}"),
-                            "BUG: user was already in captcha confirmation map"
-                        );
-                    });
+                {
+                    warn!(
+                        old_unverified = format_args!("{old_unverified:#?}"),
+                        "BUG: user was already in captcha confirmation map"
+                    );
+                }
 
                 Ok::<(), Error>(())
             }
@@ -345,7 +345,7 @@ impl UnverifiedUser {
         user_id: UserId,
         delete_reason: DeleteReason,
     ) -> Result {
-        let Some(mut unverified) = Self::delete_from_map(&ctx, chat_id, user_id) else {
+        let Some(mut unverified) = Self::delete_from_map(ctx, chat_id, user_id) else {
             if let DeleteReason::UserReplied = delete_reason {
                 warn!("User replied to captcha, but they weren't in the unverified users map");
             }

@@ -40,7 +40,7 @@ impl tg::cmd::Command for Cmd {
     async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result {
         match self {
             Cmd::AdminHelp => {
-                ctx.bot.reply_help_md_escaped::<Cmd>(&msg).await?;
+                ctx.bot.reply_help_md_escaped::<Cmd>(msg).await?;
             }
             Cmd::AddBannedPhrase(phrase) => {
                 banned_phrases::add_banned_phrase(ctx, msg, phrase).await?;

@@ -93,7 +93,7 @@ pub(crate) async fn handle_message(ctx: Arc<Ctx>, msg: Message) -> DynResult {
     .await
 }
 
-pub(crate) fn filter_message_from_channel<'m>(msg: Message) -> Option<Chat> {
+pub(crate) fn filter_message_from_channel(msg: Message) -> Option<Chat> {
     msg.sender_chat().cloned().filter(|sender_chat| {
         // Ignore messages that were send on behalf of the chat where the bot is
         // Ignore automatic forwards for chats linked to a channel

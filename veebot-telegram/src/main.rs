@@ -6,7 +6,7 @@ use veebot_telegram::util::tracing_err;
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    if let Err(_) = dotenv::dotenv() {
+    if dotenv::dotenv().is_err() {
         eprintln!("Dotenv config was not found, ignoring this...")
     }
 
