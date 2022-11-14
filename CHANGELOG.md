@@ -15,7 +15,7 @@
 
 # Fixed
 
-- Fixed remaining bugs in captcha. The bot now save the information about the user rights when they joined the chat and restrores them when captcha finishes. The bot doesn't restore the original permissions when the user's rights were changed during the captcha process by some other admin.
+- Fixed remaining bugs in captcha. The bot now saves the information about the user rights when they joined the chat and restrores them when captcha finishes. The bot doesn't restore the original permissions when the user's rights were changed during the captcha process by some other admin.
 
 
 # 0.4.2

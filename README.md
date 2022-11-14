@@ -61,7 +61,7 @@ docker_username = "username"
 docker_password = "password"
 ```
 
-Note that some credentials are differ by the terraform workspace. If the default terraform workspace is selected, then `prod` credentials and configurations will be used. If `dev` workspace selected, then development `dev` credentials and configurations will be used accordingly.
+Note that some credentials differ by the terraform workspace. If the default terraform workspace is selected, then `prod` credentials and configurations will be used. If `dev` workspace is selected, then development `dev` credentials and configurations will be used accordingly.
 
 After that, you will be able to run the following command to deploy the entire stack with the Dockerhub repo, Hetzner server and Grafana Cloud Stack.
 
