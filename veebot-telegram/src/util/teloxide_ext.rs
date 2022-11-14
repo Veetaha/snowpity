@@ -43,20 +43,39 @@ pub(crate) impl User {
     }
 
     fn debug_id(&self) -> String {
-        let full_name = self.full_name();
-        let id = self.id;
-        format!("{full_name} ({id})")
+        self.md_link()
     }
 }
 
 #[ext(ChatExt)]
 pub(crate) impl Chat {
     fn debug_id(&self) -> String {
-        let title = self.title().unwrap_or("{{unknown_chat_title}}");
-        let username = self.username().unwrap_or("{{unknown_chat_username}}");
-        let id = self.id;
-        format!("{title} ({username}, {id})")
+        chat_debug_id_imp(self, no_escape)
     }
+
+    fn debug_id_markdown_escaped(&self) -> String {
+        chat_debug_id_imp(self, markdown::escape)
+    }
+}
+
+fn no_escape(str: &str) -> String {
+    str.to_owned()
+}
+
+fn chat_debug_id_imp(chat: &Chat, escape: fn(&str) -> String) -> String {
+    let title = chat.title().unwrap_or("{{unknown_chat_title}}");
+    let username = chat
+        .username()
+        .map(|name| format!("{name}, "))
+        .unwrap_or_default();
+
+    let id = chat.id;
+    let title = escape(&title);
+    let suffix = escape(&format!("({username}{id})"));
+
+    chat.invite_link()
+        .map(|invite_link| format!("[{title}]({invite_link}) {suffix}"))
+        .unwrap_or_else(|| format!("{title} {suffix}"))
 }
 
 #[ext(MessageIdExt)]

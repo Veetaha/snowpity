@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-SCRIPTS=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+scripts=$(readlink -f $(dirname $0))
 
-. $SCRIPTS/server_ip.sh
+. $scripts/server_ip.sh
 
-ssh admin@$SERVER_IP
+ssh admin@$server_ip

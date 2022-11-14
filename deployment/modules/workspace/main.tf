@@ -11,6 +11,12 @@ output "id_suffix" {
   value = terraform.workspace == "default" ? "" : "-dev"
 }
 
+output "id_suffix_alnum" {
+  description = "variation of `id_suffix` that contains only alphanumeric characters"
+
+  value = terraform.workspace == "default" ? "" : "dev"
+}
+
 output "kind" {
   description = "Discrimnator to take apart real production workspace and non-production workspaces"
   value       = terraform.workspace == "default" ? "prod" : "dev"

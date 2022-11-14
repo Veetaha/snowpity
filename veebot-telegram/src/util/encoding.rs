@@ -45,18 +45,19 @@ pub(crate) fn from_json_string<'a, T: Deserialize<'a>>(input: &'a str) -> Result
     }))
 }
 
-pub(crate) fn to_json_string_pretty<T: Serialize + ?Sized>(data: &T) -> String {
-    to_json_string_imp(data, serde_json::to_string_pretty)
-}
-
 pub(crate) fn to_json_string<T: Serialize + ?Sized>(data: &T) -> String {
-    to_json_string_imp(data, serde_json::to_string)
+    serialize(data, serde_json::to_string)
 }
 
-fn to_json_string_imp<T: Serialize + ?Sized>(
-    data: &T,
-    imp: fn(&T) -> serde_json::Result<String>,
-) -> String {
+pub(crate) fn to_yaml_string<T: Serialize + ?Sized>(data: &T) -> String {
+    serialize(data, serde_yaml::to_string)
+}
+
+fn serialize<T, E>(data: &T, imp: fn(&T) -> Result<String, E>) -> String
+where
+    T: Serialize + ?Sized,
+    E: std::error::Error,
+{
     imp(&data).unwrap_or_else(|err| {
         let data_type = type_name::<T>();
         panic!(

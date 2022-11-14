@@ -45,12 +45,23 @@ You also need to retrieve the bot token from [@BotFather] in Telegram.
 Then, create a file `deployment/project/terraform.tfvars` with the secrets and credentials:
 
 ```hcl
-tg_bot_token          = "9999999999:AAaa9-9AAaa99AAaa99AAaa99AAaa99AAaa"
-hcloud_token          = "AAaa99AAaa99AAaa99AAaa99AAaaAAaa99AAaa99AAaa99AAaa99AAaaAAaa99AA"
-grafana_cloud_api_key = "AAaa99AAaa99AAaa99AAaa99AAaaAAaa99AAaa99AAaa99AAaa99AAaaAAaa99AAAAaa99AAaa99AAa99AAAAaa99AAaa99AAa99AAAAaa9="
-docker_username       = "username"
-docker_password       = "password"
+tg_bot_token = {
+    prod = "9999999999:AAaa9-9AAaa99AAaa99AAaa99AAaa99AAaa"
+    dev  = "..."
+}
+hcloud_token = {
+    prod = "AAaa99AAaa99AAaa99AAaa99AAaaAAaa99AAaa99AAaa99AAaa99AAaaAAaa99AA"
+    dev  = "..."
+}
+grafana_cloud_api_key = {
+    prod = "AAaa99AAaa99AAaa99AAaa99AAaaAAaa99AAaa99AAaa99AAaa99AAaaAAaa99AAAAaa99AAaa99AAa99AAAAaa99AAaa99AAa99AAAAaa9="
+    dev  = "..."
+}
+docker_username = "username"
+docker_password = "password"
 ```
+
+Note that some credentials are differ by the terraform workspace. If the default terraform workspace is selected, then `prod` credentials and configurations will be used. If `dev` workspace selected, then development `dev` credentials and configurations will be used accordingly.
 
 After that, you will be able to run the following command to deploy the entire stack with the Dockerhub repo, Hetzner server and Grafana Cloud Stack.
 

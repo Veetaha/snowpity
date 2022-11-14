@@ -4,20 +4,26 @@
 
 set -eu -o pipefail
 
-IMAGE="veetaha/veebot-telegram"
+scripts=$(readlink -f $(dirname $0))
+repo="$scripts/.."
 
-SCRIPTS=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-REPO="$SCRIPTS/.."
+cd $repo
 
-. $SCRIPTS/server_ip.sh
+image=$(cd deployment/project && terraform output -json | jq -r '.docker.value.image_name')
 
-cd $REPO
-
-VERSION=$(\
+version=$(\
     cargo metadata --format-version=1 \
     | jq -r '.packages[] | select(.name == "veebot-telegram") | .version' \
 )
 
-DOCKER_BUILDKIT=1 docker build . --tag $IMAGE:$VERSION --tag $IMAGE:latest --build-arg RUST_BUILD_MODE=release
-docker push $IMAGE:$VERSION
-docker push $IMAGE:latest
+workspace=$(cd deployment/project && terraform workspace show)
+
+if [ "$workspace" = "default" ]; then
+    build_mode=release
+else
+    build_mode=debug
+fi
+
+DOCKER_BUILDKIT=1 docker build . --tag $image:$version --tag $image:latest --build-arg RUST_BUILD_MODE=$build_mode
+docker push $image:$version
+docker push $image:latest

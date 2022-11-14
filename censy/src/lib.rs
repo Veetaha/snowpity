@@ -57,7 +57,5 @@ pub struct ValidationOutput {
 }
 
 pub fn validate(_input: ValidationInput<'_>) -> ValidationOutput {
-    let U: u32 = TryFrom::try_from(32_u32).unwrap();
-
     todo!()
 }

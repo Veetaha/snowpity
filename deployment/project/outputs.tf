@@ -20,6 +20,12 @@ output "grafana_loki_creds" {
   value = {
     loki_url       = grafana_cloud_stack.this.logs_url
     loki_ursername = grafana_cloud_stack.this.logs_user_id
-    loki_password  = var.grafana_cloud_api_key
+    loki_password  = local.grafana_cloud_api_key
+  }
+}
+
+output "docker" {
+  value = {
+    image_name = module.dockerhub.image_name
   }
 }

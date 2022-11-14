@@ -2,13 +2,16 @@ use crate::util::{encoding, prelude::*};
 use crate::Result;
 use crate::{err_val, tg, UserError};
 use async_trait::async_trait;
+use futures::prelude::*;
 use itertools::Itertools;
+use std::collections::{HashMap, HashSet};
+use std::future::IntoFuture;
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::ChatMemberKind;
 use teloxide::utils::command::BotCommands;
 use teloxide::utils::markdown;
-use tracing::info;
+use tracing::{error, info};
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(
@@ -22,6 +25,15 @@ pub(crate) enum Cmd {
     #[command(description = "display version info")]
     Version,
 
+    #[command(description = "display short system information")]
+    Sys,
+
+    #[command(description = "display all unverified users currently registered")]
+    ListUnverified,
+
+    #[command(description = "clear the unverified users map")]
+    ClearUnverified,
+
     #[command(description = "dump detailed diagnostic data about the message that was replied to")]
     Describe,
 }
@@ -32,6 +44,49 @@ impl tg::cmd::Command for Cmd {
         match self {
             Cmd::MaintainerHelp => {
                 ctx.bot.reply_help_md_escaped::<Cmd>(&msg).await?;
+            }
+            Cmd::ListUnverified => {
+                let unverified = ctx.captcha.list_unverified();
+                let chats: HashSet<_> = unverified.iter().map(|(chat_id, _)| *chat_id).collect();
+                let chats: HashMap<_, _> = stream::iter(chats)
+                    .map(|chat_id| async move {
+                        let chat: Result<_> =
+                            ctx.bot.get_chat(chat_id).into_future().err_into().await;
+
+                        let chat_debug = chat
+                            .map(|chat| chat.debug_id_markdown_escaped())
+                            .unwrap_or_else(|err| {
+                                error!("Couldn't get chat info: {err:#?}");
+                                format!("{{{{unkown_chat: {chat_id}}}}}")
+                            });
+                        (chat_id, chat_debug)
+                    })
+                    .buffer_unordered(15)
+                    .collect()
+                    .await;
+
+                let unverified = unverified
+                    .iter()
+                    .map(|(chat_id, user)| {
+                        let chat = &chats[chat_id];
+                        let user = user.debug_id();
+                        format!("{user} 👉 {chat}")
+                    })
+                    .join("\n");
+
+                info!("Unverified users:\n{unverified}");
+
+                ctx.bot.reply_chunked(msg, &unverified).await?;
+            }
+            Cmd::ClearUnverified => {
+                ctx.captcha.clear_unverified();
+                ctx.bot
+                    .reply_chunked(msg, "Unverified users were cleared ✔️")
+                    .await?;
+            }
+            Cmd::Sys => {
+                let info = markdown::code_block(&ctx.sysinfo.to_human_readable());
+                ctx.bot.reply_chunked(&msg, info).await?;
             }
             Cmd::Describe => {
                 let reply = msg
@@ -46,8 +101,8 @@ impl tg::cmd::Command for Cmd {
 
                 info!(
                     msg_id = msg.id.to_tracing(),
-                    msg = %encoding::to_json_string_pretty(reply),
-                    sender = %encoding::to_json_string_pretty(&sender),
+                    msg = %format_args!("\n{}", encoding::to_yaml_string(reply)),
+                    sender = %format_args!("\n{}", encoding::to_yaml_string(&sender)),
                     "/describe"
                 );
 
@@ -59,7 +114,7 @@ impl tg::cmd::Command for Cmd {
                     sender: Option<&'a ChatMemberKind>,
                 }
 
-                let info = encoding::to_json_string_pretty(&Info {
+                let info = encoding::to_yaml_string(&Info {
                     message: reply,
                     sender: sender.as_ref(),
                 });

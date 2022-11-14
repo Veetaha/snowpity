@@ -1,11 +1,14 @@
 services:
   telegram_bot:
-    image: veetaha/veebot-telegram:${VEEBOT_TG_IMAGE_TAG-latest}
+    image: ${VEEBOT_TG_IMAGE_NAME-veetaha/veebot-telegram-dev}:${VEEBOT_TG_IMAGE_TAG-latest}
     env_file: .env
     user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker compose up'}"
     build: .
     environment:
       DATABASE_URL: postgres://admin:${PG_PASSWORD}@postgres:5432
+    volumes:
+      - /proc/stat:/proc/stat:ro
+      - /proc/meminfo:/proc/meminfo:ro
 
   #   networks: [ postgres ]
   #   depends_on: [ postgres ]

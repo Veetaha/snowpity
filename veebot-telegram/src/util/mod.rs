@@ -7,7 +7,7 @@ mod teloxide_ext;
 
 pub(crate) mod encoding;
 
-// pub(crate) use chrono_ext::*;
+pub(crate) use chrono_ext::*;
 pub(crate) use reqwest_ext::*;
 // pub(crate) use sqlx_ext::*;
 // pub(crate) use teloxide_ext::*;
