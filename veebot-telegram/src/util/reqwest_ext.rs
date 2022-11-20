@@ -1,10 +1,10 @@
+use crate::util::prelude::*;
 use crate::{err_ctx, err_val, HttpError, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
 use easy_ext::ext;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use tracing::{debug, warn};
 
 pub(crate) fn create_http_client() -> reqwest::Client {
     teloxide::net::client_from_env()

@@ -8,7 +8,6 @@ use futures::prelude::*;
 use sqlx::postgres::types::PgInterval;
 use std::time::Duration;
 use teloxide::types::{ChatId, UserId};
-use tracing::{instrument, warn};
 
 pub(crate) struct TgChat {
     pub(crate) id: ChatId,
@@ -51,35 +50,6 @@ impl TgChatsRepo {
         created_by: UserId,
         banned_pattern_mute_duration: Option<Duration>,
     ) -> Result {
-
-// Recursive expansion of query! macro
-// ====================================
-
-{
-    {
-        {
-
-            use ::sqlx::ty_match::{MatchBorrowExt as _, WrapSameExt as _};
-            use ::sqlx::Arguments as _;
-            let arg0 = &(chat_id.into_db());
-            let arg1 = &(created_by.into_db());
-            let arg2 = &(banned_pattern_mute_duration.try_into_db()?);
-            let mut query_args =  <sqlx::postgres::Postgres as ::sqlx::database::HasArguments> ::Arguments::default();
-            query_args.reserve(
-                3usize,
-                0 + ::sqlx::encode::Encode::<sqlx::postgres::Postgres>::size_hint(arg0)
-                    + ::sqlx::encode::Encode::<sqlx::postgres::Postgres>::size_hint(arg1)
-                    + ::sqlx::encode::Encode::<sqlx::postgres::Postgres>::size_hint(arg2),
-            );
-            query_args.add(arg0);
-            query_args.add(arg1);
-            query_args.add(arg2);
-            ::sqlx::query_with:: <sqlx::postgres::Postgres,_>("INSERT INTO tg_chats (id, created_by, banned_pattern_mute_duration)\n            VALUES ($1, $2, $3)",query_args)
-        }
-    }
-}
-
-
         // let query = sqlx::query!(
         //     "INSERT INTO tg_chats (id, created_by, banned_pattern_mute_duration)
         //     VALUES ($1, $2, $3)",

@@ -1,24 +1,20 @@
-// TODO: the database module will be used some day
-#![allow(unused)]
-
+mod config;
 mod db_constraints;
+mod media_cache;
 // mod tg_chat_banned_words;
 // mod tg_chats;
 
-use crate::{err_ctx, DbConfig, DbError, Result};
-use dptree::di::DependencyMap;
+use crate::{err_ctx, DbError, Result};
 use sqlx::postgres::PgPoolOptions;
-use std::sync::Arc;
 
-// pub(crate) use tg_chat_banned_words::*;
-// pub(crate) use tg_chats::*;
+pub(crate) use config::*;
+pub(crate) use media_cache::*;
 
 pub(crate) struct Repo {
-    // pub(crate) tg_chats: TgChatsRepo,
-    // pub(crate) tg_chat_banned_words: TgChatBannedWordsRepo,
+    pub(crate) media_cache: MediaCacheRepo,
 }
 
-pub(crate) async fn init(config: DbConfig) -> Result<Repo> {
+pub(crate) async fn init(config: Config) -> Result<Repo> {
     let pool = PgPoolOptions::new()
         .max_connections(config.pool_size)
         // Verify that the connection is working early.
@@ -28,7 +24,7 @@ pub(crate) async fn init(config: DbConfig) -> Result<Repo> {
         .await
         .map_err(err_ctx!(DbError::Connect))?;
 
-    sqlx::migrate!()
+    sqlx::migrate!("../migrations")
         .run(&pool)
         .await
         .map_err(err_ctx!(DbError::Migrate))?;
@@ -39,7 +35,6 @@ pub(crate) async fn init(config: DbConfig) -> Result<Repo> {
         .await;
 
     Ok(Repo {
-        // tg_chat_banned_words: TgChatBannedWordsRepo::new(pool.clone()),
-        // tg_chats: TgChatsRepo::new(pool),
+        media_cache: MediaCacheRepo::new(pool.clone()),
     })
 }

@@ -5,8 +5,6 @@ pub(crate) type PgQuery<'a> = sqlx::query::Query<'a, sqlx::Postgres, sqlx::postg
 #[ext(ErrorExt)]
 pub(crate) impl sqlx::Error {
     fn is_constraint_violation(&self, constraint: &str) -> bool {
-        self.as_database_error()
-            .map(|err| err.constraint() == Some(constraint))
-            .unwrap_or(false)
+        matches!(self, Self::Database(err) if err.constraint() == Some(constraint))
     }
 }

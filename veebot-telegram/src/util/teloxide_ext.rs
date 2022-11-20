@@ -39,7 +39,7 @@ pub(crate) impl User {
     fn md_link(&self) -> String {
         let mention_text =
             markdown::escape(&self.username.clone().unwrap_or_else(|| self.full_name()));
-        format!("[{mention_text}]({})", self.url())
+        markdown::link(&self.url().to_string(), &mention_text)
     }
 
     fn debug_id(&self) -> String {
@@ -74,6 +74,7 @@ fn chat_debug_id_imp(chat: &Chat, escape: fn(&str) -> String) -> String {
     let suffix = escape(&format!("({username}{id})"));
 
     chat.invite_link()
+        .map(markdown::escape_link_url)
         .map(|invite_link| format!("[{title}]({invite_link}) {suffix}"))
         .unwrap_or_else(|| format!("{title} {suffix}"))
 }

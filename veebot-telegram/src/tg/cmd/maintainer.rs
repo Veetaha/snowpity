@@ -11,7 +11,6 @@ use teloxide::prelude::*;
 use teloxide::types::ChatMemberKind;
 use teloxide::utils::command::BotCommands;
 use teloxide::utils::markdown;
-use tracing::{error, info};
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(

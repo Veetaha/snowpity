@@ -1,35 +1,13 @@
+use crate::{db, derpi, tg};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_with::serde_as;
 use std::collections::HashMap;
-use teloxide::types::UserId;
 use tracing_subscriber::prelude::*;
 
 pub struct Config {
-    pub(crate) tg: TgConfig,
-    pub(crate) db: DbConfig,
-}
-
-#[derive(Deserialize, Clone)]
-pub(crate) struct TgConfig {
-    pub(crate) bot_token: String,
-
-    /// ID of the user, who owns the bot, and thus has full access to it
-    pub(crate) bot_maintainer: UserId,
-}
-
-#[derive(Deserialize)]
-pub(crate) struct DbConfig {
-    pub(crate) url: url::Url,
-
-    #[serde(default = "default_database_pool_size")]
-    pub(crate) pool_size: u32,
-}
-
-fn default_database_pool_size() -> u32 {
-    // Postgres instance has 100 connections limit.
-    // However, we also reserve 2 connections for ad-hoc db administration purposes
-    // via pg_admin, for example.
-    98
+    pub(crate) tg: tg::Config,
+    pub(crate) db: db::Config,
+    pub(crate) derpi: derpi::Config,
 }
 
 impl Config {
@@ -37,6 +15,7 @@ impl Config {
         Self {
             tg: from_env_or_panic("TG_"),
             db: from_env_or_panic("DATABASE_"),
+            derpi: from_env_or_panic("DERPI_"),
         }
     }
 }

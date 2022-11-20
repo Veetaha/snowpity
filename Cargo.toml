@@ -5,7 +5,7 @@ members = ["censy", "veebot-telegram", "xtask"]
 debug = 0
 
 [workspace.package]
-version = "0.4.3"
+version = "0.4.4"
 
 authors = ["Veetaha <veetaha2@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -22,6 +22,7 @@ async-recursion     = "1.0"
 async-trait         = "0.1"
 base64              = "0.13"
 bytes               = "1.1"
+derive_more         = "0.99"
 devx-cmd            = "0.5"
 display-error-chain = "=0.1.1"
 dotenv              = "0.15"
@@ -44,6 +45,7 @@ parking_lot         = "0.12"
 rand                = "0.8"
 serde_json          = { version = "1.0", features = ["preserve_order"] }
 serde_yaml          = "0.9"
+simple-actor        = "0.4"
 sqlx                = "0.6"
 sysinfo             = "0.26"
 teloxide            = "0.11"
@@ -66,6 +68,7 @@ serde              = { version = "1.0", features = ["derive"] }
 serde_with         = { version = "2.0", features = ["json"] }
 timeago            = { version = "0.3", features = ["chrono"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid               = { version = "1.2", features = ["v4"] }
 vergen             = { version = "7.2", features = ["build", "rustc", "git", "cargo"], default-features = false }
 
 # Path deps

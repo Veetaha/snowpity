@@ -1,6 +1,5 @@
-use crate::util;
+use crate::util::prelude::*;
 use easy_ext::ext;
-use tracing::error;
 
 #[ext(OptionExt)]
 pub(crate) impl<T> Option<T> {
@@ -27,7 +26,7 @@ where
             Ok(x) => x,
             Err(err) => {
                 error!(
-                    err = util::tracing_err(&err),
+                    err = tracing_err(&err),
                     "The application is crashing..."
                 );
                 panic!("unwrap called on None");

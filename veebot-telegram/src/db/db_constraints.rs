@@ -11,9 +11,10 @@ macro_rules! def_constraints {
 }
 
 def_constraints! {
-    TG_CHATS_PK = "tg_chats_pk";
-    TG_CHAT_AND_BANNED_WORD_COMPOSITE_PK = "tg_chat_and_banned_word_composite_pk";
-    TG_CHATS_FK = "tg_chats_fk";
+    TG_DERPI_MEDIA_CACHE_MEDIA_ID_PK = "tg_derpi_media_cache_media_id_pk";
+    // TG_CHATS_PK = "tg_chats_pk";
+    // TG_CHAT_AND_BANNED_WORD_COMPOSITE_PK = "tg_chat_and_banned_word_composite_pk";
+    // TG_CHATS_FK = "tg_chats_fk";
 }
 
 pub(crate) struct DbConstraints {
@@ -44,22 +45,19 @@ impl DbConstraints {
     }
 
     async fn fetch_all(&self) -> Result<HashSet<String>> {
-        // let query = sqlx::query!(
-        //     r#"
-        //     SELECT conname as "constraint!"
-        //     FROM pg_catalog.pg_constraint con
-        //     INNER JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid
-        //     INNER JOIN pg_catalog.pg_namespace nsp ON nsp.oid = connamespace
-        //     WHERE nsp.nspname = 'public'
-        // "#
-        // );
+        let query = sqlx::query!(r#"
+            select conname as constraint
+            from pg_catalog.pg_constraint con
+            inner join pg_catalog.pg_class rel on rel.oid = con.conrelid
+            inner join pg_catalog.pg_namespace nsp on nsp.oid = connamespace
+            where nsp.nspname = 'public'
+        "#);
 
-        // query
-        //     .fetch(&self.pool)
-        //     .map_ok(|record| record.constraint)
-        //     .try_collect()
-        //     .err_into()
-        //     .await
-        todo!()
+        query
+            .fetch(&self.pool)
+            .map_ok(|record| record.constraint)
+            .try_collect()
+            .err_into()
+            .await
     }
 }

@@ -1,7 +1,7 @@
 use crate::tg::{self, Bot};
+use crate::util;
 use crate::util::prelude::*;
-use crate::util::{self, DynError};
-use crate::{err_val, Error, ErrorKind, Result};
+use crate::{err_val, DynResult, Error, ErrorKind, Result};
 use chrono::prelude::*;
 use futures::prelude::*;
 use parking_lot::Mutex as SyncMutex;
@@ -18,7 +18,6 @@ use teloxide::types::{
 };
 use teloxide::utils::markdown;
 use tokio::sync::oneshot;
-use tracing::{debug, error, info, info_span, instrument, trace, warn};
 use tracing_futures::Instrument;
 
 /// Duration for the new users to solve the captcha. If they don't reply
@@ -67,7 +66,7 @@ struct CaptchaReplyPayload {
 pub(crate) async fn handle_callback_query(
     ctx: Arc<tg::Ctx>,
     callback_query: CallbackQuery,
-) -> Result<(), Box<DynError>> {
+) -> DynResult {
     async {
         let tg::Ctx { bot, .. } = &*ctx;
 
@@ -144,12 +143,12 @@ pub(crate) async fn handle_new_chat_members(
     ctx: Arc<tg::Ctx>,
     msg: Message,
     users: Vec<User>,
-) -> Result<(), Box<DynError>> {
+) -> DynResult {
     async move {
         let image_url: &Url = &GREETING_ANIMATION_URL.parse().unwrapx();
 
         let futs = users.into_iter().map(|user| {
-            let span = tracing::info_span!("user", user = %user.debug_id());
+            let span = info_span!("user", user = %user.debug_id());
             let ctx = ctx.clone();
             async move {
                 let mention = user.md_link();
@@ -316,7 +315,7 @@ pub(crate) async fn handle_left_chat_member(
     ctx: Arc<tg::Ctx>,
     msg: Message,
     user: User,
-) -> Result<(), Box<DynError>> {
+) -> DynResult {
     async {
         let user_id = user.id;
         let chat_id = msg.chat.id;
