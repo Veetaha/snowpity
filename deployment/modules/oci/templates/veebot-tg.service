@@ -1,7 +1,12 @@
 [Unit]
 Description=Veebot Telegram Service (docker compose)
-Requires=docker.service
+BindsTo=docker.service
 After=docker.service
+
+# This unit is generated automatically by `systemd` using the builtin generator
+# that reads the configurations from `/etc/fstab`
+BindsTo=mnt-master.mount
+After=mnt-master.mount
 
 [Service]
 Type=oneshot

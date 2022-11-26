@@ -4,16 +4,12 @@ variable "veebot_tg_image_tag" {
   default  = "latest"
 }
 
-variable "tg_bot_token" {
-  nullable  = false
-  sensitive = true
-  type = object({
-    prod = optional(string)
-    dev  = optional(string)
-  })
+variable "tg_bot_maintainer" {
+  nullable = false
+  type     = string
 }
 
-variable "hcloud_token" {
+variable "tg_bot_token" {
   nullable  = false
   sensitive = true
   type = object({
@@ -53,4 +49,9 @@ variable "pgadmin_password" {
   nullable  = false
   type      = string
   sensitive = true
+}
+
+variable "oci_parent_compartment_id" {
+  nullable  = false
+  type      = string
 }

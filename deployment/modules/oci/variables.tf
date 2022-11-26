@@ -1,3 +1,13 @@
+variable "parent_compartment_id" {
+  nullable = false
+  type     = string
+}
+
+variable "tg_bot_maintainer" {
+  nullable = false
+  type     = string
+}
+
 variable "veebot_tg_image_tag" {
   nullable = false
   type     = string

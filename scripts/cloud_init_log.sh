@@ -4,4 +4,4 @@ scripts=$(readlink -f $(dirname $0))
 
 . $scripts/server_ip.sh
 
-ssh admin@$server_ip
+ssh -t ubuntu@$server_ip "clear && cat /var/log/cloud-init-output.log"

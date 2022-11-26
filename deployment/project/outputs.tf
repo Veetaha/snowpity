@@ -1,8 +1,13 @@
+output "oci_compartment_id" {
+  value = module.oci.compartment_id
+}
+
 output "server" {
   value = {
-    ipv6               = module.hetzner.server_ipv6
-    status             = module.hetzner.server_status
-    volume_mount_point = module.hetzner.volume_mount_point
+    id                      = module.oci.server_id
+    ip                      = module.oci.server_ip
+    state                   = module.oci.server_state
+    data_volume_mount_point = module.oci.data_volume_mount_point
   }
 }
 

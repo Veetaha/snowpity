@@ -148,7 +148,11 @@ pub(crate) async fn handle_new_chat_members(
     async move {
         let image_url: &Url = &GREETING_ANIMATION_URL.parse().unwrapx();
 
-        let futs = users.into_iter().map(|user| {
+        let bot_id = ctx.bot.get_me().await?.id;
+
+        let users = users.into_iter().filter(|user| user.id != bot_id);
+
+        let futs = users.map(|user| {
             let span = tracing::info_span!("user", user = %user.debug_id());
             let ctx = ctx.clone();
             async move {
@@ -240,11 +244,12 @@ pub(crate) async fn handle_new_chat_members(
                         "Timed out waiting for captcha confirmation"
                     );
 
-                    let (delete_msg_result, kick_result) = futures::join!(
-                        UnverifiedUser::delete(&ctx, chat_id, user_id, DeleteReason::Timeout),
-                        kick_user_due_to_captcha(&ctx.bot, chat_id, user_id)
-                            .instrument(info_span!("kick_reason", kick_reason = "captcha_timeout"))
-                    );
+                    let delete_msg_result =
+                        UnverifiedUser::delete(&ctx, chat_id, user_id, DeleteReason::Timeout).await;
+
+                    let kick_result = kick_user_due_to_captcha(&ctx.bot, chat_id, user_id)
+                        .instrument(info_span!("kick_reason", kick_reason = "captcha_timeout"))
+                        .await;
 
                     if let Err(err) = delete_msg_result {
                         error!("Failed to remove captcha message: {err:#?}");
