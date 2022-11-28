@@ -1,14 +1,10 @@
 #cloud-config
 
-# fs_setup:
-#   - filesystem: ${data_volume_fs}
-#     device: ${data_volume_device}
-
 mounts:
   - - ${data_volume_device}
     - ${data_volume_mount_point}
     - ${data_volume_fs}
-    - defaults,noauto,x-systemd.growfs,x-systemd.makefs,x-systemd.device-timeout=10min
+    - defaults,noauto,uid=${server_os_user},gid=${server_os_user},x-systemd.growfs,x-systemd.makefs,x-systemd.device-timeout=10min
     - "0"
     - "0"
 
@@ -16,7 +12,7 @@ groups: [docker]
 
 users:
   - default
-  - name: mane
+  - name: ${server_os_user}
     lock_passwd: true
     shell: /bin/bash
     ssh_authorized_keys: ["${ssh_public_key}"]
@@ -66,8 +62,8 @@ runcmd:
 
   # Log in to be able to pull the image from the private dockerhub repo in development workspace
   # `runuser` is required here, because `docker login` stores the creds in $HOME
-  # and our systemd service will run on behalf of `admin` user
-  - runuser -u admin -- docker login --username ${docker_username} --password ${docker_password}
+  # and our systemd service will run on behalf of `${server_os_user}` user
+  - runuser -u ${server_os_user} -- docker login --username ${docker_username} --password ${docker_password}
 
   - echo 'Installing grafana-agent...'
 

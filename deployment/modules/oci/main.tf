@@ -27,6 +27,12 @@ locals {
   data_volume_mount_point = "/mnt/master"
   data_volume_fs          = "ext4"
 
+  # Looks like using the user name `admin` conflicts with something, because
+  # the server is not accessible via SSH with this user name. The supposition
+  # is that this conflicts with the `admin` group name already present in the
+  # used linux AMI.
+  server_os_user = "mane"
+
   pg_data = "${local.data_volume_mount_point}/data/postgres"
 
   env_file_path = "/var/app/.env"
@@ -51,6 +57,7 @@ locals {
       vars = {
         docker_compose_cmd = "/usr/bin/env bash /var/app/docker-compose.sh"
         env_file_path      = local.env_file_path
+        server_os_user     = local.server_os_user
       }
     }
     "docker-compose.sh" = {
@@ -78,6 +85,7 @@ locals {
   user_data_vars = {
     files          = { for path, content in local.files : path => base64gzip(content) }
     ssh_public_key = local.ssh_public_key
+    server_os_user = local.server_os_user
 
     data_volume_device      = local.data_volume_device
     data_volume_mount_point = local.data_volume_mount_point

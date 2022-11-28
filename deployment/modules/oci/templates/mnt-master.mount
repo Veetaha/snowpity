@@ -1,3 +1,0 @@
-[Mount]
-What=${data_volume_device}
-Where=${data_volume_mount_point}

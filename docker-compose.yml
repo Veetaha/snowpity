@@ -2,7 +2,7 @@ services:
   telegram_bot:
     image: ${VEEBOT_TG_IMAGE_NAME-veetaha/veebot-telegram-dev}:${VEEBOT_TG_IMAGE_TAG-latest}
     env_file: .env
-    user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker compose up'}"
+    user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker ...'}"
     build: .
     environment:
       DATABASE_URL: postgres://admin:${PG_PASSWORD}@postgres:5432
@@ -14,8 +14,8 @@ services:
     depends_on: [ postgres ]
 
   postgres:
-    image: postgres:14
-    user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker compose up'}"
+    image: postgres:15
+    user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker ...'}"
     environment:
       POSTGRES_USER: admin
       POSTGRES_DB: postgres

@@ -17,3 +17,7 @@ output "server_state" {
 output "data_volume_mount_point" {
   value = local.data_volume_mount_point
 }
+
+output "server_os_user" {
+  value = local.server_os_user
+}

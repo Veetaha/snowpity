@@ -10,7 +10,7 @@ After=mnt-master.mount
 
 [Service]
 Type=oneshot
-User=admin
+User=${server_os_user}
 RemainAfterExit=yes
 WorkingDirectory=/var/app
 EnvironmentFile=${env_file_path}

@@ -52,6 +52,6 @@ variable "pgadmin_password" {
 }
 
 variable "oci_parent_compartment_id" {
-  nullable  = false
-  type      = string
+  nullable = false
+  type     = string
 }

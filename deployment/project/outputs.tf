@@ -7,6 +7,7 @@ output "server" {
     id                      = module.oci.server_id
     ip                      = module.oci.server_ip
     state                   = module.oci.server_state
+    os_user                 = module.oci.server_os_user
     data_volume_mount_point = module.oci.data_volume_mount_point
   }
 }
