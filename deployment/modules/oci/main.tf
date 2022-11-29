@@ -12,7 +12,8 @@ locals {
     PG_PASSWORD      = var.pg_password
     PGADMIN_PASSWORD = var.pgadmin_password
 
-    PG_DATA = local.pg_data
+    PG_DATA                 = local.pg_data
+    DATA_VOLUME_MOUNT_POINT = local.data_volume_mount_point
 
     VEEBOT_TG_IMAGE_NAME = var.veebot_tg_image_name
     VEEBOT_TG_IMAGE_TAG  = var.veebot_tg_image_tag
@@ -37,53 +38,23 @@ locals {
 
   env_file_path = "/var/app/.env"
 
-  templates = {
-    "grafana-agent.yaml" = {
-      target = "/etc/grafana-agent.yaml"
-      vars = {
-        prometheus_remote_write_url = var.prometheus_remote_write_url
-        prometheus_username         = var.prometheus_username
-        prometheus_password         = var.prometheus_password
+  systemd_service = "veebot-tg.service"
 
-        loki_remote_write_url = "${var.loki_url}/loki/api/v1/push"
-        loki_username         = var.loki_username
-        loki_password         = var.loki_password
+  template_vars = {
+    env_file_path  = local.env_file_path
+    server_os_user = local.server_os_user
 
-        hostname = local.hostname
-      }
-    },
-    "veebot-tg.service" = {
-      target = "/etc/systemd/system/veebot-tg.service"
-      vars = {
-        docker_compose_cmd = "/usr/bin/env bash /var/app/docker-compose.sh"
-        env_file_path      = local.env_file_path
-        server_os_user     = local.server_os_user
-      }
-    }
-    "docker-compose.sh" = {
-      target = "/var/app/docker-compose.sh"
-      vars   = {}
-    }
-  }
+    prometheus_remote_write_url = var.prometheus_remote_write_url
+    prometheus_username         = var.prometheus_username
+    prometheus_password         = var.prometheus_password
 
-  non_templates = {
-    "/var/app/docker-compose.yml"    = file("${path.module}/../../../docker-compose.yml"),
-    "/var/app/pgadmin4/servers.json" = file("${path.module}/../../../pgadmin4/servers.json"),
+    loki_remote_write_url = "${var.loki_url}/loki/api/v1/push"
+    loki_username         = var.loki_username
+    loki_password         = var.loki_password
+    loki_url              = var.loki_url
 
-    "${local.env_file_path}" = join("\n", [for k, v in local.veebot_tg_env_vars : "${k}=${v}"]),
-  }
+    hostname = local.hostname
 
-  files = merge(
-    {
-      for template_source, template in local.templates : template.target => templatefile(
-        "${path.module}/templates/${template_source}", template.vars
-      )
-    },
-    local.non_templates
-  )
-
-  user_data_vars = {
-    files          = { for path, content in local.files : path => base64gzip(content) }
     ssh_public_key = local.ssh_public_key
     server_os_user = local.server_os_user
 
@@ -91,16 +62,40 @@ locals {
     data_volume_mount_point = local.data_volume_mount_point
     data_volume_fs          = local.data_volume_fs
 
-    loki_url      = var.loki_url
-    loki_username = var.loki_username
-    loki_password = var.loki_password
-
     docker_username = var.docker_username
     docker_password = var.docker_password
 
     // Reboot only when running in production. It usually isn't important,
     // so we can skip this step in development.
     reboot_if_required = module.workspace.kind == "prod"
+  }
+
+  templates = {
+    "grafana-agent.yaml"    = "/etc/grafana-agent.yaml"
+    (local.systemd_service) = "/etc/systemd/system/veebot-tg.service"
+  }
+
+  exec_files = {
+    "/var/app/docker-compose.sh" = file("${path.module}/templates/docker-compose.sh")
+    "/var/app/start.sh"          = file("${path.module}/templates/start.sh")
+  }
+
+  data_files = merge(
+    {
+      "/var/app/docker-compose.yml"    = file("${path.module}/../../../docker-compose.yml")
+      "/var/app/pgadmin4/servers.json" = file("${path.module}/../../../pgadmin4/servers.json")
+
+      (local.env_file_path) = join("\n", [for k, v in local.veebot_tg_env_vars : "${k}=${v}"])
+    },
+    {
+      for source, target in local.templates :
+      target => templatefile("${path.module}/templates/${source}", local.template_vars)
+    }
+  )
+
+  files_by_perms = {
+    "0444" = local.data_files
+    "0555" = local.exec_files
   }
 
   compartment_id      = oci_identity_compartment.master.id
@@ -127,7 +122,24 @@ module "workspace" {
 
 data "cloudinit_config" "master" {
   part {
-    content = templatefile("${path.module}/templates/user_data.yaml", local.user_data_vars)
+    content = templatefile(
+      "${path.module}/templates/user_data.yaml",
+      merge(
+        local.template_vars,
+        {
+          files = merge(
+            flatten([
+              for perms, files in local.files_by_perms : [
+                for path, content in files : {
+                  (path) = { content = base64gzip(content), perms = perms }
+                }
+              ]
+            ])
+            ...
+          )
+        }
+      )
+    )
   }
 }
 
@@ -207,6 +219,51 @@ resource "oci_core_volume_attachment" "master_data" {
   volume_id       = oci_core_volume.master_data.id
   device          = local.data_volume_device
   attachment_type = "paravirtualized"
+}
+
+# HACK: we need to gracefully shutdown our systemd service with the database
+# docker container before the data volume is detached. This null resource
+# depends on the volume attachment resource, so the remote-exec provisioner
+# teardown script will be run before the attachment is destroyed.
+#
+# Unfortunatelly, it's not possible to do this with `systemd`. The volume detach
+# sequence is undocumented in OCI docs. One would expect that all `systemd`
+# services dependent upon the volume's mount are stopped before the volume
+# is detached but this isn't true.
+#
+# The reality is cruel. It was experimentally found that the volume is
+# detached abruptly. Therefore the database doesn't have time to
+# flush its data to the disk, which means potential data loss.
+resource "null_resource" "teardown" {
+  triggers = {
+    data_volume_attachment_id = oci_core_volume_attachment.master_data.id
+
+    # The data volume attachment ID is enough for the trigger, but these
+    # triggers are needed to workaround the problem that it's impossible
+    # to reference symbols other than `self` variable in the provisioner block.
+    #
+    # Issue in terraform: https://github.com/hashicorp/terraform/issues/23679
+    server_ip       = oci_core_instance.master.public_ip
+    server_os_user  = local.server_os_user
+    systemd_service = local.systemd_service
+  }
+
+  provisioner "remote-exec" {
+    when = destroy
+
+    inline = [
+      <<-SCRIPT
+      #!/usr/bin/env bash
+      set -euo pipefail
+      sudo systemctl stop ${self.triggers.systemd_service}
+      SCRIPT
+    ]
+
+    connection {
+      host = self.triggers.server_ip
+      user = self.triggers.server_os_user
+    }
+  }
 }
 
 # ------------------------------------------------

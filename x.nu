@@ -42,12 +42,17 @@ def "main ssh cloud-init user-data" [] {
 def "main ssh" [
     --code # Connect using VSCode
 ] {
-    if $code {
-        # FIXME: make vscode connection work via CLI, it doesn't right now :(
-        # code --folder-uri $"vscode-remote://ssh-remote+(ssh-str)"
-    } else {
+    if not $code {
         ssh
+        return
     }
+
+    # FIXME: make vscode connection work via CLI, it doesn't right now :(
+    code --folder-uri $"vscode-remote://ssh-remote+(ssh-str)"
+}
+
+def "main ssh str" [] {
+    ssh-str
 }
 
 # Build the docker image with the app's executable
@@ -81,8 +86,10 @@ def "main docker build" [
     )
 }
 
-# Start the local database container with pgadmin using `docker compose`
-def "main db start" [
+# Start all services locally using `docker compose`
+def "main start" [
+    --detach     # Run the services in the background
+    --no-app     # Start only the database services. Useful when running app locally
     --fresh (-f) # Executes `db drop` before starting the database (run `db drop --help` for details)
 ] {
     if $fresh {
@@ -91,12 +98,21 @@ def "main db start" [
     }
 
     mkdir (db-data)
-    docker-compose up postgres pgadmin
+
+    mut args = (
+        [up]
+        | append-if $detach '--detach'
+        | append-if $no_app postgres pgadmin
+    )
+
+    docker-compose $args
 }
 
-# Shutdown the local database container
-def "main db stop" [] {
-    docker-compose down
+# Shutdown the local services using `docker compose`
+def "main stop" [] {
+    # We increase the timeout, because shutting down `teloxide` takes a while
+    # The issue in `teloxide`: https://github.com/teloxide/teloxide/issues/711
+    docker-compose down '--timeout' 60
 }
 
 # Clean the persistent data volume of the local database container
@@ -112,6 +128,7 @@ def "main deploy" [
     --release (-r) # Build in release mode
     --drop-server  # Force the re-creation of the server instance
     --drop-db      # Drop the database (re-create the data volume)
+    --plan         # Do `tf plan` instead of `tf apply`
 ] {
     if not $no_build {
         # FIXME: it's this verbose due to https://github.com/nushell/nushell/issues/7260
@@ -122,38 +139,38 @@ def "main deploy" [
         }
     }
 
-    let args = ['apply' '-auto-approve' '-var' $'veebot_tg_image_tag=(project-version)']
-    let args = ($args | append-if $drop_server '--replace=module.oci.oci_core_instance.master')
-    let args = ($args | append-if $drop_db     '--replace=module.oci.oci_core_volume.master_data')
+    let args = if $plan {
+        ['plan']
+    } else {
+        ['apply' '-auto-approve']
+    }
+
+    let args = (
+        $args
+        | append ['-var' $'veebot_tg_image_tag=(project-version)']
+        | append-if $drop_server '--replace=module.oci.oci_core_instance.master'
+        | append-if $drop_db     '--replace=module.oci.oci_core_volume.master_data'
+    )
 
     tf $args
 
-    main ssh cloud-init log
+    if not $plan {
+        main ssh cloud-init log
+    }
+}
+
+def "main destroy server" [] {
+    tf destroy '--target=module.oci.oci_core_instance.master'
 }
 
 # Convenience wrapper for `tf state list`
 def "main tf state list" [] {
-    tf state list | lines
+    tf --no-debug state list | lines
 }
 
 ################################################
 ############ Implementation details ############
 ################################################
-
-# This is an env variable, because it's the only way to mutate state in nushell.
-# We need this to lazily cache the server IP on the first usage.
-
-def-env cached [cache_id: string, imp: block] {
-    let cache_id = $'__cache_($cache_id)'
-
-    let-env $cache_id = if $cache_id in $env {
-        $env | get $cache_id
-    } else {
-        do $imp
-    }
-
-    $env | get $cache_id
-}
 
 def-env repo [] {
     cached repo { git rev-parse --show-toplevel | str trim }
@@ -175,6 +192,10 @@ def-env project-version [] {
     cargo-metadata | get packages | where name == veebot-telegram | get 0.version
 }
 
+def-env server-ip [] {
+    (tf-output).server.value.ip
+}
+
 def-env ssh-str [] {
     let tf_output = tf-output
     let ip = $tf_output.server.value.ip
@@ -184,7 +205,7 @@ def-env ssh-str [] {
 }
 
 def-env ssh [...args: string] {
-    ^ssh (ssh-str) $args
+    ^ssh -t (ssh-str) $args
 }
 
 def tf [--no-debug, ...args: string] {
@@ -193,13 +214,13 @@ def tf [--no-debug, ...args: string] {
     let args = ($args | flatten-list)
 
     if $no_debug {
-        terraform $args
-    } else {
-        with-debug terraform $args
+        return (terraform $args)
     }
+
+    with-debug terraform $args
 }
 
-def docker-compose [...args: string] {
+def docker-compose [...args: any] {
     cd (repo)
     (
         CURRENT_UID=$"(id --user | str trim):(id --group | str trim)"
@@ -215,14 +236,30 @@ def debug [arg: any] {
     print --stderr $"(ansi blue_bold)[DEBUG] ($arg) (ansi reset)"
 }
 
-def append-if [condition: bool, value: any] {
-    if $condition { $in | append [$value] } else { $in }
+def append-if [condition: bool, ...values: any] {
+    if $condition { $in | append ($values | flatten-list) } else { $in }
 }
 
 def with-debug [cmd: string, ...args: string] {
     let args = ($args | flatten-list)
-    debug $"($cmd) ($args | str join ' ')"
-    run-external --redirect-stdout $cmd $args
+    let invocation = $"($cmd) ($args | str join ' ')"
+
+    debug $invocation
+
+    let result = (run-external $cmd $args | complete)
+    let span = (metadata $cmd).span;
+
+    if $result.exit_code != 0 {
+        let invocation = ([$invocation] | table --collapse)
+        error make {
+            msg: $"Command exited with code ($result.exit_code)\n\n($invocation)\n"
+            label: {
+                text: "The command originates from here"
+                start: $span.start
+                end: $span.end
+            }
+        }
+    }
 }
 
 def flatten-list [] {
@@ -231,4 +268,20 @@ def flatten-list [] {
     } else {
         $in
     }
+}
+
+# Some commands are expensive to run, and this utility may be used to cache
+# their output.
+#
+# This is `def-env` because it's the only way to mutate state in nushell.
+def-env cached [cache_id: string, imp: block] {
+    let cache_id = $'__cache_($cache_id)'
+
+    let-env $cache_id = if $cache_id in $env {
+        $env | get $cache_id
+    } else {
+        do $imp
+    }
+
+    $env | get $cache_id
 }

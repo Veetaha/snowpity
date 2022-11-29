@@ -4,7 +4,7 @@ mounts:
   - - ${data_volume_device}
     - ${data_volume_mount_point}
     - ${data_volume_fs}
-    - defaults,noauto,uid=${server_os_user},gid=${server_os_user},x-systemd.growfs,x-systemd.makefs,x-systemd.device-timeout=10min
+    - defaults,noauto,x-systemd.growfs,x-systemd.makefs,x-systemd.device-timeout=10min
     - "0"
     - "0"
 
@@ -29,10 +29,13 @@ packages:
   - gnupg
 
 write_files:
-  %{~ for path, content in files ~}
+  %{~ for path, file in files ~}
   - encoding: gzip+base64
+    content: ${file.content}
+    owner: '${server_os_user}:${server_os_user}'
     path: ${path}
-    content: ${content}
+    permissions: '${file.perms}'
+    defer: true
   %{~ endfor ~}
 
 runcmd:
