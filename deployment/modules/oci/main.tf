@@ -1,10 +1,5 @@
 locals {
-  veebot_tg_env_vars = {
-    VEEBOT_LOG = "debug,hyper=info,reqwest=info,rustls=info,sqlx=warn"
-
-    TG_BOT_MAINTAINER = var.tg_bot_maintainer
-    TG_BOT_TOKEN      = var.tg_bot_token
-
+  env_vars = {
     LOKI_URL      = var.loki_url
     LOKI_USERNAME = var.loki_username
     LOKI_PASSWORD = var.loki_password
@@ -15,9 +10,12 @@ locals {
     PG_DATA                 = local.pg_data
     DATA_VOLUME_MOUNT_POINT = local.data_volume_mount_point
 
-    VEEBOT_TG_IMAGE_NAME = var.veebot_tg_image_name
-    VEEBOT_TG_IMAGE_TAG  = var.veebot_tg_image_tag
-    VEEBOT_LOG_LABELS = jsonencode({
+    TG_BOT_MAINTAINER = var.tg_bot_maintainer
+    TG_BOT_TOKEN      = var.tg_bot_token
+    TG_BOT_IMAGE_NAME = var.tg_bot_image_name
+    TG_BOT_IMAGE_TAG  = var.tg_bot_image_tag
+    TG_BOT_LOG = "debug,hyper=info,reqwest=info,rustls=info,sqlx=warn"
+    TG_BOT_LOG_LABELS = jsonencode({
       instance = local.hostname
     })
   }
@@ -38,7 +36,7 @@ locals {
 
   env_file_path = "/var/app/.env"
 
-  systemd_service = "veebot-tg.service"
+  systemd_service = "tg-bot.service"
 
   template_vars = {
     env_file_path  = local.env_file_path
@@ -72,7 +70,7 @@ locals {
 
   templates = {
     "grafana-agent.yaml"    = "/etc/grafana-agent.yaml"
-    (local.systemd_service) = "/etc/systemd/system/veebot-tg.service"
+    (local.systemd_service) = "/etc/systemd/system/tg-bot.service"
   }
 
   exec_files = {
@@ -85,7 +83,7 @@ locals {
       "/var/app/docker-compose.yml"    = file("${path.module}/../../../docker-compose.yml")
       "/var/app/pgadmin4/servers.json" = file("${path.module}/../../../pgadmin4/servers.json")
 
-      (local.env_file_path) = join("\n", [for k, v in local.veebot_tg_env_vars : "${k}=${v}"])
+      (local.env_file_path) = join("\n", [for k, v in local.env_vars : "${k}=${v}"])
     },
     {
       for source, target in local.templates :

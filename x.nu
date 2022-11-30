@@ -16,7 +16,7 @@ def main [] {}
 
 # Display the app's systemd service status
 def "main ssh systemctl status" [] {
-    ssh "sudo systemctl status veebot-tg.service"
+    ssh "sudo systemctl status tg-bot.service"
 }
 
 # Display the server's cloud-init logs
@@ -147,7 +147,7 @@ def "main deploy" [
 
     let args = (
         $args
-        | append ['-var' $'veebot_tg_image_tag=(project-version)']
+        | append ['-var' $'tg_bot_image_tag=(project-version)']
         | append-if $drop_server '--replace=module.oci.oci_core_instance.master'
         | append-if $drop_db     '--replace=module.oci.oci_core_volume.master_data'
     )
@@ -196,7 +196,7 @@ def-env cargo-metadata [] {
 }
 
 def-env project-version [] {
-    cargo-metadata | get packages | where name == veebot-telegram | get 0.version
+    cargo-metadata | get packages | where name == snowpity-tg | get 0.version
 }
 
 def-env server-ip [] {

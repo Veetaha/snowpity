@@ -1,4 +1,4 @@
-variable "veebot_tg_image_tag" {
+variable "tg_bot_image_tag" {
   nullable = false
   type     = string
   default  = "latest"

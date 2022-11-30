@@ -87,4 +87,4 @@ runcmd:
   - systemctl enable --now grafana-agent.service
 
   # Enable systemd services responsible for managing Docker Compose services
-  - systemctl enable --now veebot-tg.service
+  - systemctl enable --now tg-bot.service
