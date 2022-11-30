@@ -2,7 +2,7 @@ services:
   telegram_bot:
     image: ${VEEBOT_TG_IMAGE_NAME-veetaha/veebot-telegram-dev}:${VEEBOT_TG_IMAGE_TAG-latest}
     env_file: .env
-    user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker compose up'}"
+    user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker ...'}"
     build: .
     environment:
       DATABASE_URL: postgres://admin:${PG_PASSWORD}@postgres:5432
@@ -10,56 +10,55 @@ services:
       - /proc/stat:/proc/stat:ro
       - /proc/meminfo:/proc/meminfo:ro
 
-  #   networks: [ postgres ]
-  #   depends_on: [ postgres ]
+    # We are listening only for Ctrl-C
+    stop_signal: SIGINT
 
-#   postgres:
-#     image: postgres:14
-#     user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker compose up'}"
-#     environment:
-#       POSTGRES_USER: admin
-#       POSTGRES_DB: postgres
-#       POSTGRES_PASSWORD: ${PG_PASSWORD}
+    networks: [ postgres ]
+    depends_on: [ postgres ]
 
-#     volumes:
-#       - ${PGDATA:-./data/postgres}:/var/lib/postgresql/data
-#       - /etc/passwd:/etc/passwd:ro
-#       - /etc/group:/etc/group:ro
+  postgres:
+    image: postgres:15
+    user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker ...'}"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
 
-#     ports:
-#       - "5432:5432"
+    volumes:
+      - ${PG_DATA:-./data/postgres}:/var/lib/postgresql/data
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
 
-#     networks: [ postgres ]
+    ports:
+      - "5432:5432"
 
-#   pgadmin:
-#     image: dpage/pgadmin4:6
-#     environment:
-#       PGADMIN_DEFAULT_EMAIL: admin@admin.com
-#       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    networks: [ postgres ]
 
-#     ports:
-#       - "5000:80"
+  pgadmin:
+    image: dpage/pgadmin4:6
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
 
-#     volumes:
-#       - ./pgadmin4/servers.json:/pgadmin4/servers.json:ro
-#       # `pgadmin4` hardcodes the assumption that the user 5050:5050 has write permissions
-#       # to that directory and stores some mutable configuration state there;
-#       # It makes it very problematic to bind-mount to host, so we don't do that
-#       #  - ${PGADMIN_DATA:-./data/pgadmin}:/var/lib/pgadmin
+    ports:
+      - "5000:80"
 
-#     # Create the `/pgpass` file in pgadmin's storage directory.
-#     # The files in that directory are required to be owned by pgadmin user.
-#     entrypoint: >
-#       /bin/sh -c "
-#       mkdir -p -m 700                               /var/lib/pgadmin/storage/admin_admin.com;
-#       chown -R pgadmin:pgadmin                      /var/lib/pgadmin/storage/admin_admin.com;
-#       echo 'postgres:5432:*:admin:${PG_PASSWORD}' > /var/lib/pgadmin/storage/admin_admin.com/pgpass;
-#       chmod 600                                     /var/lib/pgadmin/storage/admin_admin.com/pgpass;
-#       /entrypoint.sh
-#       "
+    volumes:
+      - ./pgadmin4/servers.json:/pgadmin4/servers.json:ro
 
-#     networks: [ postgres ]
-#     depends_on: [ postgres ]
+    # Create the `/pgpass` file in pgadmin's storage directory.
+    # The files in that directory are required to be owned by pgadmin user.
+    entrypoint: >
+      /bin/sh -c "
+      mkdir -p -m 700                               /var/lib/pgadmin/storage/admin_admin.com;
+      chown -R pgadmin:pgadmin                      /var/lib/pgadmin/storage/admin_admin.com;
+      echo 'postgres:5432:*:admin:${PG_PASSWORD}' > /var/lib/pgadmin/storage/admin_admin.com/pgpass;
+      chmod 600                                     /var/lib/pgadmin/storage/admin_admin.com/pgpass;
+      /entrypoint.sh
+      "
 
-# networks:
-#   postgres:
+    networks: [ postgres ]
+    depends_on: [ postgres ]
+
+networks:
+  postgres:

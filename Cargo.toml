@@ -5,7 +5,7 @@ members = ["censy", "veebot-telegram", "xtask"]
 debug = 0
 
 [workspace.package]
-version = "0.4.3"
+version = "0.4.4"
 
 authors = ["Veetaha <veetaha2@gmail.com>"]
 license = "MIT OR Apache-2.0"

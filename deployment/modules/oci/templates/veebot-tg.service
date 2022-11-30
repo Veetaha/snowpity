@@ -1,0 +1,27 @@
+[Unit]
+Description=Veebot Telegram Service (docker compose)
+BindsTo=docker.service
+After=docker.service
+
+# This unit is generated automatically by `systemd` using the builtin generator
+# that reads the configurations from `/etc/fstab`
+BindsTo=mnt-master.mount
+After=mnt-master.mount
+
+[Service]
+Type=oneshot
+User=${server_os_user}
+RemainAfterExit=yes
+WorkingDirectory=/var/app
+EnvironmentFile=${env_file_path}
+
+ExecStartPre=-/var/app/docker-compose.sh rm
+
+ExecStart=/var/app/start.sh up --detach --no-build
+
+# We increase the timeout, because shutting down `teloxide` takes a while
+# The issue in `teloxide`: https://github.com/teloxide/teloxide/issues/711
+ExecStop=/var/app/docker-compose.sh stop --timeout 60
+
+[Install]
+WantedBy=multi-user.target

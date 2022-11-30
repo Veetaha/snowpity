@@ -1,21 +1,18 @@
 #cloud-config
 
-fs_setup:
-  - filesystem: ${volume_fs}
-    device: ${volume_device}
-
 mounts:
-  - - ${volume_device}
-    - ${volume_mount_point}
-    - ${volume_fs}
-    - discard,nofail,defaults
+  - - ${data_volume_device}
+    - ${data_volume_mount_point}
+    - ${data_volume_fs}
+    - defaults,noauto,x-systemd.growfs,x-systemd.makefs,x-systemd.device-timeout=10min
     - "0"
     - "0"
 
 groups: [docker]
 
 users:
-  - name: admin
+  - default
+  - name: ${server_os_user}
     lock_passwd: true
     shell: /bin/bash
     ssh_authorized_keys: ["${ssh_public_key}"]
@@ -24,7 +21,7 @@ users:
 
 package_update: true
 package_upgrade: true
-package_reboot_if_required: true
+package_reboot_if_required: ${reboot_if_required}
 packages:
   - apt-transport-https
   - ca-certificates
@@ -32,13 +29,24 @@ packages:
   - gnupg
 
 write_files:
-  %{~ for path, content in files ~}
+  %{~ for path, file in files ~}
   - encoding: gzip+base64
+    content: ${file.content}
+    owner: '${server_os_user}:${server_os_user}'
     path: ${path}
-    content: ${content}
+    permissions: '${file.perms}'
+    defer: true
   %{~ endfor ~}
 
 runcmd:
+  - |
+    log_content() {
+      echo "Contents of $1:"
+      cat $1 || echo "The file is absent at path $1"
+    }
+    log_content /var/run/reboot-required
+    log_content /var/run/reboot-required.pkgs
+
   - echo 'Installing docker...'
 
   # Installs docker and docker-compose on the server
@@ -53,13 +61,12 @@ runcmd:
     | tee /etc/apt/sources.list.d/docker.list > /dev/null'
   - apt-get update -y
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-  - systemctl start docker
-  - systemctl enable docker
+  - systemctl enable --now docker
 
   # Log in to be able to pull the image from the private dockerhub repo in development workspace
   # `runuser` is required here, because `docker login` stores the creds in $HOME
-  # and our systemd service will run on behalf of `admin` user
-  - runuser -u admin -- docker login --username ${docker_username} --password ${docker_password}
+  # and our systemd service will run on behalf of `${server_os_user}` user
+  - runuser -u ${server_os_user} -- docker login --username ${docker_username} --password ${docker_password}
 
   - echo 'Installing grafana-agent...'
 
@@ -69,7 +76,7 @@ runcmd:
 
   - export GA_RELEASE_VERSION="0.29.0"
   - export GA_RELEASE_URL="https://github.com/grafana/agent/releases/download/v$GA_RELEASE_VERSION"
-  - export GA_DEB_URL="$GA_RELEASE_URL/grafana-agent-$GA_RELEASE_VERSION-1.amd64.deb"
+  - export GA_DEB_URL="$GA_RELEASE_URL/grafana-agent-$GA_RELEASE_VERSION-1.$(dpkg --print-architecture).deb"
 
   - curl --retry 5 --retry-connrefused -L --progress-bar $GA_DEB_URL -o $HOME/grafana-agent.deb
 
@@ -77,11 +84,7 @@ runcmd:
   # before this installation script is running, therefore `dpkg` has to use the "old config"
   - sudo dpkg -i --force-confold $HOME/grafana-agent.deb
   - rm $HOME/grafana-agent.deb
-  - sudo systemctl enable grafana-agent.service
-  - sudo systemctl start grafana-agent.service
-
-  - echo 'Initializing postgres data directory if needed...'
-  - mkdir -p ${pgdata}
+  - systemctl enable --now grafana-agent.service
 
   # Enable systemd services responsible for managing Docker Compose services
   - systemctl enable --now veebot-tg.service

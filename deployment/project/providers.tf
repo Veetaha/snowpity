@@ -1,7 +1,3 @@
-provider "hcloud" {
-  token = local.hcloud_token
-}
-
 provider "dockerhub" {
   username = var.docker_username
   password = var.docker_password
@@ -11,9 +7,9 @@ terraform {
   required_version = ">= 1.2"
 
   required_providers {
-    hcloud = {
-      source  = "hetznercloud/hcloud"
-      version = "~> 1.35.2"
+    oci = {
+      source  = "oracle/oci"
+      version = "~> 4.100.0"
     }
 
     cloudinit = {

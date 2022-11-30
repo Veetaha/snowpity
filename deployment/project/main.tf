@@ -1,16 +1,16 @@
 locals {
   grafana_cloud_api_key = var.grafana_cloud_api_key[module.workspace.kind]
   tg_bot_token          = var.tg_bot_token[module.workspace.kind]
-  hcloud_token          = var.hcloud_token[module.workspace.kind]
 }
 
 module "workspace" {
   source = "../modules/workspace"
 }
 
-module "hetzner" {
-  source = "../modules/hetzner"
+module "oci" {
+  source = "../modules/oci"
 
+  tg_bot_maintainer    = var.tg_bot_maintainer
   tg_bot_token         = local.tg_bot_token
   veebot_tg_image_tag  = var.veebot_tg_image_tag
   veebot_tg_image_name = module.dockerhub.image_name
@@ -28,6 +28,8 @@ module "hetzner" {
 
   docker_username = var.docker_username
   docker_password = var.docker_password
+
+  parent_compartment_id = var.oci_parent_compartment_id
 }
 
 module "grafana_cloud_stack" {
