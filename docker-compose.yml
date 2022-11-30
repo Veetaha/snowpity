@@ -1,11 +1,11 @@
 services:
-  telegram_bot:
-    image: ${VEEBOT_TG_IMAGE_NAME-veetaha/veebot-telegram-dev}:${VEEBOT_TG_IMAGE_TAG-latest}
+  tg_bot:
+    image: ${TG_BOT_IMAGE_NAME-veetaha/snowpity-tg-dev}:${TG_BOT_IMAGE_TAG-latest}
     env_file: .env
     user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker ...'}"
     build: .
     environment:
-      DATABASE_URL: postgres://admin:${PG_PASSWORD}@postgres:5432
+      DATABASE_URL: postgres://snowpity:${PG_PASSWORD}@snowpity:5432
     volumes:
       - /proc/stat:/proc/stat:ro
       - /proc/meminfo:/proc/meminfo:ro
@@ -13,15 +13,15 @@ services:
     # We are listening only for Ctrl-C
     stop_signal: SIGINT
 
-    networks: [ postgres ]
-    depends_on: [ postgres ]
+    networks: [ pg ]
+    depends_on: [ pg ]
 
-  postgres:
+  pg:
     image: postgres:15
     user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker ...'}"
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_DB: postgres
+      POSTGRES_USER: snowpity
+      POSTGRES_DB: snowpity
       POSTGRES_PASSWORD: ${PG_PASSWORD}
 
     volumes:
@@ -32,13 +32,13 @@ services:
     ports:
       - "5432:5432"
 
-    networks: [ postgres ]
+    networks: [ pg ]
 
   pgadmin:
     image: dpage/pgadmin4:6
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_DEFAULT_EMAIL: snowpity@snowpity.com
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-snowpity}
 
     ports:
       - "5000:80"
@@ -50,15 +50,15 @@ services:
     # The files in that directory are required to be owned by pgadmin user.
     entrypoint: >
       /bin/sh -c "
-      mkdir -p -m 700                               /var/lib/pgadmin/storage/admin_admin.com;
-      chown -R pgadmin:pgadmin                      /var/lib/pgadmin/storage/admin_admin.com;
-      echo 'postgres:5432:*:admin:${PG_PASSWORD}' > /var/lib/pgadmin/storage/admin_admin.com/pgpass;
-      chmod 600                                     /var/lib/pgadmin/storage/admin_admin.com/pgpass;
+      mkdir -p -m 700                         /var/lib/pgadmin/storage/snowpity_snowpity.com;
+      chown -R pgadmin:pgadmin                /var/lib/pgadmin/storage/snowpity_snowpity.com;
+      echo 'pg:5432:*:admin:${PG_PASSWORD}' > /var/lib/pgadmin/storage/snowpity_snowpity.com/pgpass;
+      chmod 600                               /var/lib/pgadmin/storage/snowpity_snowpity.com/pgpass;
       /entrypoint.sh
       "
 
-    networks: [ postgres ]
-    depends_on: [ postgres ]
+    networks: [ pg ]
+    depends_on: [ pg ]
 
 networks:
-  postgres:
+  pg:

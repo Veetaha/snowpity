@@ -1,8 +1,8 @@
-resource "dockerhub_repository" "veebot_telegram" {
+resource "dockerhub_repository" "snowpity_tg" {
   namespace        = "veetaha"
-  name             = "veebot-telegram${module.workspace.id_suffix}"
+  name             = "snowpity-tg${module.workspace.id_suffix}"
   description      = "Telegram bot with assorted functionality"
-  full_description = "More information in [Github repository](https://github.com/Veetaha/veebot-telegram)"
+  full_description = "More information in [Github repository](https://github.com/Veetaha/snowpity)"
   private          = module.workspace.kind == "dev"
 }
 
@@ -11,5 +11,5 @@ module "workspace" {
 }
 
 output "image_name" {
-  value = "${dockerhub_repository.veebot_telegram.namespace}/${dockerhub_repository.veebot_telegram.name}"
+  value = "${dockerhub_repository.snowpity_tg.namespace}/${dockerhub_repository.snowpity_tg.name}"
 }

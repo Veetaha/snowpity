@@ -10,10 +10,10 @@ module "workspace" {
 module "oci" {
   source = "../modules/oci"
 
-  tg_bot_maintainer    = var.tg_bot_maintainer
-  tg_bot_token         = local.tg_bot_token
-  veebot_tg_image_tag  = var.veebot_tg_image_tag
-  veebot_tg_image_name = module.dockerhub.image_name
+  tg_bot_maintainer = var.tg_bot_maintainer
+  tg_bot_token      = local.tg_bot_token
+  tg_bot_image_tag  = var.tg_bot_image_tag
+  tg_bot_image_name = module.dockerhub.image_name
 
   prometheus_remote_write_url = grafana_cloud_stack.this.prometheus_remote_write_endpoint
   prometheus_username         = grafana_cloud_stack.this.prometheus_user_id

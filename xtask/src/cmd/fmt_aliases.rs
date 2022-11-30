@@ -1,5 +1,6 @@
-use crate::util::{fs, repo_abs_path};
+use crate::util::repo_abs_path;
 use clap::Parser;
+pub use fs_err as fs;
 use itertools::Itertools;
 
 /// Deduplicated aliases.csv file

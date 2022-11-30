@@ -1,10 +1,9 @@
 [rust-toolchain]: https://www.rust-lang.org/tools/install
 
-# veebot-telegram
+# Snowpity telegram bot
 
 This is a Telegram bot for me and friends.
 It has assorted functionality for managing our Telegram chat.
-
 
 # Development
 
@@ -111,7 +110,7 @@ x destroy server
 [terraform]: https://www.terraform.io/
 [oracle-cloud]: https://www.oracle.com/cloud/
 [oci-always-free]: https://www.oracle.com/cloud/free/
-[dockerhub-repo]: https://hub.docker.com/repository/docker/veetaha/veebot-telegram
+[dockerhub-repo]: https://hub.docker.com/repository/docker/veetaha/snowpity-tg
 [grafana-cloud]: https://grafana.com/products/cloud/
 [docker-compose]: https://docs.docker.com/compose/
 [cloud-init]: https://cloudinit.readthedocs.io/en/latest/

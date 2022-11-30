@@ -20,8 +20,8 @@ provider "grafana" {
 resource "grafana_cloud_stack" "this" {
   provider = grafana.cloud
 
-  name        = "veebot-telegram"
-  slug        = "vtg${module.workspace.id_suffix_alnum}"
+  name        = "snowpity-tg"
+  slug        = "sptg${module.workspace.id_suffix_alnum}"
   region_slug = "eu"
 }
 
@@ -29,6 +29,6 @@ resource "grafana_api_key" "deployment" {
   provider = grafana.cloud
 
   cloud_stack_slug = grafana_cloud_stack.this.slug
-  name             = "veebot-telegram-deployment-key"
+  name             = "snowpity-tg-deployment-key"
   role             = "Admin"
 }

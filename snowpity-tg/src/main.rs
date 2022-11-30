@@ -2,7 +2,7 @@ use futures::{prelude::*, TryFutureExt};
 use std::panic::AssertUnwindSafe;
 use std::process::ExitCode;
 use tracing::{error, info, warn};
-use veebot_telegram::util::tracing_err;
+use snowpity_tg::util::tracing_err;
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -10,7 +10,7 @@ async fn main() -> ExitCode {
         eprintln!("Dotenv config was not found, ignoring this...")
     }
 
-    let logging_task = veebot_telegram::LoggingConfig::load_or_panic().init_logging();
+    let logging_task = snowpity_tg::LoggingConfig::load_or_panic().init_logging();
 
     let main_fut = AssertUnwindSafe(async {
         let result = try_main().await;
@@ -70,10 +70,10 @@ async fn main() -> ExitCode {
     exit_code
 }
 
-async fn try_main() -> veebot_telegram::Result {
-    let config = veebot_telegram::Config::load_or_panic();
+async fn try_main() -> snowpity_tg::Result {
+    let config = snowpity_tg::Config::load_or_panic();
 
-    veebot_telegram::run(config).await?;
+    snowpity_tg::run(config).await?;
 
     Ok(())
 }

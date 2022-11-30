@@ -39,7 +39,14 @@ pub(crate) impl reqwest::RequestBuilder {
     async fn read_bytes(self) -> Result<Bytes> {
         let request = self
             // XXX: important for derpibooru (otherwise it responds with an html capcha page)
-            .header("User-Agent", "Telegram Bot made by Veetaha");
+            .header(
+                "User-Agent",
+                concat!(
+                    "SnowpityTelegramBot/",
+                    env!("VERGEN_BUILD_SEMVER"),
+                    " (https://github.com/Veetaha/snowpity)",
+                ),
+            );
 
         debug!(?request, "sending HTTP request");
 

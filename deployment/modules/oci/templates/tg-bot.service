@@ -1,5 +1,5 @@
 [Unit]
-Description=Veebot Telegram Service (docker compose)
+Description=Telegram Bot Service (docker compose)
 BindsTo=docker.service
 After=docker.service
 

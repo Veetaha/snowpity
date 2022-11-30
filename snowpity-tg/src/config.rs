@@ -48,7 +48,7 @@ pub struct LoggingConfig {
     loki_username: String,
     loki_password: String,
     #[serde_as(as = "serde_with::json::JsonString")]
-    veebot_log_labels: HashMap<String, String>,
+    tg_bot_log_labels: HashMap<String, String>,
 }
 
 impl LoggingConfig {
@@ -57,7 +57,7 @@ impl LoggingConfig {
     }
 
     pub fn init_logging(self) -> tokio::task::JoinHandle<()> {
-        let env_filter = tracing_subscriber::EnvFilter::from_env("VEEBOT_LOG");
+        let env_filter = tracing_subscriber::EnvFilter::from_env("TG_BOT_LOG");
 
         let fmt = tracing_subscriber::fmt::layer()
             .with_target(true)
@@ -71,10 +71,10 @@ impl LoggingConfig {
         let additional_labels = [
             ("app_version", env!("VERGEN_BUILD_SEMVER")),
             ("app_git_commit", env!("VERGEN_GIT_SHA")),
-            ("source", "veebot"),
+            ("source", "snowpity-tg"),
         ];
 
-        let mut labels = self.veebot_log_labels;
+        let mut labels = self.tg_bot_log_labels;
         labels.extend(
             additional_labels
                 .into_iter()

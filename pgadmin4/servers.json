@@ -1,12 +1,12 @@
 {
   "Servers": {
     "1": {
-      "Name": "veebot_telegram",
-      "Group": "veebot_telegram_group",
-      "Host": "postgres",
+      "Name": "snowpity-tg",
+      "Group": "snowpity-tg-group",
+      "Host": "pg",
       "Port": 5432,
-      "MaintenanceDB": "postgres",
-      "Username": "admin",
+      "MaintenanceDB": "snowpity",
+      "Username": "snowpity",
       "PassFile": "/pgpass",
       "SSLMode": "prefer"
     }

@@ -27,10 +27,10 @@ COPY . .
 RUN --mount=type=cache,sharing=private,target=/usr/local/cargo/git \
     --mount=type=cache,sharing=private,target=/usr/local/cargo/registry \
     --mount=type=cache,sharing=private,target=/app/target \
-    cargo build ${RUST_RELEASE_FLAG} -p veebot-telegram --bin veebot-telegram && \
+    cargo build ${RUST_RELEASE_FLAG} -p snowpity-tg --bin snowpity-tg && \
     # The buildkit's cache dir (`target`) isn't part of docker layers, so we need to
     # copy the binary out of that dir into somewhere where it will be part of the layer.
-    cp /app/target/${RUST_BUILD_MODE}/veebot-telegram /usr/bin/
+    cp /app/target/${RUST_BUILD_MODE}/snowpity-tg /usr/bin/
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:11-slim AS runtime
@@ -51,6 +51,6 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean
 
 RUN --mount=type=cache,target=/var/cache/apt /app/install-runtime-deps.sh
 
-COPY --from=build /usr/bin/veebot-telegram /usr/bin
+COPY --from=build /usr/bin/snowpity-tg /usr/bin
 
-ENTRYPOINT ["/usr/bin/veebot-telegram"]
+ENTRYPOINT ["/usr/bin/snowpity-tg"]

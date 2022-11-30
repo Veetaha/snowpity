@@ -8,12 +8,12 @@ variable "tg_bot_maintainer" {
   type     = string
 }
 
-variable "veebot_tg_image_tag" {
+variable "tg_bot_image_tag" {
   nullable = false
   type     = string
 }
 
-variable "veebot_tg_image_name" {
+variable "tg_bot_image_name" {
   nullable = false
   type     = string
 }
