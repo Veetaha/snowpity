@@ -159,6 +159,13 @@ def "main deploy" [
     }
 }
 
+# Destroy the full application's stack. ⚠️ This guarantees data loss, because
+# the database's data volume will be destroyed as well.
+def "main destroy" [] {
+    tf destroy
+}
+
+# Destroy only the server instance in the stack
 def "main destroy server" [] {
     tf destroy '--target=module.oci.oci_core_instance.master'
 }
