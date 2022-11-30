@@ -86,7 +86,7 @@ The `oci_api_key.pem` file can be generated from Oracle Cloud web UI ([docs link
 
 ## Deployment routine
 
-After all the necessary credentials are configured, you will be able to run the following command to deploy the entire stack with the Dockerhub repo, Hetzner server and Grafana Cloud Stack.
+After all the necessary credentials are configured, you will be able to run the following command to deploy the entire stack with the Dockerhub repo, Oracle Cloud server and Grafana Cloud Stack.
 
 ```bash
 x deploy
