@@ -93,7 +93,7 @@ def "main start" [
     --fresh (-f) # Executes `db drop` before starting the database (run `db drop --help` for details)
 ] {
     if $fresh {
-        info "--fresh was speicified, so dropping the local database..."
+        info "--fresh was specified, so dropping the local database..."
         main db drop
     }
 
