@@ -2,53 +2,70 @@
 
 mod captcha;
 mod cmd;
+mod config;
+mod inline_query;
 mod updates;
 
+use crate::db;
+use crate::derpi::{self, DerpiService};
 use crate::ftai::FtaiService;
 use crate::sysinfo::SysInfoService;
 use crate::util;
-use crate::{Result, TgConfig};
+use crate::util::prelude::*;
+use crate::Result;
 use captcha::CaptchaCtx;
-use dptree::di::DependencyMap;
+use dptree::di::{DependencyMap, DependencySupplier};
+use inline_query::InlineQueryService;
 use std::sync::Arc;
 use teloxide::adaptors::{CacheMe, DefaultParseMode, Throttle, Trace};
 use teloxide::dispatching::UpdateFilterExt;
 use teloxide::prelude::*;
 use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
-use tracing::info;
+
+pub(crate) use config::*;
 
 type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
 
 pub(crate) struct Ctx {
     bot: Bot,
-    // db: db::Repo,
-    cfg: TgConfig,
+    db: Arc<db::Repo>,
+    cfg: Arc<Config>,
     ftai: FtaiService,
     captcha: CaptchaCtx,
     sysinfo: SysInfoService,
+    derpi: Arc<DerpiService>,
+    inline_query: InlineQueryService,
 }
 
-pub(crate) async fn run_bot(cfg: TgConfig /*db: db::Repo*/) -> Result {
+pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Repo) -> Result {
     let mut di = DependencyMap::new();
 
     let http = util::create_http_client();
 
-    let bot: Bot = teloxide::Bot::with_client(cfg.bot_token.clone(), http.clone())
+    let bot: Bot = teloxide::Bot::with_client(tg_cfg.bot_token.clone(), http.clone())
         .throttle(Default::default())
         .parse_mode(ParseMode::MarkdownV2)
         .cache_me()
         .trace(teloxide::adaptors::trace::Settings::all());
 
-    let ftai = FtaiService::new(http);
+    let ftai = FtaiService::new(http.clone());
+    let derpi = Arc::new(DerpiService::new(derpi_cfg, http));
+    let tg_cfg = Arc::new(tg_cfg);
+    let db = Arc::new(db);
+
+    let inline_query =
+        InlineQueryService::new(bot.clone(), derpi.clone(), tg_cfg.clone(), db.clone());
 
     di.insert(Arc::new(Ctx {
         bot: bot.clone(),
-        // db,
-        cfg,
+        db,
+        cfg: tg_cfg,
         ftai,
-        captcha: Default::default(),
         sysinfo: SysInfoService::new(),
+        derpi,
+        captcha: Default::default(),
+        inline_query,
     }));
 
     info!("Starting bot...");
@@ -84,7 +101,8 @@ pub(crate) async fn run_bot(cfg: TgConfig /*db: db::Repo*/) -> Result {
                 .endpoint(cmd::handle::<cmd::maintainer::Cmd>()),
         )
         // .branch(Update::filter_edited_message().endpoint(updates::handle_edited_message))
-        .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query));
+        .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query))
+        .branch(Update::filter_inline_query().endpoint(inline_query::handle_inline_query));
 
     Dispatcher::builder(bot, handler)
         .dependencies(di)

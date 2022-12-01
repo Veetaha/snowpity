@@ -71,16 +71,32 @@ impl<A: TryFromDbImp> TryFromDb for A {
     }
 }
 
-// impl<A: TryInto<A::DbRepr> + DbRepresentable> TryIntoDbImp for A
-// where
-//     <A as TryInto<A::DbRepr>>::Error: std::error::Error + Send + Sync + 'static,
-// {
-//     type Err = <A as TryInto<A::DbRepr>>::Error;
+// macro_rules! impl_try_into_db_via_try_into {
+//     ($ty:ty) => {
+//         impl TryIntoDbImp for A {
+//             type Err = <A as TryInto<A::DbRepr>>::Error;
 
-//     fn try_into_db_imp(self) -> Result<Self::DbRepr, Self::Err> {
-//         self.try_into()
-//     }
+//             fn try_into_db_imp(self) -> Result<Self::DbRepr, Self::Err> {
+//                 self.try_into()
+//             }
+//         }
+//     };
 // }
+
+
+impl<A> TryIntoDbImp for A
+where
+    A: DbRepresentable,
+    A::DbRepr: TryFrom<A>,
+    <A::DbRepr as TryFrom<A>>::Error: std::error::Error + Send + Sync + 'static,
+{
+    type Err = <A as TryInto<A::DbRepr>>::Error;
+
+    fn try_into_db_imp(self) -> Result<Self::DbRepr, Self::Err> {
+        self.try_into()
+    }
+}
+
 
 // impl<A: TryFrom<A::DbRepr> + DbRepresentable> TryFromDbImp for A
 // where

@@ -9,26 +9,36 @@ pub(crate) mod encoding;
 
 pub(crate) use chrono_ext::*;
 pub(crate) use reqwest_ext::*;
-// pub(crate) use sqlx_ext::*;
+pub(crate) use sqlx_ext::*;
 // pub(crate) use teloxide_ext::*;
 // pub(crate) use std_ext::*;
 
+// We don't care if some of the imports here are not used. They may be used
+// at some point. It's just convenient not to import them manually all the
+// time a new logging macro is needed.
+#[allow(unused_imports)]
 pub(crate) mod prelude {
-    // pub(crate) use super::std_ext::OptionExt;
     pub(crate) use super::chrono_ext::DateTimeExt as _;
-    // pub(crate) use super::sqlx_ext::ErrorExt as _;
-    pub(crate) use super::std_ext::ErrorExt as _;
-    pub(crate) use super::std_ext::ResultExt;
-    // pub(crate) use super::sqlx_ext::FromDb as _;
-    // pub(crate) use super::sqlx_ext::TryIntoApp as _;
-    // pub(crate) use super::sqlx_ext::IntoDb as _;
-    // pub(crate) use super::sqlx_ext::TryIntoDb as _;
-    // pub(crate) use super::teloxide_ext::MessageKindExt as _;
     pub(crate) use super::reqwest_ext::ReqwestBuilderExt as _;
+    pub(crate) use super::sqlx_ext::ErrorExt as _;
+    pub(crate) use super::sqlx_ext::IntoDb as _;
+    pub(crate) use super::sqlx_ext::TryIntoApp as _;
+    pub(crate) use super::sqlx_ext::TryIntoDb as _;
+    pub(crate) use super::sqlx_ext::TryIntoDbImp as _;
+    pub(crate) use super::std_ext::ErrorExt as _;
+    pub(crate) use super::std_ext::OptionExt as _;
+    pub(crate) use super::std_ext::ResultExt as _;
     pub(crate) use super::teloxide_ext::ChatExt as _;
     pub(crate) use super::teloxide_ext::MessageIdExt as _;
+    pub(crate) use super::teloxide_ext::MessageKindExt as _;
     pub(crate) use super::teloxide_ext::UserExt as _;
     pub(crate) use super::teloxide_ext::UtilRequesterExt as _;
+
+    pub(crate) use super::tracing_err;
+    pub(crate) use tracing::{
+        debug, debug_span, error, error_span, info, info_span, instrument, trace, trace_span, warn,
+        warn_span,
+    };
 }
 
 use crate::{Result, UserError};
@@ -38,8 +48,8 @@ use std::str::FromStr;
 pub(crate) type DynError = dyn std::error::Error + Send + Sync;
 
 macro_rules! def_url_base {
-    ($ident:ident, $url:literal) => {
-        fn $ident<T: AsRef<str>>(segments: impl IntoIterator<Item = T>) -> ::url::Url {
+    ($vis:vis $ident:ident, $url:literal) => {
+        $vis fn $ident<T: AsRef<str>>(segments: impl IntoIterator<Item = T>) -> ::url::Url {
             let mut url: ::url::Url = $url.parse().unwrap();
             url.path_segments_mut().unwrap().extend(segments);
             url

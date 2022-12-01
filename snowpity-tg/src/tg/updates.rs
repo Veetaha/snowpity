@@ -8,6 +8,7 @@
 // FIXME: remove this ^
 
 use crate::tg::{Bot, Ctx};
+use crate::util::prelude::*;
 use crate::util::DynError;
 use crate::DynResult;
 use crate::Error;
@@ -19,8 +20,6 @@ use teloxide::prelude::*;
 use teloxide::types::Chat;
 use teloxide::types::{ChatMemberUpdated, Message};
 // use teloxide::utils::markdown;
-use tracing::info;
-use tracing::instrument;
 
 enum PhrasesFilterRequest {
     ValidateMessage {

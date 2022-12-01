@@ -4,7 +4,6 @@ use crate::{err_val, Result, UserError};
 use chrono::prelude::*;
 use futures::prelude::*;
 use teloxide::types::{ChatId, UserId};
-use tracing::instrument;
 
 #[derive(Debug)]
 pub(crate) struct BannedWord {

@@ -1,6 +1,5 @@
-use crate::util;
+use crate::util::prelude::*;
 use easy_ext::ext;
-use tracing::error;
 
 #[ext(OptionExt)]
 pub(crate) impl<T> Option<T> {

@@ -3,7 +3,7 @@ pub(crate) mod maintainer;
 pub(crate) mod regular;
 use crate::tg;
 use crate::util::prelude::*;
-use crate::util::{tracing_err, DynError};
+use crate::DynResult;
 use async_trait::async_trait;
 use display_error_chain::DisplayErrorChain;
 use futures::future::BoxFuture;
@@ -20,7 +20,7 @@ pub(crate) trait Command: fmt::Debug + Send + Sync + 'static {
 }
 
 pub(crate) fn handle<'a, C: Command>(
-) -> impl Fn(Arc<tg::Ctx>, Message, C) -> BoxFuture<'a, Result<(), Box<DynError>>> {
+) -> impl Fn(Arc<tg::Ctx>, Message, C) -> BoxFuture<'a, DynResult> {
     move |ctx, msg, cmd| {
         let info = info_span!(
             "handle_message",

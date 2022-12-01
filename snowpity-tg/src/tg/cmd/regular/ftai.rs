@@ -1,9 +1,9 @@
+use crate::util::prelude::*;
 use crate::{err_val, tg, Error, Result, UserError};
 use std::str::FromStr;
 use teloxide::prelude::*;
 use teloxide::types::{InputFile, Message};
 use teloxide::utils::markdown;
-use tracing::{info, instrument};
 
 #[derive(Debug, Clone)]
 pub(crate) struct FtaiCmd {
