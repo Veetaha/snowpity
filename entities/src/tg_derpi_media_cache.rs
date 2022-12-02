@@ -4,7 +4,7 @@ use sea_orm::entity::prelude::*;
 #[sea_orm(table_name = "tg_derpi_media_cache")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false, column_type = "BigInteger")]
-    pub derpi_id: u64,
+    pub derpi_id: i64,
     pub tg_file_id: String,
 }
 

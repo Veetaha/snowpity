@@ -6,7 +6,6 @@ use thiserror::Error;
 // use tracing_error::SpanTrace;
 
 pub type Result<T = (), E = Error> = std::result::Result<T, E>;
-pub type DynResult<T = (), E = Box<DynError>> = std::result::Result<T, E>;
 
 /// Macro to reduce the boilerplate of creating crate-level errors.
 /// It directly accepts the body of [`ErrorKind`] variant without type name qualification.
@@ -184,11 +183,12 @@ pub(crate) enum DbError {
     #[error("Failed to migrate the database")]
     Migrate { source: sea_orm::DbErr },
 
-    // #[error("Database query failed")]
-    // Query {
-    //     #[from]
-    //     source: sqlx::Error,
-    // },
+    #[error("Database query failed")]
+    Query {
+        #[from]
+        source: sea_orm::DbErr,
+    },
+
     #[error(
         "Failed to serialize app value into db repr.\n\
         App type: {app_ty}\n\

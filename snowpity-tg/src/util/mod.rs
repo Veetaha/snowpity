@@ -38,6 +38,7 @@ use crate::{Result, UserError};
 use std::fmt;
 use std::str::FromStr;
 
+pub(crate) type DynResult<T = (), E = Box<DynError>> = std::result::Result<T, E>;
 pub(crate) type DynError = dyn std::error::Error + Send + Sync;
 
 macro_rules! def_url_base {

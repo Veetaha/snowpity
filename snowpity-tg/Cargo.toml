@@ -44,6 +44,7 @@ tracing-subscriber  = { workspace = true }
 url                 = { workspace = true, features = ["serde"] }
 wav_io              = { workspace = true }
 
+entities  = { path = "../entities" }
 migration = { path = "../migration" }
 
 [dependencies.sea-orm]

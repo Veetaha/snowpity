@@ -1,5 +1,5 @@
 [workspace]
-members = ["censy", "snowpity-tg", "xtask", "migration"]
+members = ["censy", "snowpity-tg", "xtask", "migration", "entities"]
 
 [profile.dev]
 debug = 0

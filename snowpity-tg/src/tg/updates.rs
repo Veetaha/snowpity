@@ -9,8 +9,7 @@
 
 use crate::tg::{Bot, Ctx};
 use crate::util::prelude::*;
-use crate::util::DynError;
-use crate::DynResult;
+use crate::util::{DynError, DynResult};
 use crate::Error;
 use crate::Result;
 use futures::prelude::*;

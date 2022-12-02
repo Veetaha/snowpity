@@ -3,13 +3,13 @@
 //! https://github.com/octet-stream/dinky/blob/master/lib/Dinky.d.ts
 use crate::derpi::derpi;
 use chrono::prelude::*;
-use derive_more::Display;
+use derive_more::{Display, FromStr};
 use reqwest::Url;
 use serde::Deserialize;
 
-#[derive(Display, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Display, FromStr, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
 #[serde(transparent)]
-pub struct MediaId(u64);
+pub struct MediaId(pub(crate) u64);
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct SearchImagesResponse {

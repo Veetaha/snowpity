@@ -3,7 +3,7 @@ pub(crate) mod maintainer;
 pub(crate) mod regular;
 use crate::tg;
 use crate::util::prelude::*;
-use crate::DynResult;
+use crate::util::DynResult;
 use async_trait::async_trait;
 use display_error_chain::DisplayErrorChain;
 use futures::future::BoxFuture;

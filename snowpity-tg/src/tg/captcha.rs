@@ -1,7 +1,7 @@
 use crate::tg::{self, Bot};
-use crate::util;
 use crate::util::prelude::*;
-use crate::{err_val, DynResult, Error, ErrorKind, Result};
+use crate::util::{self, DynResult};
+use crate::{err_val, Error, ErrorKind, Result};
 use chrono::prelude::*;
 use futures::prelude::*;
 use parking_lot::Mutex as SyncMutex;

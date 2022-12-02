@@ -1,6 +1,7 @@
 use crate::derpi::rpc::MimeType;
 use crate::util::prelude::*;
-use crate::{db, derpi, tg, DynResult, Error, Result};
+use crate::util::DynResult;
+use crate::{db, derpi, tg, Error, Result};
 use futures::channel::oneshot;
 use futures::prelude::*;
 use lazy_regex::regex_captures;
@@ -75,7 +76,7 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
         let inline_query_id = query.id;
         let query = query.query;
 
-        let Some((_, media_id)) = regex_captures!(r"derpibooru.org/images/(\d+)", &query) else {
+        let Some(media_id) = parse_query(&query) else {
             return Ok(());
         };
         // let Ok(media_id) = media_id.parse() else {
@@ -194,5 +195,40 @@ impl DerpiMediaCacheService {
         //     .await?;
 
         // Ok(tg_file_id)
+    }
+}
+
+fn parse_query(str: &str) -> Option<derpi::MediaId> {
+    let (_, a, b) = regex_captures!(r"(?:^(\d+)*$)|(?:derpibooru.org/images/(\d+))", &str.trim())?;
+    if a.is_empty() { b } else { a }.parse().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use expect_test::{expect, Expect};
+
+    #[track_caller]
+    fn assert_parse_query(query: &str, expected: Expect) {
+        let actual = if let Some(id) = parse_query(query) {
+            id.to_string()
+        } else {
+            "None".to_string()
+        };
+        expected.assert_eq(&actual);
+    }
+
+    #[test]
+    fn query_parsing() {
+        use assert_parse_query as test;
+        test("123", expect!["123"]);
+        test(" 123", expect!["123"]);
+        test("123 ", expect!["123"]);
+        test(" 123 ", expect!["123"]);
+        test("d123", expect!["None"]);
+        test("123d", expect!["None"]);
+        test("derpibooru.org/images/123", expect!["123"]);
+        test("derpibooru.org/images/123/", expect!["123"]);
+        test("furbooru.org/images/123/", expect!["None"]);
     }
 }
