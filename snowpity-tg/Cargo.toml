@@ -14,6 +14,7 @@ async-trait         = { workspace = true }
 base64              = { workspace = true }
 bytes               = { workspace = true }
 chrono              = { workspace = true, features = ["serde"] }
+derive_more         = { workspace = true }
 display-error-chain = { workspace = true }
 dotenv              = { workspace = true }
 dptree              = { workspace = true }
@@ -43,8 +44,10 @@ tracing-subscriber  = { workspace = true }
 url                 = { workspace = true, features = ["serde"] }
 wav_io              = { workspace = true }
 
-[dependencies.sqlx]
-features  = ["runtime-tokio-rustls", "postgres", "macros", "chrono", "offline"]
+migration = { path = "../migration" }
+
+[dependencies.sea-orm]
+features  = ["macros", "debug-print"]
 workspace = true
 
 [dependencies.teloxide]

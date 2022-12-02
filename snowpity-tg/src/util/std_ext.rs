@@ -25,10 +25,7 @@ where
         match self {
             Ok(x) => x,
             Err(err) => {
-                error!(
-                    err = util::tracing_err(&err),
-                    "The application is crashing..."
-                );
+                error!(err = tracing_err(&err), "The application is crashing...");
                 panic!("unwrap called on None");
             }
         }

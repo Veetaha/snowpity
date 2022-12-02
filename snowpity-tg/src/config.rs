@@ -13,7 +13,7 @@ pub struct Config {
 impl Config {
     pub fn load_or_panic() -> Config {
         Self {
-            tg: from_env_or_panic("TG_"),
+            tg: from_env_or_panic("TG_BOT_"),
             db: from_env_or_panic("DATABASE_"),
             derpi: from_env_or_panic("DERPI_"),
         }

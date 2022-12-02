@@ -100,9 +100,9 @@ def "main start" [
     mkdir (db-data)
 
     mut args = (
-        [up]
+        [up --build]
         | append-if $detach '--detach'
-        | append-if $no_app postgres pgadmin
+        | append-if $no_app pg pgadmin
     )
 
     docker-compose $args
@@ -129,6 +129,7 @@ def "main deploy" [
     --drop-server  # Force the re-creation of the server instance
     --drop-db      # Drop the database (re-create the data volume)
     --plan         # Do `tf plan` instead of `tf apply`
+    --yes (-y)     # Auto-approve the deployment
 ] {
     if not $no_build {
         # FIXME: it's this verbose due to https://github.com/nushell/nushell/issues/7260
@@ -139,15 +140,11 @@ def "main deploy" [
         }
     }
 
-    let args = if $plan {
-        ['plan']
-    } else {
-        ['apply' '-auto-approve']
-    }
-
+    let args = if $plan { [plan] } else { [apply] }
     let args = (
         $args
-        | append ['-var' $'tg_bot_image_tag=(project-version)']
+        | append (tf-vars)
+        | append-if $yes         '--auto-approve'
         | append-if $drop_server '--replace=module.oci.oci_core_instance.master'
         | append-if $drop_db     '--replace=module.oci.oci_core_volume.master_data'
     )
@@ -159,15 +156,20 @@ def "main deploy" [
     }
 }
 
-# Destroy the full application's stack. ⚠️ This guarantees data loss, because
-# the database's data volume will be destroyed as well.
-def "main destroy" [] {
-    tf destroy
-}
-
-# Destroy only the server instance in the stack
-def "main destroy server" [] {
-    tf destroy '--target=module.oci.oci_core_instance.master'
+# Destroy the application's stack. By default destroys only the server instance,
+# because it's safe to do, and no data will be lost. Use `--all` to destroy everything.
+def "main destroy" [
+    --yes (-y) # Auto-approve the destruction
+    --all
+    # Destroy all resources. ⚠️ This guarantees data loss because
+    # the database's data volume will be destroyed as well
+] {
+    let args = (
+        [destroy] ++ (tf-vars)
+        | append-if $yes '--auto-approve'
+        | append-if (not $all) '--target=module.oci.oci_core_instance.master'
+    )
+    tf $args
 }
 
 # Convenience wrapper for `tf state list`
@@ -175,9 +177,24 @@ def "main tf state list" [] {
     tf --no-debug state list | lines
 }
 
+# Convenience wrapper for `tf output`
+def "main tf output" [] {
+    tf-output | to json | jq
+}
+
+# Generate the entities Rust code from the database schema
+def "main orm gen" [] {
+    cd (repo)
+    sea-orm-cli generate entity --output-dir snowpity-tg/src/db/entities
+}
+
 ################################################
 ############ Implementation details ############
 ################################################
+
+def-env tf-vars [] {
+    ['-var' $'tg_bot_image_tag=(project-version)']
+}
 
 def-env repo [] {
     cached repo { git rev-parse --show-toplevel | str trim }

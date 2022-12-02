@@ -172,5 +172,5 @@ impl tg::cmd::Command for Cmd {
 }
 
 pub(crate) fn is_maintainer(ctx: Arc<tg::Ctx>, msg: Message) -> bool {
-    matches!(msg.from(), Some(sender) if sender.id == ctx.cfg.bot_maintainer)
+    matches!(msg.from(), Some(sender) if sender.id == ctx.cfg.maintainer)
 }

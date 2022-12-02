@@ -1,5 +1,5 @@
 [workspace]
-members = ["censy", "snowpity-tg", "xtask"]
+members = ["censy", "snowpity-tg", "xtask", "migration"]
 
 [profile.dev]
 debug = 0
@@ -8,6 +8,7 @@ debug = 0
 version = "0.4.4"
 
 authors = ["Veetaha <veetaha2@gmail.com>"]
+edition = "2021"
 license = "MIT OR Apache-2.0"
 publish = false
 
@@ -22,6 +23,7 @@ async-recursion     = "1.0"
 async-trait         = "0.1"
 base64              = "0.13"
 bytes               = "1.1"
+derive_more         = "0.99"
 devx-cmd            = "0.5"
 display-error-chain = "=0.1.1"
 dotenv              = "0.15"
@@ -43,15 +45,12 @@ parking_lot         = "0.12"
 rand                = "0.8"
 serde_json          = { version = "1.0", features = ["preserve_order"] }
 serde_yaml          = "0.9"
-sqlx                = "0.6"
 sysinfo             = "0.26"
-teloxide            = "0.11"
 thiserror           = "1.0"
 tokio               = "1.21"
 tracing             = "0.1"
 tracing-error       = "0.2"
 tracing-futures     = "0.2"
-tracing-loki        = "0.2"
 url                 = "2.2"
 wav_io              = "0.1"
 xshell              = "0.2"
@@ -60,9 +59,13 @@ xshell              = "0.2"
 chrono             = { version = "0.4", features = ["clock", "std"], default-features = false }
 clap               = { version = "4.0", features = ["derive"] }
 reqwest            = { version = "0.11", features = ["rustls-tls"], default-features = false }
+sea-orm            = { version = "0.10", features = ["runtime-tokio-rustls", "sqlx-postgres"] }
+sea-orm-migration  = { version = "0.10", features = ["runtime-tokio-rustls", "sqlx-postgres"] }
 serde              = { version = "1.0", features = ["derive"] }
 serde_with         = { version = "2.0", features = ["json"] }
+teloxide           = { version = "0.11", features = ["rustls"], default-features = false }
 timeago            = { version = "0.3", features = ["chrono"] }
+tracing-loki       = { version = "0.2", features = ["rustls", "compat-0-2-1"], default-features = false }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 vergen             = { version = "7.2", features = ["build", "rustc", "git", "cargo"], default-features = false }
 

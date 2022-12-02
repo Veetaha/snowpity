@@ -1,7 +1,6 @@
 //! Assorted utility functions (missing batteries).
 mod chrono_ext;
 mod reqwest_ext;
-mod sqlx_ext;
 mod std_ext;
 mod teloxide_ext;
 
@@ -9,7 +8,6 @@ pub(crate) mod encoding;
 
 pub(crate) use chrono_ext::*;
 pub(crate) use reqwest_ext::*;
-pub(crate) use sqlx_ext::*;
 // pub(crate) use teloxide_ext::*;
 // pub(crate) use std_ext::*;
 
@@ -20,11 +18,6 @@ pub(crate) use sqlx_ext::*;
 pub(crate) mod prelude {
     pub(crate) use super::chrono_ext::DateTimeExt as _;
     pub(crate) use super::reqwest_ext::ReqwestBuilderExt as _;
-    pub(crate) use super::sqlx_ext::ErrorExt as _;
-    pub(crate) use super::sqlx_ext::IntoDb as _;
-    pub(crate) use super::sqlx_ext::TryIntoApp as _;
-    pub(crate) use super::sqlx_ext::TryIntoDb as _;
-    pub(crate) use super::sqlx_ext::TryIntoDbImp as _;
     pub(crate) use super::std_ext::ErrorExt as _;
     pub(crate) use super::std_ext::OptionExt as _;
     pub(crate) use super::std_ext::ResultExt as _;

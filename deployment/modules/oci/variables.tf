@@ -3,6 +3,11 @@ variable "parent_compartment_id" {
   type     = string
 }
 
+variable "tg_bot_media_cache_chat" {
+  nullable = false
+  type     = string
+}
+
 variable "tg_bot_maintainer" {
   nullable = false
   type     = string

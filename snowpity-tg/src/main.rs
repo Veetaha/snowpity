@@ -1,8 +1,8 @@
 use futures::{prelude::*, TryFutureExt};
+use snowpity_tg::util::tracing_err;
 use std::panic::AssertUnwindSafe;
 use std::process::ExitCode;
 use tracing::{error, info, warn};
-use snowpity_tg::util::tracing_err;
 
 #[tokio::main]
 async fn main() -> ExitCode {

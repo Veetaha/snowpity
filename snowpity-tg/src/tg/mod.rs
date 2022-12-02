@@ -43,7 +43,7 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
 
     let http = util::create_http_client();
 
-    let bot: Bot = teloxide::Bot::with_client(tg_cfg.bot_token.clone(), http.clone())
+    let bot: Bot = teloxide::Bot::with_client(tg_cfg.token.clone(), http.clone())
         .throttle(Default::default())
         .parse_mode(ParseMode::MarkdownV2)
         .cache_me()

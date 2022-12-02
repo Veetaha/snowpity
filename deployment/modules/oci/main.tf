@@ -10,11 +10,12 @@ locals {
     PG_DATA                 = local.pg_data
     DATA_VOLUME_MOUNT_POINT = local.data_volume_mount_point
 
-    TG_BOT_MAINTAINER = var.tg_bot_maintainer
-    TG_BOT_TOKEN      = var.tg_bot_token
-    TG_BOT_IMAGE_NAME = var.tg_bot_image_name
-    TG_BOT_IMAGE_TAG  = var.tg_bot_image_tag
-    TG_BOT_LOG = "debug,hyper=info,reqwest=info,rustls=info,sqlx=warn"
+    TG_BOT_MEDIA_CACHE_CHAT    = var.tg_bot_media_cache_chat
+    TG_BOT_MAINTAINER          = var.tg_bot_maintainer
+    TG_BOT_TOKEN               = var.tg_bot_token
+    TG_BOT_IMAGE_NAME          = var.tg_bot_image_name
+    TG_BOT_IMAGE_TAG           = var.tg_bot_image_tag
+    TG_BOT_LOG                 = "debug,hyper=info,reqwest=info,rustls=info,sqlx=warn,h2=info"
     TG_BOT_LOG_LABELS = jsonencode({
       instance = local.hostname
     })

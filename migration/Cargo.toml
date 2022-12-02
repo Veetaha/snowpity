@@ -1,0 +1,11 @@
+[package]
+name = "migration"
+
+edition = { workspace = true }
+license = { workspace = true }
+publish = { workspace = true }
+version = { workspace = true }
+
+[dependencies]
+sea-orm-migration = { workspace = true }
+tokio             = { workspace = true, features = ["macros", "rt-multi-thread"] }

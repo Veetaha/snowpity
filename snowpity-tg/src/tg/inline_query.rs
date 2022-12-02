@@ -13,7 +13,7 @@ use teloxide::utils::markdown;
 use tokio::sync::{mpsc, OnceCell as AsyncOnceCell};
 
 pub(crate) struct InlineQueryService {
-    derpi_media_cache: Actor<DerpiMediaCacheService>,
+    // derpi_media_cache: DerpiMediaCacheService,
 }
 
 impl InlineQueryService {
@@ -31,27 +31,28 @@ impl InlineQueryService {
             in_flight_requests: Default::default(),
         };
 
-        let (actor, driver) = Actor::new_with_capacity(service, 40);
-        tokio::spawn(driver);
+        // // let (actor, driver) = Actor::new_with_capacity(service, 40);
+        // tokio::spawn(driver);
 
-        Self {
-            derpi_media_cache: actor,
-        }
+        Self {}
+        // Self {
+        //     derpi_media_cache: actor,
+        // }
     }
 
     async fn cache_derpi_media(&self, media_id: u64) -> Result<String> {
-        let res = self
-            .derpi_media_cache
-            .query_blocking(|service| {
-                Box::pin(async {
+        // let res = self
+        //     .derpi_media_cache
+        //     .query_blocking(|service| {
+        //         Box::pin(async {
 
-                    // service.in_flight_requests.get()
+        //             // service.in_flight_requests.get()
 
-                    // 32
-                })
-            })
-            .await
-            .unwrap();
+        //             // 32
+        //         })
+        //     })
+        //     .await
+        //     .unwrap();
 
         // let (tx, rx) = oneshot::channel();
         // self.derpi_media_cache
@@ -77,11 +78,11 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
         let Some((_, media_id)) = regex_captures!(r"derpibooru.org/images/(\d+)", &query) else {
             return Ok(());
         };
-        let Ok(media_id) = media_id.parse() else {
-            return Ok(());
-        };
+        // let Ok(media_id) = media_id.parse() else {
+        //     return Ok(());
+        // };
 
-        let tg_file_id = db.media_cache.get_derpi_tg_file_id(media_id).await?;
+        // let tg_file_id = db.media_cache.get_derpi_tg_file_id(media_id).await?;
 
         // let tg_file_id = match tg_file_id {
         //     Some(cached) => cached,

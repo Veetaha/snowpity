@@ -179,17 +179,16 @@ pub(crate) enum HttpError {
 #[derive(Debug, Error)]
 pub(crate) enum DbError {
     #[error("Failed to connect to the database")]
-    Connect { source: sqlx::Error },
+    Connect { source: sea_orm::DbErr },
 
     #[error("Failed to migrate the database")]
-    Migrate { source: sqlx::Error },
+    Migrate { source: sea_orm::DbErr },
 
-    #[error("Database query failed")]
-    Query {
-        #[from]
-        source: sqlx::Error,
-    },
-
+    // #[error("Database query failed")]
+    // Query {
+    //     #[from]
+    //     source: sqlx::Error,
+    // },
     #[error(
         "Failed to serialize app value into db repr.\n\
         App type: {app_ty}\n\
