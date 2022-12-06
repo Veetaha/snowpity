@@ -8,6 +8,8 @@ deps=(
     # https://github.com/debuerreotype/docker-debian-artifacts/issues/15#issuecomment-634423712
     ca-certificates
 
+    ffmpeg
+
     libopus0
 )
 

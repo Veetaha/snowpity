@@ -1,15 +1,16 @@
 //! Assorted utility functions (missing batteries).
 mod chrono_ext;
-mod reqwest_ext;
 mod std_ext;
 mod teloxide_ext;
+mod tokio_ext;
 
 pub(crate) mod encoding;
+pub(crate) mod http;
 
 pub(crate) use chrono_ext::*;
-pub(crate) use reqwest_ext::*;
-// pub(crate) use teloxide_ext::*;
-// pub(crate) use std_ext::*;
+pub(crate) use std_ext::*;
+pub(crate) use teloxide_ext::*;
+pub(crate) use tokio_ext::*;
 
 // We don't care if some of the imports here are not used. They may be used
 // at some point. It's just convenient not to import them manually all the
@@ -17,20 +18,17 @@ pub(crate) use reqwest_ext::*;
 #[allow(unused_imports)]
 pub(crate) mod prelude {
     pub(crate) use super::chrono_ext::DateTimeExt as _;
-    pub(crate) use super::reqwest_ext::ReqwestBuilderExt as _;
-    pub(crate) use super::std_ext::ErrorExt as _;
-    pub(crate) use super::std_ext::OptionExt as _;
-    pub(crate) use super::std_ext::ResultExt as _;
-    pub(crate) use super::teloxide_ext::ChatExt as _;
-    pub(crate) use super::teloxide_ext::MessageIdExt as _;
-    pub(crate) use super::teloxide_ext::MessageKindExt as _;
-    pub(crate) use super::teloxide_ext::UserExt as _;
-    pub(crate) use super::teloxide_ext::UtilRequesterExt as _;
+    pub(crate) use super::http::RequestBuilderExt as _;
+    pub(crate) use super::std_ext::{ErrorExt as _, OptionExt as _, ResultExt as _};
+    pub(crate) use super::teloxide_ext::{
+        ChatExt as _, MessageIdExt as _, MessageKindExt as _, SendPayloadExt, UserExt as _,
+        UtilRequesterExt as _,
+    };
 
     pub(crate) use super::tracing_err;
     pub(crate) use tracing::{
         debug, debug_span, error, error_span, info, info_span, instrument, trace, trace_span, warn,
-        warn_span,
+        warn_span, Instrument as _,
     };
 }
 

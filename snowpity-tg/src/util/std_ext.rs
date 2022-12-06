@@ -41,3 +41,7 @@ where
         display_error_chain::DisplayErrorChain::new(self)
     }
 }
+
+pub(crate) fn type_name_of_val<T: ?Sized>(_: &T) -> &'static str {
+    std::any::type_name::<T>()
+}

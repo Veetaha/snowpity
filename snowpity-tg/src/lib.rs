@@ -3,6 +3,7 @@ mod db;
 mod derpi;
 mod error;
 mod ftai;
+mod media;
 mod sysinfo;
 mod tg;
 

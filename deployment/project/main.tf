@@ -1,6 +1,7 @@
 locals {
-  grafana_cloud_api_key = var.grafana_cloud_api_key[module.workspace.kind]
-  tg_bot_token          = var.tg_bot_token[module.workspace.kind]
+  grafana_cloud_api_key   = var.grafana_cloud_api_key[module.workspace.kind]
+  tg_bot_token            = var.tg_bot_token[module.workspace.kind]
+  tg_bot_media_cache_chat = var.tg_bot_media_cache_chat[module.workspace.kind]
 }
 
 module "workspace" {
@@ -10,7 +11,7 @@ module "workspace" {
 module "oci" {
   source = "../modules/oci"
 
-  tg_bot_media_cache_chat = var.tg_bot_media_cache_chat
+  tg_bot_media_cache_chat = local.tg_bot_media_cache_chat
   tg_bot_maintainer       = var.tg_bot_maintainer
   tg_bot_token            = local.tg_bot_token
   tg_bot_image_tag        = var.tg_bot_image_tag

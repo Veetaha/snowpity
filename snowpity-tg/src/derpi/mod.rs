@@ -1,5 +1,5 @@
 use crate::util::prelude::*;
-use crate::util::{self, ThemeTag};
+use crate::util::{self, http, ThemeTag};
 use crate::Result;
 use itertools::Itertools;
 use serde::Deserialize;
@@ -26,27 +26,30 @@ pub struct Config {
 }
 
 pub(crate) struct DerpiService {
-    http_client: reqwest::Client,
+    http_client: http::Client,
     cfg: Config,
 }
 
 impl DerpiService {
-    pub(crate) fn new(cfg: Config, http_client: reqwest::Client) -> Self {
+    pub(crate) fn new(cfg: Config, http_client: http::Client) -> Self {
+        // Derpibooru API is rate-limited to 3 requests per second as per their response in discord:
+        // https://discord.com/channels/430829008402251796/438029140659142657/1048823724364800101
+        //
+        // The http client should already handle exponential backoff with retries.
         Self { http_client, cfg }
     }
 
-    pub(crate) async fn get_media(&self, media_id: u64) -> Result<Media> {
-        let res: GetImageResponse = self
+    pub(crate) async fn get_media(&self, media_id: MediaId) -> Result<Media> {
+        Ok(self
             .http_client
             .get(derpi_api(["images", &media_id.to_string()]))
-            .read_json()
-            .await?;
-
-        Ok(res.image)
+            .read_json::<GetImageResponse>()
+            .await?
+            .image)
     }
 
     /// Fetches random pony media (image or video) based on the given tags (if there are any).
-    //#[allow(unused)]
+    #[allow(unused)]
     pub(crate) async fn get_random_media(
         &self,
         tags: impl IntoIterator<Item = ThemeTag>,

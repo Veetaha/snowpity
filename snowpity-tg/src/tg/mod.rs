@@ -14,18 +14,23 @@ use crate::util;
 use crate::util::prelude::*;
 use crate::Result;
 use captcha::CaptchaCtx;
-use dptree::di::{DependencyMap, DependencySupplier};
+use dptree::di::DependencyMap;
 use inline_query::InlineQueryService;
 use std::sync::Arc;
+use teloxide::adaptors::throttle::ThrottlingRequest;
+use teloxide::adaptors::trace::TraceRequest;
 use teloxide::adaptors::{CacheMe, DefaultParseMode, Throttle, Trace};
 use teloxide::dispatching::UpdateFilterExt;
 use teloxide::prelude::*;
+use teloxide::requests::MultipartRequest;
 use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
 
+use crate::tg::inline_query::media_cache;
 pub(crate) use config::*;
 
-type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
+pub(crate) type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
+pub(crate) type Request<T> = TraceRequest<ThrottlingRequest<MultipartRequest<T>>>;
 
 pub(crate) struct Ctx {
     bot: Bot,
@@ -41,21 +46,26 @@ pub(crate) struct Ctx {
 pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Repo) -> Result {
     let mut di = DependencyMap::new();
 
-    let http = util::create_http_client();
+    let http = util::http::create_client();
 
-    let bot: Bot = teloxide::Bot::with_client(tg_cfg.token.clone(), http.clone())
+    let bot: Bot = teloxide::Bot::new(tg_cfg.token.clone())
         .throttle(Default::default())
         .parse_mode(ParseMode::MarkdownV2)
         .cache_me()
         .trace(teloxide::adaptors::trace::Settings::all());
 
     let ftai = FtaiService::new(http.clone());
-    let derpi = Arc::new(DerpiService::new(derpi_cfg, http));
+    let derpi = Arc::new(DerpiService::new(derpi_cfg, http.clone()));
     let tg_cfg = Arc::new(tg_cfg);
     let db = Arc::new(db);
 
-    let inline_query =
-        InlineQueryService::new(bot.clone(), derpi.clone(), tg_cfg.clone(), db.clone());
+    let ctx = media_cache::Context {
+        http_client: http,
+        bot: bot.clone(),
+        derpi: derpi.clone(),
+        cfg: tg_cfg.clone(),
+        db: db.clone(),
+    };
 
     di.insert(Arc::new(Ctx {
         bot: bot.clone(),
@@ -65,7 +75,7 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
         sysinfo: SysInfoService::new(),
         derpi,
         captcha: Default::default(),
-        inline_query,
+        inline_query: InlineQueryService::new(ctx),
     }));
 
     info!("Starting bot...");

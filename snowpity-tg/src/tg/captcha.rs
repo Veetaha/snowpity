@@ -18,7 +18,6 @@ use teloxide::types::{
 };
 use teloxide::utils::markdown;
 use tokio::sync::oneshot;
-use tracing_futures::Instrument;
 
 /// Duration for the new users to solve the captcha. If they don't reply
 /// in this time, they will be kicked.

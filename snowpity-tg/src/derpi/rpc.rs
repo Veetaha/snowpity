@@ -21,35 +21,49 @@ pub(crate) struct GetImageResponse {
     pub(crate) image: Media,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub(crate) struct Media {
     pub(crate) id: MediaId,
     pub(crate) mime_type: MimeType,
     pub(crate) representations: ImageRepresentations,
     pub(crate) tags: Vec<String>,
     pub(crate) created_at: DateTime<Utc>,
-    /// The image's number of upvotes minus the image's number of downvotes.
+    /// The number of upvotes minus the number of downvotes.
     pub(crate) score: i64,
     pub(crate) size: u64,
+    pub(crate) view_url: Url,
+
+    // Dimensions of the media
+    pub(crate) width: u64,
+    pub(crate) height: u64,
+    pub(crate) aspect_ratio: f64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub(crate) struct ImageRepresentations {
-    pub(crate) full: Url,
-    pub(crate) thumb: Url,
+    pub(crate) thumb_small: Url,
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Display, Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MimeType {
     #[serde(rename = "image/gif")]
+    #[display(fmt = "image/gif")]
     ImageGif,
+
     #[serde(rename = "image/jpeg")]
+    #[display(fmt = "image/jpeg")]
     ImageJpeg,
+
     #[serde(rename = "image/png")]
+    #[display(fmt = "image/png")]
     ImagePng,
+
     #[serde(rename = "image/svg+xml")]
+    #[display(fmt = "image/svg+xml")]
     ImageSvgXml,
+
     #[serde(rename = "video/webm")]
+    #[display(fmt = "video/webm")]
     VideoWebm,
 }
 
@@ -57,6 +71,19 @@ impl Media {
     pub(crate) fn webpage_url(&self) -> Url {
         media_id_to_webpage_url(self.id)
     }
+
+    pub(crate) fn artists(&self) -> impl Iterator<Item = &str> {
+        self.tags
+            .iter()
+            .filter_map(|tag| tag.strip_prefix("artist:"))
+    }
+}
+
+pub(crate) fn artist_to_webpage_url(artist: &str) -> Url {
+    let mut url = derpi(["search"]);
+    let tag = format!("artist:{artist}");
+    url.query_pairs_mut().append_pair("q", &tag);
+    url
 }
 
 pub(crate) fn media_id_to_webpage_url(media_id: MediaId) -> Url {
@@ -64,11 +91,21 @@ pub(crate) fn media_id_to_webpage_url(media_id: MediaId) -> Url {
 }
 
 impl MimeType {
-    pub(crate) fn is_image(&self) -> bool {
+    pub(crate) fn is_image(self) -> bool {
         use MimeType::*;
         match self {
             ImageGif | ImageJpeg | ImagePng | ImageSvgXml => true,
             VideoWebm => false,
+        }
+    }
+    pub(crate) fn file_extension(self) -> &'static str {
+        use MimeType::*;
+        match self {
+            ImageGif => "gif",
+            ImageJpeg => "jpg",
+            ImagePng => "png",
+            ImageSvgXml => "svg",
+            VideoWebm => "webm",
         }
     }
 }

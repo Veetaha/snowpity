@@ -5,7 +5,10 @@ variable "tg_bot_image_tag" {
 
 variable "tg_bot_media_cache_chat" {
   nullable = false
-  type     = string
+  type = object({
+    prod = optional(string)
+    dev  = optional(string)
+  })
 }
 
 variable "tg_bot_maintainer" {

@@ -1,7 +1,7 @@
 //! Symbols related to communicating with the 15.ai API
 
-use crate::util;
 use crate::util::prelude::*;
+use crate::util::{self, http};
 use crate::{err_ctx, err_val, FtAiError, Result};
 
 /// Limit of the text length that can be passed to 15.ai for voice generation
@@ -39,11 +39,11 @@ util::def_url_base!(ftai_api, "https://api.15.ai/app");
 util::def_url_base!(ftai_cdn, "https://cdn.15.ai");
 
 pub(crate) struct FtaiService {
-    http_client: reqwest::Client,
+    http_client: http::Client,
 }
 
 impl FtaiService {
-    pub(crate) fn new(http_client: reqwest::Client) -> Self {
+    pub(crate) fn new(http_client: http::Client) -> Self {
         Self { http_client }
     }
 

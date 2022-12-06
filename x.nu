@@ -101,7 +101,7 @@ def "main start" [
 
     mut args = (
         [up --build]
-        | append-if $detach '--detach'
+        | append-if $detach '--wait'
         | append-if $no_app pg pgadmin
     )
 
@@ -182,15 +182,39 @@ def "main tf output" [] {
     tf-output | to json | jq
 }
 
-# Generate the entities Rust code from the database schema
+# Generate the entities Rust code from the database schema. This will stop any
+# local running containers, drop the database, re-create, migrate it and
+# output the generated code to the working tree.
 def "main orm gen" [] {
     cd (repo)
-    sea-orm-cli generate entity --output-dir snowpity-tg/src/db/entities
+    main stop
+    main start --fresh --no-app --detach
+    wait-for-db
+    sea-orm-cli migrate
+    sea-orm-cli generate entity --with-copy-enums --output-dir entities/src/generated
+    main stop
+}
+
+# Fetch the image metadata from derpibooru
+def "main derpi image" [id:int] {
+    fetch $"https://derpibooru.org/api/v1/json/images/($id)" | get image | flatten representations | get 0
 }
 
 ################################################
 ############ Implementation details ############
 ################################################
+
+# def-env database-url [] {
+#     cached database-url {
+#         open .env
+#         | lines
+#         | str trim
+#         | where { |line| ($line | str length) != 0 }
+#         | parse "{name}={value}"
+#         | where name == DATABASE_URL
+#         | get 0.value
+#     }
+# }
 
 def-env tf-vars [] {
     ['-var' $'tg_bot_image_tag=(project-version)']
@@ -244,12 +268,16 @@ def tf [--no-debug, ...args: string] {
     with-debug terraform $args
 }
 
-def docker-compose [...args: any] {
+def docker-compose [--no-debug, ...args: any] {
     cd (repo)
-    (
-        CURRENT_UID=$"(id --user | str trim):(id --group | str trim)"
-        with-debug docker ($args | flatten-list | prepend compose)
-    )
+    let current_uid = $"(id --user | str trim):(id --group | str trim)"
+    let args = ($args | flatten-list | prepend compose)
+
+    if $no_debug {
+        return (CURRENT_UID=$current_uid docker $args)
+    }
+
+    CURRENT_UID=$current_uid with-debug docker $args
 }
 
 def info [arg: any] {
@@ -308,4 +336,43 @@ def-env cached [cache_id: string, imp: block] {
     }
 
     $env | get $cache_id
+}
+
+def-env docker-compose-config [] {
+    cached docker-compose-config {
+        docker-compose --no-debug config '--format' json | from json
+    }
+}
+
+def-env wait-for-db [] {
+    let db_url = (
+        docker-compose-config
+        | get services.tg_bot.environment.DATABASE_URL
+        | url parse
+    )
+
+    let db_name = ($db_url.path | parse "/{name}").0.name
+
+    let postgres_image = (docker-compose-config).services.pg.image
+
+    mut is_ready = false
+
+    while not $is_ready {
+        sleep 200ms
+        $is_ready = (try {
+            (
+                with-debug docker run
+                    '--network' 'snowpity_pg'
+                    $postgres_image
+                    pg_isready
+                    '--dbname' $db_name
+                    '--host' $db_url.host
+                    '--port' $db_url.port
+                    '--username' $db_url.username
+            )
+            true
+        } catch { |e|
+            false
+        })
+    }
 }
