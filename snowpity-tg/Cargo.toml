@@ -29,6 +29,7 @@ lazy-regex            = { workspace = true }
 nanoid                = { workspace = true }
 ogg-opus              = { workspace = true }
 parking_lot           = { workspace = true }
+prometheus            = { workspace = true, features = ["process"] }
 reqwest               = { workspace = true, features = ["json"] }
 reqwest-middleware    = { workspace = true }
 reqwest-retry         = { workspace = true }

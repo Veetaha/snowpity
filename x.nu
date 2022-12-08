@@ -124,12 +124,14 @@ def "main db drop" [] {
 
 # Deploy the full application's stack
 def "main deploy" [
-    --no-build     # Skip build step, reuse the docker image that is already in the remote registry
-    --release (-r) # Build in release mode
-    --drop-server  # Force the re-creation of the server instance
-    --drop-db      # Drop the database (re-create the data volume)
-    --plan         # Do `tf plan` instead of `tf apply`
-    --yes (-y)     # Auto-approve the deployment
+    --no-build      # Skip build step, reuse the docker image that is already in the remote registry
+    --release (-r)  # Build in release mode
+    --drop-server   # Force the re-creation of the server instance
+    --drop-db       # Drop the database (re-create the data volume)
+    --plan          # Do `tf plan` instead of `tf apply`
+    --yes (-y)      # Auto-approve the deployment
+    --retry         # Retry the deployment if it fails until it succeeds
+    --no-tf-refresh # Don't refresh the terraform state before deployment
 ] {
     if not $no_build {
         # FIXME: it's this verbose due to https://github.com/nushell/nushell/issues/7260
@@ -144,12 +146,27 @@ def "main deploy" [
     let args = (
         $args
         | append (tf-vars)
-        | append-if $yes         '--auto-approve'
-        | append-if $drop_server '--replace=module.oci.oci_core_instance.master'
-        | append-if $drop_db     '--replace=module.oci.oci_core_volume.master_data'
+        | append-if $yes           '--auto-approve'
+        | append-if $drop_server   '--replace=module.oci.oci_core_instance.master'
+        | append-if $drop_db       '--replace=module.oci.oci_core_volume.master_data'
+        | append-if $no_tf_refresh '--refresh=false'
     )
 
-    tf $args
+    if $retry {
+        loop {
+            try {
+                tf $args
+                break
+            } catch { |err|
+                let retry_duration = 2sec
+                echo $err
+                info $"Deployment failed, retrying in ($retry_duration)"
+                sleep $retry_duration
+            }
+        }
+    } else {
+        tf $args
+    }
 
     if not $plan {
         main ssh cloud-init log

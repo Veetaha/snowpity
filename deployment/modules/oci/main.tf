@@ -99,7 +99,7 @@ locals {
 
   compartment_id      = oci_identity_compartment.master.id
   display_name        = "only-hooves-tg-bot${module.workspace.id_suffix}"
-  availability_domain = data.oci_identity_availability_domains.master.availability_domains[1].name
+  availability_domain = data.oci_identity_availability_domains.master.availability_domains[0].name
 
   # Our tagret is to fit into the Always Free capacity of Oracle Cloud.
   # We could use the full capacity for the production instance, but we

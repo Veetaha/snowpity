@@ -12,6 +12,24 @@ async fn main() -> ExitCode {
 
     let logging_task = snowpity_tg::LoggingConfig::load_or_panic().init_logging();
 
+    // A default ProcessCollector is registered automatically.
+    // let mut buffer = Vec::new();
+    // let encoder = prometheus::TextEncoder::new();
+    // for _ in 0..5 {
+    //     use prometheus::Encoder;
+
+    //     let metric_families = prometheus::gather();
+    //     encoder.encode(&metric_families, &mut buffer).unwrap();
+
+    //     // Output to the standard output.
+    //     println!("{}", String::from_utf8(buffer.clone()).unwrap());
+
+    //     buffer.clear();
+    //     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    // }
+
+    // return ExitCode::SUCCESS;
+
     let main_fut = AssertUnwindSafe(async {
         let result = try_main().await;
 
