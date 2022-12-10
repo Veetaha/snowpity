@@ -1,5 +1,5 @@
 use crate::util::prelude::*;
-use crate::{err_ctx, err_val, HttpError, Result};
+use crate::{err_ctx, err_val, HttpClientError, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
 use easy_ext::ext;
@@ -9,6 +9,15 @@ use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::time::Duration;
+use crate::metrics::def_metrics;
+
+// def_metrics! {
+//     /// Number of http requests
+//     http_requests: IntCounter;
+
+//     /// Number of http requests that failed
+//     http_requests_errors: Int;
+// }
 
 pub type Client = reqwest_middleware::ClientWithMiddleware;
 
@@ -58,11 +67,14 @@ impl reqwest_middleware::Middleware for LoggingMiddleware {
         );
         async {
             debug!("Sending request");
+            // http_requests().inc();
+
             let result = next.run(req, extensions).await;
             match &result {
                 Ok(response) => {
                     if let Err(err) = response.error_for_status_ref() {
                         error!(err = tracing_err(&err), "Request failed (error status)");
+                        // http_requests_errors().with_label_values()
                     }
                 }
                 Err(err) => {
@@ -98,7 +110,7 @@ pub(crate) impl RequestBuilder {
                     "Bad JSON response"
                 ),
             };
-            err_val!(HttpError::UnexpectedResponseJsonShape { source: err })
+            err_val!(HttpClientError::UnexpectedResponseJsonShape { source: err })
         })
     }
 
@@ -106,7 +118,7 @@ pub(crate) impl RequestBuilder {
         let res = self
             .send()
             .await
-            .map_err(err_ctx!(HttpError::SendRequest))?;
+            .map_err(err_ctx!(HttpClientError::SendRequest))?;
 
         let status = res.status();
 
@@ -116,10 +128,10 @@ pub(crate) impl RequestBuilder {
                 Err(err) => format!("Could not collect the error response body text: {}", err),
             };
 
-            return Err(err_val!(HttpError::BadResponseStatusCode { status, body }));
+            return Err(err_val!(HttpClientError::BadResponseStatusCode { status, body }));
         }
 
-        res.bytes().await.map_err(err_ctx!(HttpError::ReadResponse))
+        res.bytes().await.map_err(err_ctx!(HttpClientError::ReadResponse))
     }
 
     // async fn read_to_temp_file(self) -> Result<tempfile::TempPath> {

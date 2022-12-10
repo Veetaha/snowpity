@@ -10,6 +10,8 @@ services:
       - /proc/stat:/proc/stat:ro
       - /proc/meminfo:/proc/meminfo:ro
 
+    ports: ["3000:3000"]
+
     # We are listening only for Ctrl-C
     stop_signal: SIGINT
 
@@ -29,8 +31,7 @@ services:
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
 
-    ports:
-      - "5432:5432"
+    ports: ["5432:5432"]
 
     networks: [ pg ]
 
@@ -40,8 +41,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: snowpity@snowpity.com
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-snowpity}
 
-    ports:
-      - "5000:80"
+    ports: ["5000:80"]
 
     volumes:
       - ./pgadmin4/servers.json:/pgadmin4/servers.json:ro

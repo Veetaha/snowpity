@@ -1,5 +1,4 @@
-pub(crate) mod media_cache;
-
+use crate::metrics::def_metrics;
 use crate::util::prelude::*;
 use crate::util::DynResult;
 use crate::{derpi, tg, Error};
@@ -10,6 +9,16 @@ use teloxide::prelude::*;
 use teloxide::types::{
     InlineQuery, InlineQueryResultCachedPhoto, InlineQueryResultCachedVideo, ParseMode,
 };
+
+pub(crate) mod media_cache;
+
+def_metrics! {
+    /// Number of inline queries recieved by the bot
+    inline_queries: IntCounter;
+
+    /// Number of errors while handling inline queries
+    inline_queries_errors: IntCounter;
+}
 
 pub(crate) struct InlineQueryService {
     media_cache_client: media_cache::Client,
@@ -26,6 +35,8 @@ impl InlineQueryService {
 #[instrument(skip_all, fields(query = %query.query))]
 pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     async {
+        inline_queries().inc();
+
         let tg::Ctx {
             bot, inline_query, ..
         } = &*ctx;
@@ -73,6 +84,7 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
 
         Ok::<_, Error>(())
     }
+    .inspect_err(|_| inline_queries_errors().inc())
     .err_into()
     .await
 }

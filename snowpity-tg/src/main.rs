@@ -12,8 +12,10 @@ async fn main() -> ExitCode {
 
     let logging_task = snowpity_tg::LoggingConfig::load_or_panic().init_logging();
 
+    let abort_signal = abort_signal().shared();
+
     let main_fut = AssertUnwindSafe(async {
-        let result = try_main().await;
+        let result = try_main(abort_signal.clone()).await;
 
         result.map(|()| ExitCode::SUCCESS).unwrap_or_else(|err| {
             error!(err = tracing_err(&err), "Exitting with an error...");
@@ -70,10 +72,18 @@ async fn main() -> ExitCode {
     exit_code
 }
 
-async fn try_main() -> snowpity_tg::Result {
+async fn try_main(abort: impl Future<Output = ()>) -> snowpity_tg::Result {
     let config = snowpity_tg::Config::load_or_panic();
+    snowpity_tg::run(config, abort).await
+}
 
-    snowpity_tg::run(config).await?;
-
-    Ok(())
+async fn abort_signal() {
+    if let Err(err) = tokio::signal::ctrl_c().await {
+        warn!(
+            err = tracing_err(&err),
+            "Failed to wait for Ctrl+C, exiting..."
+        );
+    } else {
+        info!("Ctrl+C received, exiting forcefully...");
+    }
 }

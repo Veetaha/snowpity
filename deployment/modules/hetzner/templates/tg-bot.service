@@ -1,12 +1,11 @@
 [Unit]
 Description=Telegram Bot Service (docker compose)
+
 BindsTo=docker.service
 After=docker.service
 
-# This unit is generated automatically by `systemd` using the builtin generator
-# that reads the configurations from `/etc/fstab`
-BindsTo=mnt-master.mount
-After=mnt-master.mount
+BindsTo=data-volume.service
+After=data-volume.service
 
 [Service]
 Type=oneshot
@@ -17,7 +16,7 @@ EnvironmentFile=${env_file_path}
 
 ExecStartPre=-/var/app/docker-compose.sh rm
 
-ExecStart=/var/app/start.sh up --detach --no-build
+ExecStart=/var/app/docker-compose.sh up --detach --no-build --wait
 
 # We increase the timeout, because shutting down `teloxide` takes a while
 # The issue in `teloxide`: https://github.com/teloxide/teloxide/issues/711

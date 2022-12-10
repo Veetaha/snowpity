@@ -24,10 +24,12 @@ envy                  = { workspace = true }
 fs-err                = { workspace = true, features = ["tokio"] }
 futures               = { workspace = true }
 humansize             = { workspace = true }
+hyper                 = { workspace = true, features = ["http2", "server"] }
 itertools             = { workspace = true }
 lazy-regex            = { workspace = true }
 nanoid                = { workspace = true }
 ogg-opus              = { workspace = true }
+once_cell             = { workspace = true }
 parking_lot           = { workspace = true }
 prometheus            = { workspace = true, features = ["process"] }
 reqwest               = { workspace = true, features = ["json"] }

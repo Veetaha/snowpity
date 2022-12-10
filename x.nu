@@ -169,7 +169,7 @@ def "main destroy" [
     let args = (
         [destroy] ++ (tf-vars)
         | append-if $yes '--auto-approve'
-        | append-if (not $all) '--target=module.oci.oci_core_instance.master'
+        | append-if (not $all) '--target=module.hetzner.hcloud_server.master'
     )
     tf $args
 }

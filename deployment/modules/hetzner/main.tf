@@ -1,4 +1,18 @@
 locals {
+  log_filter = [
+    "debug",
+    "hyper=info",
+    "reqwest=info",
+    "rustls=info",
+    "sqlx=warn",
+    "h2=info",
+    # Don't log HTTP requests to `/metrics` endpoint, which we know
+    # will be hit by Prometheus regularly, but log all other ones,
+    # because we don't expect any other incomming HTTP traffic.
+    "snowpity::tg_metrics[uri=\"/metrics\"]=off",
+    "snowpity::tg_metrics=trace",
+  ]
+
   location         = "fsn1"
   hostname         = "hetzner-master${module.workspace.id_suffix}"
   data_volume_path = "/mnt/master"
@@ -17,11 +31,12 @@ locals {
   templates = {
     "grafana-agent.yaml"    = "/etc/grafana-agent.yaml"
     (local.systemd_service) = "/etc/systemd/system/tg-bot.service"
+    "data-volume.service"   = "/etc/systemd/system/data-volume.service"
   }
 
   exec_files = {
     "/var/app/docker-compose.sh" = file("${path.module}/templates/docker-compose.sh")
-    "/var/app/start.sh"          = file("${path.module}/templates/start.sh")
+    "/var/app/data-volume.sh"    = file("${path.module}/templates/data-volume.sh")
   }
 
   data_files = merge(
@@ -86,7 +101,7 @@ locals {
     TG_BOT_TOKEN            = var.tg_bot_token
     TG_BOT_IMAGE_NAME       = var.tg_bot_image_name
     TG_BOT_IMAGE_TAG        = var.tg_bot_image_tag
-    TG_BOT_LOG              = "debug,hyper=info,reqwest=info,rustls=info,sqlx=warn,h2=info"
+    TG_BOT_LOG              = join(",", local.log_filter)
     TG_BOT_LOG_LABELS = jsonencode({
       instance = local.hostname
     })
@@ -167,34 +182,34 @@ resource "hcloud_volume_attachment" "master" {
 # # The reality is cruel. It was experimentally found that the volume is
 # # detached abruptly. Therefore the database doesn't have time to
 # # flush its data to the disk, which means potential data loss.
-# resource "null_resource" "teardown" {
-#   triggers = {
-#     data_volume_attachment_id = hcloud_volume_attachment.master.id
+resource "null_resource" "teardown" {
+  triggers = {
+    data_volume_attachment_id = hcloud_volume_attachment.master.id
 
-#     # The data volume attachment ID is enough for the trigger, but these
-#     # triggers are needed to workaround the problem that it's impossible
-#     # to reference symbols other than `self` variable in the provisioner block.
-#     #
-#     # Issue in terraform: https://github.com/hashicorp/terraform/issues/23679
-#     server_ip       = hcloud_server.master.ipv4_address
-#     server_os_user  = local.server_os_user
-#     systemd_service = local.systemd_service
-#   }
+    # The data volume attachment ID is enough for the trigger, but these
+    # triggers are needed to workaround the problem that it's impossible
+    # to reference symbols other than `self` variable in the provisioner block.
+    #
+    # Issue in terraform: https://github.com/hashicorp/terraform/issues/23679
+    server_ip       = hcloud_server.master.ipv4_address
+    server_os_user  = local.server_os_user
+    systemd_service = local.systemd_service
+  }
 
-#   provisioner "remote-exec" {
-#     when = destroy
+  provisioner "remote-exec" {
+    when = destroy
 
-#     inline = [
-#       <<-SCRIPT
-#       #!/usr/bin/env bash
-#       set -euo pipefail
-#       sudo systemctl stop ${self.triggers.systemd_service}
-#       SCRIPT
-#     ]
+    inline = [
+      <<-SCRIPT
+      #!/usr/bin/env bash
+      set -euo pipefail
+      sudo systemctl stop ${self.triggers.systemd_service} grafana-agent.service
+      SCRIPT
+    ]
 
-#     connection {
-#       host = self.triggers.server_ip
-#       user = self.triggers.server_os_user
-#     }
-#   }
-# }
+    connection {
+      host = self.triggers.server_ip
+      user = self.triggers.server_os_user
+    }
+  }
+}

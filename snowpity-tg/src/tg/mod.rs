@@ -9,6 +9,7 @@ mod updates;
 use crate::db;
 use crate::derpi::{self, DerpiService};
 use crate::ftai::FtaiService;
+use crate::metrics::def_metrics;
 use crate::sysinfo::SysInfoService;
 use crate::util;
 use crate::util::prelude::*;
@@ -32,14 +33,20 @@ pub(crate) use config::*;
 pub(crate) type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
 pub(crate) type Request<T> = TraceRequest<ThrottlingRequest<MultipartRequest<T>>>;
 
+def_metrics! {
+    /// Number of updates recieved from telegram
+    tg_updates: IntCounter;
+
+    /// Number of updates recieved from telegram, that were skipped by the bot
+    tg_updates_skipped: IntCounter;
+}
+
 pub(crate) struct Ctx {
     bot: Bot,
-    db: Arc<db::Repo>,
     cfg: Arc<Config>,
     ftai: FtaiService,
     captcha: CaptchaCtx,
     sysinfo: SysInfoService,
-    derpi: Arc<DerpiService>,
     inline_query: InlineQueryService,
 }
 
@@ -62,18 +69,16 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
     let ctx = media_cache::Context {
         http_client: http,
         bot: bot.clone(),
-        derpi: derpi.clone(),
+        derpi,
         cfg: tg_cfg.clone(),
-        db: db.clone(),
+        db,
     };
 
     di.insert(Arc::new(Ctx {
         bot: bot.clone(),
-        db,
         cfg: tg_cfg,
         ftai,
         sysinfo: SysInfoService::new(),
-        derpi,
         captcha: Default::default(),
         inline_query: InlineQueryService::new(ctx),
     }));
@@ -84,6 +89,7 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
         .await?;
 
     let handler = dptree::entry()
+        .inspect(|| tg_updates().inc())
         .branch(
             Update::filter_message()
                 .chain(Message::filter_new_chat_members())
@@ -112,7 +118,8 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
         )
         // .branch(Update::filter_edited_message().endpoint(updates::handle_edited_message))
         .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query))
-        .branch(Update::filter_inline_query().endpoint(inline_query::handle_inline_query));
+        .branch(Update::filter_inline_query().endpoint(inline_query::handle_inline_query))
+        .inspect(|| tg_updates_skipped().inc());
 
     Dispatcher::builder(bot, handler)
         .dependencies(di)

@@ -19,6 +19,7 @@ users:
     groups: docker
     sudo: ALL=(ALL) NOPASSWD:ALL
 
+# Save time on package upgrades and reboot in development mode
 %{ if workspace_kind == "prod" }
 package_update: true
 package_upgrade: true
@@ -86,6 +87,7 @@ runcmd:
   # before this installation script is running, therefore `dpkg` has to use the "old config"
   - sudo dpkg -i --force-confold $HOME/grafana-agent.deb
   - rm $HOME/grafana-agent.deb
+  - usermod -a -G docker grafana-agent
   - systemctl enable --now grafana-agent.service
 
   # Enable systemd services responsible for managing Docker Compose services

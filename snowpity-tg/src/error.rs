@@ -71,9 +71,15 @@ pub(crate) enum ErrorKind {
     },
 
     #[error(transparent)]
-    Http {
+    HttpClient {
         #[from]
-        source: HttpError,
+        source: HttpClientError,
+    },
+
+    #[error(transparent)]
+    HttpServer {
+        #[from]
+        source: HttpServerError,
     },
 
     #[error(transparent)]
@@ -188,7 +194,7 @@ pub(crate) enum UserError {
 
 /// Errors at the layer of the HTTP API
 #[derive(Debug, Error)]
-pub(crate) enum HttpError {
+pub(crate) enum HttpClientError {
     #[error("Failed to send an http request")]
     SendRequest { source: reqwest_middleware::Error },
 
@@ -209,6 +215,12 @@ pub(crate) enum HttpError {
 
     #[error("Failed to flush bytes to a file")]
     FlushToFile { source: std::io::Error },
+}
+
+#[derive(Debug, Error)]
+pub(crate) enum HttpServerError {
+    #[error("Failure serving HTTP")]
+    Serve { source: hyper::Error },
 }
 
 /// Most likely unrecoverable errors from database communication layer

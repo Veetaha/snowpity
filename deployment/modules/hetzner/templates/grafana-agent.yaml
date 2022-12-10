@@ -3,17 +3,15 @@ integrations:
   # agent:
   #   enabled: true
 
+  # TODO: scrape the metrics from the postgres instance
+  # postgres_exporter:
+
   node_exporter:
     enabled: true
     relabel_configs:
       - replacement: ${hostname}
         source_labels: [__address__]
         target_label: instance
-  prometheus_remote_write:
-    - url: ${prometheus_remote_write_url}
-      basic_auth:
-        username: ${prometheus_username}
-        password: ${prometheus_password}
 
 logs:
   positions_directory: /tmp/log-positions
@@ -45,12 +43,17 @@ logs:
               target_label: level
 metrics:
   global:
-    scrape_interval: 60s
-  wal_directory: /tmp/grafana-agent-wal
+    scrape_interval: 15s
+    remote_write:
+      - url: ${prometheus_remote_write_url}
+        basic_auth:
+          username: ${prometheus_username}
+          password: ${prometheus_password}
+
+  wal_directory: ${data_volume_path}/grafana-agent-wal
   configs:
-    - name: integrations
-      remote_write:
-        - url: ${prometheus_remote_write_url}
-          basic_auth:
-            username: ${prometheus_username}
-            password: ${prometheus_password}
+    - name: docker-containers
+      scrape_configs:
+        - job_name: docker-containers
+          docker_sd_configs:
+            - host: unix:///var/run/docker.sock
