@@ -2,7 +2,7 @@
 
 mounts:
   - - ${data_volume_device}
-    - ${data_volume_mount_point}
+    - ${data_volume_path}
     - ${data_volume_fs}
     - defaults,noauto,x-systemd.growfs,x-systemd.makefs,x-systemd.device-timeout=10min
     - "0"
@@ -19,14 +19,16 @@ users:
     groups: docker
     sudo: ALL=(ALL) NOPASSWD:ALL
 
+%{ if workspace_kind == "prod" }
 package_update: true
 package_upgrade: true
-package_reboot_if_required: ${reboot_if_required}
+package_reboot_if_required: true
 packages:
   - apt-transport-https
   - ca-certificates
   - curl
   - gnupg
+%{ endif }
 
 write_files:
   %{~ for path, file in files ~}

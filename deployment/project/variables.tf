@@ -58,7 +58,22 @@ variable "pgadmin_password" {
   sensitive = true
 }
 
-variable "oci_parent_compartment_id" {
+variable "hcloud_token" {
+  nullable  = false
+  sensitive = true
+  type = object({
+    prod = optional(string)
+    dev  = optional(string)
+  })
+}
+
+variable "derpi_api_key" {
+  nullable  = false
+  sensitive = true
+  type      = string
+}
+
+variable "derpi_filter" {
   nullable = false
   type     = string
 }

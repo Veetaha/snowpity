@@ -80,8 +80,6 @@ def "main docker build" [
             '--tag' $version_tag
             '--tag' $latest_tag
             '--build-arg' $"RUST_BUILD_MODE=($build_mode)"
-            # We use ARM-propelled server in oracle cloud, so doing AMD builds isn't critical
-            '--platform' linux/arm64/v8
             $output_flag
     )
 }
@@ -89,7 +87,8 @@ def "main docker build" [
 # Start all services locally using `docker compose`
 def "main start" [
     --detach     # Run the services in the background
-    --no-app     # Start only the database services. Useful when running app locally
+    --no-tg-bot  # Don't start the tg_bot service
+    --no-pgadmin # Don't start the pgadmin service
     --fresh (-f) # Executes `db drop` before starting the database (run `db drop --help` for details)
 ] {
     if $fresh {
@@ -100,9 +99,10 @@ def "main start" [
     mkdir (db-data)
 
     mut args = (
-        [up --build]
+        [up --build pg]
         | append-if $detach '--wait'
-        | append-if $no_app pg pgadmin
+        | append-if (not $no_tg_bot) tg_bot
+        | append-if (not $no_pgadmin) pgadmin
     )
 
     docker-compose $args
@@ -130,7 +130,6 @@ def "main deploy" [
     --drop-db       # Drop the database (re-create the data volume)
     --plan          # Do `tf plan` instead of `tf apply`
     --yes (-y)      # Auto-approve the deployment
-    --retry         # Retry the deployment if it fails until it succeeds
     --no-tf-refresh # Don't refresh the terraform state before deployment
 ] {
     if not $no_build {
@@ -147,29 +146,15 @@ def "main deploy" [
         $args
         | append (tf-vars)
         | append-if $yes           '--auto-approve'
-        | append-if $drop_server   '--replace=module.oci.oci_core_instance.master'
-        | append-if $drop_db       '--replace=module.oci.oci_core_volume.master_data'
+        | append-if $drop_server   '--replace=module.hetzner.hcloud_server.master'
+        | append-if $drop_db       '--replace=module.hetzner.hcloud_volume.master'
         | append-if $no_tf_refresh '--refresh=false'
     )
 
-    if $retry {
-        loop {
-            try {
-                tf $args
-                break
-            } catch { |err|
-                let retry_duration = 2sec
-                echo $err
-                info $"Deployment failed, retrying in ($retry_duration)"
-                sleep $retry_duration
-            }
-        }
-    } else {
-        tf $args
-    }
+    tf $args
 
     if not $plan {
-        main ssh cloud-init log
+        with-retry --max-retries 20 { main ssh cloud-init log }
     }
 }
 
@@ -205,7 +190,7 @@ def "main tf output" [] {
 def "main orm gen" [] {
     cd (repo)
     main stop
-    main start --fresh --no-app --detach
+    main start --fresh --no-tg-bot --no-pgadmin --detach
     wait-for-db
     sea-orm-cli migrate
     sea-orm-cli generate entity --with-copy-enums --output-dir entities/src/generated
@@ -250,7 +235,9 @@ def-env tf-output [] {
 }
 
 def-env cargo-metadata [] {
-    cached cargo-metadata { cargo metadata --format-version 1 | from json }
+    # XXX: Caching cargo metadata causes a performance bug in nushell:
+    # https://github.com/nushell/nushell/issues/6979#issuecomment-1343650021
+    cargo metadata --format-version 1 | from json
 }
 
 def-env project-version [] {
@@ -297,6 +284,10 @@ def docker-compose [--no-debug, ...args: any] {
     CURRENT_UID=$current_uid with-debug docker $args
 }
 
+def warn [arg: any] {
+    print --stderr $"(ansi yellow_bold)[WARN] ($arg) (ansi reset)"
+}
+
 def info [arg: any] {
     print --stderr $"(ansi green_bold)[INFO] ($arg) (ansi reset)"
 }
@@ -320,13 +311,8 @@ def with-debug [cmd: string, ...args: string] {
 
     if $result.exit_code != 0 {
         let invocation = ([$invocation] | table --collapse)
-        error make {
-            msg: $"Command exited with code ($result.exit_code)\n\n($invocation)\n"
-            label: {
-                text: "The command originates from here"
-                start: $span.start
-                end: $span.end
-            }
+        error make --unspanned {
+            msg: $"Command exited with code ($result.exit_code)\n($invocation)"
         }
     }
 }
@@ -372,24 +358,72 @@ def-env wait-for-db [] {
 
     let postgres_image = (docker-compose-config).services.pg.image
 
-    mut is_ready = false
+    let wait_time = 1min
+    let delay = 200ms
+    let max_retries = ($wait_time / $delay)
 
-    while not $is_ready {
-        sleep 200ms
-        $is_ready = (try {
-            (
-                with-debug docker run
-                    '--network' 'snowpity_pg'
-                    $postgres_image
-                    pg_isready
-                    '--dbname' $db_name
-                    '--host' $db_url.host
-                    '--port' $db_url.port
-                    '--username' $db_url.username
-            )
+    with-retry --fixed --max-retries $max_retries --delay $delay {(
+        with-debug docker run
+            '--network' 'snowpity_pg'
+            $postgres_image
+            pg_isready
+            '--dbname' $db_name
+            '--host' $db_url.host
+            '--port' $db_url.port
+            '--username' $db_url.username
+    )}
+}
+
+# Retry a closure until it succeeds or retry attempts are exhausted.
+# Uses exponential backoff with jitter by default.
+# See `--fixed` flag to alter this behavior.
+def with-retry [
+    imp: closure
+    --delay       = 200ms # Initial delay between retries (will be fixed if --fixed is set)
+    --max-retries = 5     # Maximum times to retry before giving up (first attempt is not counted)
+    --max-delay   = 5sec  # Maximum delay between retries (only used with exponential backoff)
+    --fixed               # Use fixed delay instead of exponential backoff
+] {
+    let exp = 3
+    let base_delay = $delay
+    mut attempt = 0
+    mut delay = $delay
+
+    loop {
+        let success = (try {
+            do $imp
             true
-        } catch { |e|
+        } catch {|err|
+            warn ($err | table)
             false
         })
+
+        # XXX: nu currently doesn't support `return` in `try-catch`
+        if $success {
+            return
+        }
+
+        $attempt += 1
+
+        warn $"Failure! Retrying \(($attempt) / ($max_retries)\) in ($delay)..."
+
+        sleep $delay
+
+        if $attempt >= $max_retries - 1 {
+            # Do the last retry outside of the `try-catch`
+            # to propagate the error
+            break
+        }
+
+        if $fixed {
+            continue
+        }
+
+        $delay = (
+            [$max_delay, ((random integer ($base_delay / 1ms)..($delay / 1ms * $exp)) * 1ms)]
+            | math min
+        )
     }
+
+    do $imp
 }

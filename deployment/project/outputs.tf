@@ -1,14 +1,9 @@
-output "oci_compartment_id" {
-  value = module.oci.compartment_id
-}
-
 output "server" {
   value = {
-    id                      = module.oci.server_id
-    ip                      = module.oci.server_ip
-    state                   = module.oci.server_state
-    os_user                 = module.oci.server_os_user
-    data_volume_mount_point = module.oci.data_volume_mount_point
+    ip               = module.hetzner.server_ip
+    status           = module.hetzner.server_status
+    os_user          = module.hetzner.server_os_user
+    data_volume_path = module.hetzner.data_volume_path
   }
 }
 

@@ -3,7 +3,6 @@ use crate::util::{self, http, ThemeTag};
 use crate::Result;
 use itertools::Itertools;
 use serde::Deserialize;
-use serde_with::{serde_as, DisplayFromStr};
 use std::collections::HashSet;
 
 pub(crate) mod rpc;
@@ -12,14 +11,9 @@ pub(crate) use rpc::*;
 util::def_url_base!(derpi_api, "https://derpibooru.org/api/v1/json");
 util::def_url_base!(derpi, "https://derpibooru.org");
 
-#[serde_as]
 #[derive(Clone, Deserialize)]
 pub struct Config {
     api_key: String,
-
-    /// Tags that are always added to queries
-    #[serde_as(as = "HashSet<DisplayFromStr>")]
-    always_on_tags: HashSet<ThemeTag>,
 
     // Default filter applied to queries
     filter: String,
@@ -54,12 +48,7 @@ impl DerpiService {
         &self,
         tags: impl IntoIterator<Item = ThemeTag>,
     ) -> Result<Option<Media>> {
-        let tags_with_always_on_ones = tags
-            .into_iter()
-            .chain(self.cfg.always_on_tags.iter().cloned())
-            .collect::<HashSet<_>>()
-            .iter()
-            .join(",");
+        let tags_with_always_on_ones = tags.into_iter().collect::<HashSet<_>>().iter().join(",");
 
         let mut query = vec![
             ("sf", "random"),

@@ -1,8 +1,3 @@
-variable "parent_compartment_id" {
-  nullable = false
-  type     = string
-}
-
 variable "tg_bot_media_cache_chat" {
   nullable = false
   type     = string
@@ -83,4 +78,16 @@ variable "docker_password" {
   nullable  = false
   sensitive = true
   type      = string
+}
+
+
+variable "derpi_api_key" {
+  nullable  = false
+  sensitive = true
+  type      = string
+}
+
+variable "derpi_filter" {
+  nullable = false
+  type     = string
 }

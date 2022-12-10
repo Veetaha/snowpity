@@ -2,14 +2,15 @@ locals {
   grafana_cloud_api_key   = var.grafana_cloud_api_key[module.workspace.kind]
   tg_bot_token            = var.tg_bot_token[module.workspace.kind]
   tg_bot_media_cache_chat = var.tg_bot_media_cache_chat[module.workspace.kind]
+  hcloud_token            = var.hcloud_token[module.workspace.kind]
 }
 
 module "workspace" {
   source = "../modules/workspace"
 }
 
-module "oci" {
-  source = "../modules/oci"
+module "hetzner" {
+  source = "../modules/hetzner"
 
   tg_bot_media_cache_chat = local.tg_bot_media_cache_chat
   tg_bot_maintainer       = var.tg_bot_maintainer
@@ -31,7 +32,8 @@ module "oci" {
   docker_username = var.docker_username
   docker_password = var.docker_password
 
-  parent_compartment_id = var.oci_parent_compartment_id
+  derpi_api_key = var.derpi_api_key
+  derpi_filter  = var.derpi_filter
 }
 
 module "grafana_cloud_stack" {
