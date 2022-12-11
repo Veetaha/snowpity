@@ -25,15 +25,6 @@ variable "tg_bot_token" {
   })
 }
 
-variable "grafana_cloud_api_key" {
-  nullable  = false
-  sensitive = true
-  type = object({
-    prod = optional(string)
-    dev  = optional(string)
-  })
-}
-
 variable "docker_username" {
   nullable  = false
   sensitive = true
@@ -76,4 +67,10 @@ variable "derpi_api_key" {
 variable "derpi_filter" {
   nullable = false
   type     = string
+}
+
+variable "allowed_ssh_ips" {
+  nullable = false
+  type     = list(string)
+  sensitive = true
 }

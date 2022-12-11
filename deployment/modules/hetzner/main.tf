@@ -6,11 +6,6 @@ locals {
     "rustls=info",
     "sqlx=warn",
     "h2=info",
-    # Don't log HTTP requests to `/metrics` endpoint, which we know
-    # will be hit by Prometheus regularly, but log all other ones,
-    # because we don't expect any other incomming HTTP traffic.
-    "snowpity::tg_metrics[uri=\"/metrics\"]=off",
-    "snowpity::tg_metrics=trace",
   ]
 
   location         = "fsn1"
@@ -28,27 +23,44 @@ locals {
   # with the `admin` group name already present in the used Oracle Ubuntu AMI.
   server_os_user = "mane"
 
-  templates = {
-    "grafana-agent.yaml"    = "/etc/grafana-agent.yaml"
+  template_files = {
     (local.systemd_service) = "/etc/systemd/system/tg-bot.service"
     "data-volume.service"   = "/etc/systemd/system/data-volume.service"
   }
 
   exec_files = {
-    "/var/app/docker-compose.sh" = file("${path.module}/templates/docker-compose.sh")
-    "/var/app/data-volume.sh"    = file("${path.module}/templates/data-volume.sh")
+    "/var/app/docker-compose.sh" = file("${local.templates}/docker-compose.sh")
+    "/var/app/data-volume.sh"    = file("${local.templates}/data-volume.sh")
   }
+
+  repo      = "${path.module}/../../.."
+  templates = "${path.module}/templates"
+
+  provisioning_files = [
+    "grafana/dashboards/nodes.json",
+    "grafana/dashboards/use_method_node.json",
+    "grafana/main/dashboards/config.yml",
+    "grafana/main/datasources/config.yml",
+    "grafana-agent.yml",
+    "loki.yml",
+    "pgadmin4.json",
+    "victoria-metrics.yml",
+  ]
 
   data_files = merge(
     {
-      "/var/app/docker-compose.yml"    = file("${path.module}/../../../docker-compose.yml")
-      "/var/app/pgadmin4/servers.json" = file("${path.module}/../../../pgadmin4/servers.json")
-
+      "/var/app/docker-compose.yml" = file("${local.repo}/docker-compose.yml")
+      # "/var/app/provisioning/pgadmin4.json" = file("${local.repo}/provisioning/pgadmin4.json")
+      # "/var/app"
       (local.env_file_path) = join("\n", [for k, v in local.env_vars : "${k}=${v}"])
     },
     {
-      for source, target in local.templates :
-      target => templatefile("${path.module}/templates/${source}", local.template_vars)
+      for source in local.provisioning_files :
+      "/var/app/provisioning/${source}" => file("${local.repo}/provisioning/${source}")
+    },
+    {
+      for source, target in local.template_files :
+      target => templatefile("${local.templates}/${source}", local.template_vars)
     }
   )
 
@@ -60,17 +72,6 @@ locals {
   template_vars = {
     env_file_path  = local.env_file_path
     server_os_user = local.server_os_user
-
-    prometheus_remote_write_url = var.prometheus_remote_write_url
-    prometheus_username         = var.prometheus_username
-    prometheus_password         = var.prometheus_password
-
-    loki_remote_write_url = "${var.loki_url}/loki/api/v1/push"
-    loki_username         = var.loki_username
-    loki_password         = var.loki_password
-    loki_url              = var.loki_url
-
-    hostname = local.hostname
 
     ssh_public_key = chomp(file("~/.ssh/id_rsa.pub"))
     server_os_user = local.server_os_user
@@ -86,10 +87,6 @@ locals {
   }
 
   env_vars = {
-    LOKI_URL      = var.loki_url
-    LOKI_USERNAME = var.loki_username
-    LOKI_PASSWORD = var.loki_password
-
     PG_PASSWORD      = var.pg_password
     PGADMIN_PASSWORD = var.pgadmin_password
 
@@ -139,11 +136,12 @@ data "cloudinit_config" "master" {
 }
 
 resource "hcloud_server" "master" {
-  name        = local.hostname
-  image       = "ubuntu-22.04"
-  server_type = module.workspace.kind == "prod" ? "cpx21" : "cx11"
-  location    = local.location
-  user_data   = data.cloudinit_config.master.rendered
+  name         = local.hostname
+  image        = "ubuntu-22.04"
+  server_type  = module.workspace.kind == "prod" ? "cpx21" : "cx11"
+  location     = local.location
+  user_data    = data.cloudinit_config.master.rendered
+  firewall_ids = [hcloud_firewall.allow_only_ssh.id]
 
   public_net {
     # Not having IPv4 enabled reduces the cost, but we need it because we are
@@ -211,5 +209,15 @@ resource "null_resource" "teardown" {
       host = self.triggers.server_ip
       user = self.triggers.server_os_user
     }
+  }
+}
+
+resource "hcloud_firewall" "allow_only_ssh" {
+  name = "allow-only-ssh"
+  rule {
+    direction  = "in"
+    protocol   = "tcp"
+    port       = "22"
+    source_ips = var.allowed_ssh_ips
   }
 }

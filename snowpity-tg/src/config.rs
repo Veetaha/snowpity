@@ -24,8 +24,6 @@ impl Config {
 #[derive(Deserialize)]
 pub struct LoggingConfig {
     loki_url: url::Url,
-    loki_username: String,
-    loki_password: String,
     #[serde_as(as = "serde_with::json::JsonString")]
     tg_bot_log_labels: HashMap<String, String>,
 }
@@ -43,10 +41,6 @@ impl LoggingConfig {
             .with_ansi(std::env::var("COLORS").as_deref() != Ok("0"))
             .pretty();
 
-        let mut loki_url = self.loki_url.clone();
-        loki_url.set_username(&self.loki_username).unwrap();
-        loki_url.set_password(Some(&self.loki_password)).unwrap();
-
         let additional_labels = [
             ("app_version", env!("VERGEN_BUILD_SEMVER")),
             ("app_git_commit", env!("VERGEN_GIT_SHA")),
@@ -60,7 +54,7 @@ impl LoggingConfig {
                 .map(|(k, v)| (k.to_owned(), v.to_owned())),
         );
 
-        let (loki, task) = tracing_loki::layer(loki_url, labels, HashMap::new()).unwrap();
+        let (loki, task) = tracing_loki::layer(self.loki_url, labels, HashMap::new()).unwrap();
 
         let join_handle = tokio::spawn(task);
 

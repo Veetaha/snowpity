@@ -13,7 +13,7 @@ use std::net::SocketAddr;
 pub(crate) use macros::*;
 
 pub(crate) async fn run_metrics(abort: impl Future<Output = ()>) -> Result {
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 2000));
     let make_svc = make_service_fn(|conn: &AddrStream| {
         let remote_addr = conn.remote_addr();
         let local_addr = conn.local_addr();
@@ -39,8 +39,6 @@ pub(crate) async fn run_metrics(abort: impl Future<Output = ()>) -> Result {
     uri = %request.uri(),
 ))]
 async fn handle_metrics(request: Request<Body>) -> Result<Response<Body>, Infallible> {
-    trace!("Received an HTTP request");
-
     Ok(match (request.method(), request.uri().path()) {
         (&hyper::Method::GET, "/metrics") => {
             let metrics = prometheus::gather();

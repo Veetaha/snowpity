@@ -1,0 +1,22 @@
+integrations:
+  # TODO: scrape the logs of the grafana agent itself
+  # agent:
+  #   enabled: true
+
+  # TODO: scrape the metrics from the postgres instance
+  # postgres_exporter:
+
+  node_exporter:
+    enabled: true
+    # relabel_configs:
+    #   - replacement: ${hostname}
+    #     source_labels: [__address__]
+    #     target_label: instance
+
+metrics:
+  global:
+    scrape_interval: 15s
+    remote_write:
+      - url: http://localhost:8428/api/v1/write
+
+  wal_directory: /etc/agent/data/wal

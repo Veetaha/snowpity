@@ -40,10 +40,15 @@ def "main ssh cloud-init user-data" [] {
 
 # SSH into the app's server
 def "main ssh" [
+    --forward-ports (-f) # Forward grafana and pgadmin4 ports to localhost
     --code # Connect using VSCode
 ] {
     if not $code {
-        ssh
+        if $forward_ports {
+            ssh -f
+        } else {
+            ssh
+        }
         return
     }
 
@@ -86,40 +91,41 @@ def "main docker build" [
 
 # Start all services locally using `docker compose`
 def "main start" [
-    --detach     # Run the services in the background
-    --no-tg-bot  # Don't start the tg_bot service
-    --no-pgadmin # Don't start the pgadmin service
-    --fresh (-f) # Executes `db drop` before starting the database (run `db drop --help` for details)
+    --detach           # Run the services in the background
+    --no-tg-bot        # Don't start the tg_bot service
+    --no-observability # Don't start the pgadmin and observability services
+    --fresh (-f)       # Executes `drop-data` before starting the database (run `db drop --help` for details)
 ] {
     if $fresh {
-        info "--fresh was specified, so dropping the local database..."
-        main db drop
+        info "--fresh was specified, so deleting the data volumes..."
+        main down --drop-data
     }
 
-    mkdir (db-data)
-
     mut args = (
-        [up --build pg]
+        [up --remove-orphans --build postgres]
         | append-if $detach '--wait'
-        | append-if (not $no_tg_bot) tg_bot
-        | append-if (not $no_pgadmin) pgadmin
+        | append-if (not $no_tg_bot) tg-bot
+        | append-if (not $no_observability) [
+            pgadmin
+            victoria-metrics
+            grafana
+            loki
+            grafana-agent
+        ]
     )
 
     docker-compose $args
 }
 
-# Shutdown the local services using `docker compose`
-def "main stop" [] {
+# Shutdown the local containers and clean the persistent data volumes
+def "main down" [
+    --drop-data # Remove all data volumes
+] {
+    let args = ([down '--timeout' 60] | append-if $drop_data '--volumes')
+
     # We increase the timeout, because shutting down `teloxide` takes a while
     # The issue in `teloxide`: https://github.com/teloxide/teloxide/issues/711
-    docker-compose down '--timeout' 60
-}
-
-# Clean the persistent data volume of the local database container
-def "main db drop" [] {
-    cd (repo)
-    rm -rf (db-data)
-    info $"Removed the database from (db-data)"
+    docker-compose $args
 }
 
 # Deploy the full application's stack
@@ -127,7 +133,7 @@ def "main deploy" [
     --no-build      # Skip build step, reuse the docker image that is already in the remote registry
     --release (-r)  # Build in release mode
     --drop-server   # Force the re-creation of the server instance
-    --drop-db       # Drop the database (re-create the data volume)
+    --drop-data     # Drop the persistent data (re-create the data volume)
     --plan          # Do `tf plan` instead of `tf apply`
     --yes (-y)      # Auto-approve the deployment
     --no-tf-refresh # Don't refresh the terraform state before deployment
@@ -147,7 +153,7 @@ def "main deploy" [
         | append (tf-vars)
         | append-if $yes           '--auto-approve'
         | append-if $drop_server   '--replace=module.hetzner.hcloud_server.master'
-        | append-if $drop_db       '--replace=module.hetzner.hcloud_volume.master'
+        | append-if $drop_data     '--replace=module.hetzner.hcloud_volume.master'
         | append-if $no_tf_refresh '--refresh=false'
     )
 
@@ -161,7 +167,8 @@ def "main deploy" [
 # Destroy the application's stack. By default destroys only the server instance,
 # because it's safe to do, and no data will be lost. Use `--all` to destroy everything.
 def "main destroy" [
-    --yes (-y) # Auto-approve the destruction
+    --yes (-y)  # Auto-approve the destruction
+    --drop-data # Destroy the Hetzner Cloud volume. ⚠️ This guarantees data loss
     --all
     # Destroy all resources. ⚠️ This guarantees data loss because
     # the database's data volume will be destroyed as well
@@ -170,6 +177,7 @@ def "main destroy" [
         [destroy] ++ (tf-vars)
         | append-if $yes '--auto-approve'
         | append-if (not $all) '--target=module.hetzner.hcloud_server.master'
+        | append-if (not $all and $drop_data) '--target=module.hetzner.hcloud_volume.master'
     )
     tf $args
 }
@@ -189,12 +197,11 @@ def "main tf output" [] {
 # output the generated code to the working tree.
 def "main orm gen" [] {
     cd (repo)
-    main stop
-    main start --fresh --no-tg-bot --no-pgadmin --detach
+    main start --fresh --no-tg-bot --no-observability --detach
     wait-for-db
     sea-orm-cli migrate
     sea-orm-cli generate entity --with-copy-enums --output-dir entities/src/generated
-    main stop
+    main down --drop-data
 }
 
 # Fetch the image metadata from derpibooru
@@ -226,10 +233,6 @@ def-env repo [] {
     cached repo { git rev-parse --show-toplevel | str trim }
 }
 
-def-env db-data [] {
-    cached db-data { $"(repo)/data/postgres" }
-}
-
 def-env tf-output [] {
     cached tf-output { tf --no-debug output '--json' | from json }
 }
@@ -256,8 +259,21 @@ def-env ssh-str [] {
     $"($os_user)@($ip)"
 }
 
-def-env ssh [...args: string] {
-    ^ssh -t (ssh-str) $args
+def-env ssh [
+    --forward-ports (-f) # Forward grafana and pgadmin4 ports to localhost
+    ...args: string
+] {
+    let ports = [
+        '-L' '3000:localhost:3000'
+        '-L' '5000:localhost:5000'
+    ]
+    let args = (
+        [-t (ssh-str)]
+        | append-if $forward_ports $ports
+        | append ($args | flatten-list)
+    )
+
+    ^ssh $args
 }
 
 def tf [--no-debug, ...args: string] {

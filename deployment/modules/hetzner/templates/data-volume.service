@@ -14,7 +14,3 @@ WorkingDirectory=/var/app
 EnvironmentFile=${env_file_path}
 
 ExecStart=/var/app/data-volume.sh
-
-[Install]
-RequiredBy=grafana-agent.service
-Before=grafana-agent.service

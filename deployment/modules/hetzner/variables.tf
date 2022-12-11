@@ -24,35 +24,9 @@ variable "tg_bot_token" {
   sensitive = true
 }
 
-variable "prometheus_remote_write_url" {
+variable "allowed_ssh_ips" {
   nullable = false
-  type     = string
-}
-
-variable "prometheus_username" {
-  nullable = false
-  type     = string
-}
-
-variable "prometheus_password" {
-  nullable  = false
-  type      = string
-  sensitive = true
-}
-
-variable "loki_url" {
-  nullable = false
-  type     = string
-}
-
-variable "loki_username" {
-  nullable = false
-  type     = string
-}
-
-variable "loki_password" {
-  nullable  = false
-  type      = string
+  type     = list(string)
   sensitive = true
 }
 
@@ -79,7 +53,6 @@ variable "docker_password" {
   sensitive = true
   type      = string
 }
-
 
 variable "derpi_api_key" {
   nullable  = false

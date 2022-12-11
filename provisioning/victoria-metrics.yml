@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: tg-bot
+    static_configs:
+      - targets: [tg-bot:2000]
