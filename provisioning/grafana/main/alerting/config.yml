@@ -8,14 +8,10 @@ templates:
     template: "
       {{ define \"alert_list\" }}\
         {{ range . }}
-          ⚠️ <b>{{ .Labels.alertname }}</b> ⚠️
-
-
+          ⚠️ <b>{{ .Labels.alertname }}</b> ⚠️\n\n\
           {{ range .Annotations.SortedPairs }}\
-            <b>{{ .Name }}:</b> {{ .Value }}
-
-          {{ end }}\
-
+            <b>{{ .Name }}:</b> {{ .Value }}\n\
+          {{ end }}\n\
           {{ if gt (len .GeneratorURL) 0 }}👉 <b><a href=\"{{ reReplaceAll \"://localhost\" \"://127.0.0.1\" .GeneratorURL }}\">Source</a></b>\n{{ end }}\
           {{ if gt (len .SilenceURL)   0 }}👉 <b><a href=\"{{ reReplaceAll \"://localhost\" \"://127.0.0.1\" .SilenceURL   }}\">Silence</a></b>\n{{ end }}\
           {{ if gt (len .DashboardURL) 0 }}👉 <b><a href=\"{{ reReplaceAll \"://localhost\" \"://127.0.0.1\" .DashboardURL }}\">Dashboard</a></b>\n{{ end }}\
@@ -26,14 +22,11 @@ templates:
       {{ define \"telegram.message\" }}
         {{ if gt (len .Alerts.Firing) 0 }}
           {{ template \"alert_list\" .Alerts.Firing }}\
-          {{ if gt (len .Alerts.Resolved) 0 }}
-
-
+          {{ if gt (len .Alerts.Resolved) 0 }}\n\n\
           {{ end }}\
         {{ end }}\
         {{ if gt (len .Alerts.Resolved) 0 }}\
-          ✌️ <b>Resolved</b> ✌️
-
+          ✌️ <b>Resolved</b> ✌️\n\
           {{ template \"alert_list\" .Alerts.Resolved }}
         {{ end }}\
       {{ end }}"

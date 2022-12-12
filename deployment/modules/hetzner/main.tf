@@ -3,8 +3,6 @@ locals {
 
   hostname = "hetzner-master${module.workspace.id_suffix}"
 
-  systemd_service  = "tg-bot.service"
-
   # XXX: using the name `admin` for the user is a bad idea. It does seem to work
   # fine on Hetzner. However, in the previous iterations of this project, when
   # we were using Oracle Cloud, it was found that `admin` user name causes the
@@ -73,7 +71,6 @@ resource "null_resource" "teardown" {
     # Issue in terraform: https://github.com/hashicorp/terraform/issues/23679
     server_ip       = hcloud_server.master.ipv4_address
     server_os_user  = local.server_os_user
-    systemd_service = local.systemd_service
   }
 
   provisioner "remote-exec" {
@@ -83,7 +80,7 @@ resource "null_resource" "teardown" {
       <<-SCRIPT
       #!/usr/bin/env bash
       set -euo pipefail
-      sudo systemctl stop ${self.triggers.systemd_service}
+      sudo systemctl stop tg-bot.service
       SCRIPT
     ]
 

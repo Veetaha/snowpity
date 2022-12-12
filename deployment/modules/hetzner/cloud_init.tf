@@ -16,43 +16,29 @@ locals {
   bootstrap        = "${path.module}/bootstrap"
 
   template_files = {
-    (local.systemd_service) = "/etc/systemd/system/tg-bot.service"
-    "data-volume.service"   = "/etc/systemd/system/data-volume.service"
-    "docker-daemon.json"    = "/etc/docker/daemon.json"
+    "tg-bot.service"      = "/etc/systemd/system/tg-bot.service"
+    "data-volume.service" = "/etc/systemd/system/data-volume.service"
+    "docker-daemon.json"  = "/etc/docker/daemon.json"
   }
-
-  exec_files = {
-    "/var/app/docker-compose.sh" = file("${local.bootstrap}/docker-compose.sh")
-    "/var/app/data-volume.sh"    = file("${local.bootstrap}/data-volume.sh")
-  }
-
-  provisioning_files = [
-    "grafana/dashboards/nodes.json",
-    "grafana/dashboards/use_method_node.json",
-    "grafana/main/dashboards/config.yml",
-    "grafana/main/datasources/config.yml",
-    "grafana-agent.yml",
-    "loki.yml",
-    "pgadmin4.json",
-    "victoria-metrics.yml",
-  ]
-
   data_files = merge(
     {
       "/var/app/docker-compose.yml" = file("${local.repo}/docker-compose.yml")
-      # "/var/app/provisioning/pgadmin4.json" = file("${local.repo}/provisioning/pgadmin4.json")
-      # "/var/app"
-      (local.env_file_path) = join("\n", [for k, v in local.env_vars : "${k}=${v}"])
+      (local.env_file_path)         = join("\n", [for k, v in local.env_vars : "${k}=${v}"])
     },
     {
-      for source in local.provisioning_files :
-      "/var/app/provisioning/${source}" => file("${local.repo}/provisioning/${source}")
+      for provisioning_file in fileset("${local.repo}", "provisioning/**") :
+      "/var/app/${provisioning_file}" => file("${local.repo}/${provisioning_file}")
     },
     {
       for source, target in local.template_files :
       target => templatefile("${local.bootstrap}/${source}", local.template_vars)
     }
   )
+
+  exec_files = {
+    for file in fileset(local.bootstrap, "*.sh") :
+    "/var/app/${file}" => file("${local.bootstrap}/${file}")
+  }
 
   files_by_perms = {
     "0444" = local.data_files
@@ -100,7 +86,7 @@ locals {
 data "cloudinit_config" "master" {
   part {
     content = templatefile(
-      "${path.module}/bootstrap/user_data.yaml",
+      "${path.module}/bootstrap/user_data.yml",
       merge(
         local.template_vars,
         {
