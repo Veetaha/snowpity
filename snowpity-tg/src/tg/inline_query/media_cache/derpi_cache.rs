@@ -150,6 +150,8 @@ impl TgUploadContext<'_> {
             }));
         }
 
+        // FIXME: use cached document correctly in inline query
+
         // Tested that file with this size is the one that can be uploaded.
         // The next file with greater size from derpibooru fails to be uploaded.
         //
@@ -162,19 +164,12 @@ impl TgUploadContext<'_> {
             // Derpibooru statistics for files according to this limit:
             // - Under: 2_555_839  (95%)
             // - Over:    133_821 (5%)
-
-            self.upload_imp(tg::Bot::send_photo, InputFileKind::Url(image_url.clone()))
-                .await
+            self.upload_image_direct().await
         } else if self.media.size <= 10 * MB {
             // Derpibooru statistics for files according to this limit:
             // - Under: 2_651_709 (98.5%)
             // - Over:     37_953 (1.5%)
-
-            self.upload_imp(
-                tg::Bot::send_photo,
-                InputFileKind::DownloadedUrl(image_url.clone()),
-            )
-            .await
+            self.upload_image_indirect().await
         } else {
             let thumb = self.media.representations.thumb_small.clone();
             let func = |tg_bot: &tg::Bot, chat_id, input_file| {
@@ -185,6 +180,32 @@ impl TgUploadContext<'_> {
             self.upload_imp(func, InputFileKind::DownloadedUrl(image_url.clone()))
                 .await
         }
+    }
+
+    async fn upload_image_direct(self) -> Result<FileMeta> {
+        let input_file = InputFileKind::Url(self.media.view_url.clone());
+        match self.upload_imp(tg::Bot::send_photo, input_file).await {
+            Ok(file) => return Ok(file),
+            Err(err) => {
+                warn!(
+                    err = tracing_err(&err),
+                    derpi_mime = %self.media.mime_type,
+                    derpi_size = self.media.size,
+                    derpi_id = %self.media.id,
+                    "Failed to upload image directly. \
+                    Retrying with an intermediate download..."
+                );
+            }
+        }
+        self.upload_image_indirect().await
+    }
+
+    async fn upload_image_indirect(self) -> Result<FileMeta> {
+        self.upload_imp(
+            tg::Bot::send_photo,
+            InputFileKind::DownloadedUrl(self.media.view_url.clone()),
+        )
+        .await
     }
 
     async fn upload_video(self) -> Result<FileMeta> {
@@ -221,12 +242,6 @@ impl TgUploadContext<'_> {
     {
         info!("Uploading to telegram cache chat");
 
-        let file_name = format!(
-            "derpibooru-{}.{}",
-            self.media.id,
-            self.media.mime_type.file_extension()
-        );
-
         let caption = format!(
             "{}\n*Requested by:* {}",
             core_caption(&self.media),
@@ -236,7 +251,7 @@ impl TgUploadContext<'_> {
         let input_file = input_file
             .into_input_file(&self.base.http_client)
             .await?
-            .file_name(file_name);
+            .file_name(self.file_name());
 
         let chat = self.base.cfg.media_cache_chat;
         let msg = send_payload_method(&self.base.bot, chat, input_file)
@@ -244,6 +259,29 @@ impl TgUploadContext<'_> {
             .await?;
 
         find_file(self.media.mime_type, msg)
+    }
+
+    fn file_name(&self) -> String {
+        fn join_tags(tags: &mut dyn Iterator<Item = &str>) -> String {
+            let joined = tags.map(derpi::sanitize_tag).join("+");
+            if joined.chars().count() <= 100 {
+                return joined;
+            }
+            joined.chars().take(97).chain(['.', '.', '.']).collect()
+        }
+
+        let ratings = join_tags(&mut self.media.rating_tags());
+        let artists = join_tags(&mut self.media.artists());
+
+        let prefix = ["derpibooru", ratings.as_str(), artists.as_str()]
+            .into_iter()
+            .format("-");
+
+        format!(
+            "{prefix}-{}.{}",
+            self.media.id,
+            self.media.mime_type.file_extension()
+        )
     }
 }
 
@@ -284,8 +322,15 @@ pub(crate) fn core_caption(media: &derpi::Media) -> String {
         }
     };
 
+    let ratings = media.rating_tags().join(", ");
+    let ratings = if matches!(ratings.as_str(), "" | "safe") {
+        "".to_owned()
+    } else {
+        format!(" \\({}\\)", ratings)
+    };
+
     format!(
-        "*Art from {}{artists}*",
+        "*Art from {}{artists}{ratings}*",
         markdown::link(
             &String::from(derpi::media_id_to_webpage_url(media.id)),
             r"derpibooru",

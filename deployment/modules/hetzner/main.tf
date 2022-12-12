@@ -1,19 +1,8 @@
 locals {
-  log_filter = [
-    "debug",
-    "hyper=info",
-    "reqwest=info",
-    "rustls=info",
-    "sqlx=warn",
-    "h2=info",
-  ]
+  location = "fsn1"
 
-  location         = "fsn1"
-  hostname         = "hetzner-master${module.workspace.id_suffix}"
-  data_volume_path = "/mnt/master"
-  data_volume_fs   = "ext4"
-  pg_data          = "${local.data_volume_path}/data/postgres"
-  env_file_path    = "/var/app/.env"
+  hostname = "hetzner-master${module.workspace.id_suffix}"
+
   systemd_service  = "tg-bot.service"
 
   # XXX: using the name `admin` for the user is a bad idea. It does seem to work
@@ -22,117 +11,10 @@ locals {
   # server to be inaccessible via SSH. The supposition is that there is a conflict
   # with the `admin` group name already present in the used Oracle Ubuntu AMI.
   server_os_user = "mane"
-
-  template_files = {
-    (local.systemd_service) = "/etc/systemd/system/tg-bot.service"
-    "data-volume.service"   = "/etc/systemd/system/data-volume.service"
-  }
-
-  exec_files = {
-    "/var/app/docker-compose.sh" = file("${local.templates}/docker-compose.sh")
-    "/var/app/data-volume.sh"    = file("${local.templates}/data-volume.sh")
-  }
-
-  repo      = "${path.module}/../../.."
-  templates = "${path.module}/templates"
-
-  provisioning_files = [
-    "grafana/dashboards/nodes.json",
-    "grafana/dashboards/use_method_node.json",
-    "grafana/main/dashboards/config.yml",
-    "grafana/main/datasources/config.yml",
-    "grafana-agent.yml",
-    "loki.yml",
-    "pgadmin4.json",
-    "victoria-metrics.yml",
-  ]
-
-  data_files = merge(
-    {
-      "/var/app/docker-compose.yml" = file("${local.repo}/docker-compose.yml")
-      # "/var/app/provisioning/pgadmin4.json" = file("${local.repo}/provisioning/pgadmin4.json")
-      # "/var/app"
-      (local.env_file_path) = join("\n", [for k, v in local.env_vars : "${k}=${v}"])
-    },
-    {
-      for source in local.provisioning_files :
-      "/var/app/provisioning/${source}" => file("${local.repo}/provisioning/${source}")
-    },
-    {
-      for source, target in local.template_files :
-      target => templatefile("${local.templates}/${source}", local.template_vars)
-    }
-  )
-
-  files_by_perms = {
-    "0444" = local.data_files
-    "0555" = local.exec_files
-  }
-
-  template_vars = {
-    env_file_path  = local.env_file_path
-    server_os_user = local.server_os_user
-
-    ssh_public_key = chomp(file("~/.ssh/id_rsa.pub"))
-    server_os_user = local.server_os_user
-
-    data_volume_device = hcloud_volume.master.linux_device
-    data_volume_path   = local.data_volume_path
-    data_volume_fs     = local.data_volume_fs
-
-    docker_username = var.docker_username
-    docker_password = var.docker_password
-
-    workspace_kind = module.workspace.kind
-  }
-
-  env_vars = {
-    PG_PASSWORD      = var.pg_password
-    PGADMIN_PASSWORD = var.pgadmin_password
-
-    PG_DATA          = local.pg_data
-    DATA_VOLUME_PATH = local.data_volume_path
-
-    TG_BOT_MEDIA_CACHE_CHAT = var.tg_bot_media_cache_chat
-    TG_BOT_MAINTAINER       = var.tg_bot_maintainer
-    TG_BOT_TOKEN            = var.tg_bot_token
-    TG_BOT_IMAGE_NAME       = var.tg_bot_image_name
-    TG_BOT_IMAGE_TAG        = var.tg_bot_image_tag
-    TG_BOT_LOG              = join(",", local.log_filter)
-    TG_BOT_LOG_LABELS = jsonencode({
-      instance = local.hostname
-    })
-
-    DERPI_API_KEY = var.derpi_api_key
-    DERPI_FILTER  = var.derpi_filter
-  }
 }
 
 module "workspace" {
   source = "../workspace"
-}
-
-data "cloudinit_config" "master" {
-  part {
-    content = templatefile(
-      "${path.module}/templates/user_data.yaml",
-      merge(
-        local.template_vars,
-        {
-          files = merge(
-            flatten([
-              for perms, files in local.files_by_perms : [
-                for path, content in files : {
-                  (path) = { content = base64gzip(content), perms = perms }
-                }
-              ]
-            ])
-            ...
-          )
-        }
-      )
-    )
-  }
 }
 
 resource "hcloud_server" "master" {
@@ -201,7 +83,7 @@ resource "null_resource" "teardown" {
       <<-SCRIPT
       #!/usr/bin/env bash
       set -euo pipefail
-      sudo systemctl stop ${self.triggers.systemd_service} grafana-agent.service
+      sudo systemctl stop ${self.triggers.systemd_service}
       SCRIPT
     ]
 

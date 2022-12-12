@@ -14,3 +14,7 @@ WorkingDirectory=/var/app
 EnvironmentFile=${env_file_path}
 
 ExecStart=/var/app/data-volume.sh
+
+[Install]
+RequiredBy=docker.service
+Before=docker.service

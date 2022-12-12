@@ -4,8 +4,20 @@
 use crate::derpi::derpi;
 use chrono::prelude::*;
 use derive_more::{Display, FromStr};
+use itertools::Itertools;
 use reqwest::Url;
 use serde::Deserialize;
+use std::fmt;
+
+const RATING_TAGS: &[&str] = &[
+    "safe",
+    "suggestive",
+    "questionable",
+    "explicit",
+    "semi-grimdark",
+    "grimdark",
+    "grotesque",
+];
 
 #[derive(Display, FromStr, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
 #[serde(transparent)]
@@ -27,9 +39,9 @@ pub(crate) struct Media {
     pub(crate) mime_type: MimeType,
     pub(crate) representations: ImageRepresentations,
     pub(crate) tags: Vec<String>,
-    pub(crate) created_at: DateTime<Utc>,
-    /// The number of upvotes minus the number of downvotes.
-    pub(crate) score: i64,
+    // pub(crate) created_at: DateTime<Utc>,
+    // The number of upvotes minus the number of downvotes.
+    // pub(crate) score: i64,
     pub(crate) size: u64,
     pub(crate) view_url: Url,
 
@@ -77,6 +89,13 @@ impl Media {
             .iter()
             .filter_map(|tag| tag.strip_prefix("artist:"))
     }
+
+    pub(crate) fn rating_tags(&self) -> impl Iterator<Item = &str> {
+        self.tags
+            .iter()
+            .map(String::as_str)
+            .filter(|tag| RATING_TAGS.contains(tag))
+    }
 }
 
 pub(crate) fn artist_to_webpage_url(artist: &str) -> Url {
@@ -88,6 +107,21 @@ pub(crate) fn artist_to_webpage_url(artist: &str) -> Url {
 
 pub(crate) fn media_id_to_webpage_url(media_id: MediaId) -> Url {
     derpi(["images", &media_id.to_string()])
+}
+
+pub(crate) fn sanitize_tag(tag: &str) -> impl fmt::Display + '_ {
+    tag.chars()
+        .flat_map(char::to_lowercase)
+        .filter_map(|char| {
+            if char.is_whitespace() {
+                return Some('-');
+            }
+            if char.is_alphanumeric() {
+                return Some(char);
+            }
+            Some('_')
+        })
+        .format("")
 }
 
 impl MimeType {

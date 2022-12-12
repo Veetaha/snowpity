@@ -209,6 +209,18 @@ def "main derpi image" [id:int] {
     fetch $"https://derpibooru.org/api/v1/json/images/($id)" | get image | flatten representations | get 0
 }
 
+# Get the ID of the telegram chat by its public tag.
+# This is needed to get the ID of the private telegram chat or channel.
+# We have to make that chat temporarily public, then get its ID and move
+# it back to private again.
+def "main tg chat-id" [
+    --bot-token: string
+    --chat-tag: string
+] {
+    fetch $"https://api.telegram.org/bot($bot_token)/sendMessage?chat_id=@($chat_tag)&text=snowpity"
+        | get result.chat.id
+}
+
 ################################################
 ############ Implementation details ############
 ################################################

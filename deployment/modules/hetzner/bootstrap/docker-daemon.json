@@ -1,0 +1,3 @@
+{
+    "data-root": "${data_volume_path}/docker"
+}

@@ -8,10 +8,9 @@ integrations:
 
   node_exporter:
     enabled: true
-    # relabel_configs:
-    #   - replacement: ${hostname}
-    #     source_labels: [__address__]
-    #     target_label: instance
+    rootfs_path: /host/root
+    sysfs_path: /host/sys
+    procfs_path: /host/proc
 
 metrics:
   global:

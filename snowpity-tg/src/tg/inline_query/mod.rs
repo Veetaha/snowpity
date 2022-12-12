@@ -91,12 +91,13 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
 
 fn parse_query(str: &str) -> Option<derpi::MediaId> {
     // FIXME: support all possible derpicdn URLs
-    let (_, booru, cdn) = regex_captures!(
+    let (_, booru, cdn_repr, cdn_view) = regex_captures!(
         "(?:derpibooru.org/images/(\\d+))\
+        |(?:derpicdn.net/img/\\d+/\\d+/\\d+/(\\d+))
         |(?:derpicdn.net/img/view/\\d+/\\d+/\\d+/(\\d+))",
         str.trim()
     )?;
-    [booru, cdn]
+    [booru, cdn_repr, cdn_view]
         .iter()
         .find(|capture| !capture.is_empty())?
         .parse()

@@ -50,6 +50,8 @@ runcmd:
     log_content /var/run/reboot-required
     log_content /var/run/reboot-required.pkgs
 
+  - systemctl enable --now data-volume.service
+
   - echo 'Installing docker...'
 
   # Installs docker and docker-compose on the server
@@ -64,11 +66,12 @@ runcmd:
     | tee /etc/apt/sources.list.d/docker.list > /dev/null'
   - apt-get update -y
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  - systemctl enable --now docker.service
 
   # Log in to be able to pull the image from the private dockerhub repo in development workspace
   # `runuser` is required here, because `docker login` stores the creds in $HOME
   # and our systemd service will run on behalf of `${server_os_user}` user
   - runuser -u ${server_os_user} -- docker login --username ${docker_username} --password ${docker_password}
 
-  # Enable systemd services responsible for managing Docker Compose services
+  # Enable the systemd service responsible for managing Docker Compose services
   - systemctl enable --now tg-bot.service

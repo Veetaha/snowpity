@@ -8,7 +8,6 @@ use futures::prelude::*;
 use futures::stream::FuturesUnordered;
 use std::collections::HashMap;
 use std::sync::Arc;
-use teloxide::prelude::*;
 use tokio::sync::{mpsc, oneshot};
 
 pub(crate) use derpi_cache::*;
