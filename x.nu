@@ -14,6 +14,10 @@ def main [] {}
 ############ Entrypoints ############
 #####################################
 
+def "main ssh journalctl" [] {
+    ssh "sudo journalctl --follow --catalog --unit tg-bot.service"
+}
+
 # Display the app's systemd service status
 def "main ssh systemctl status" [] {
     ssh "sudo systemctl status tg-bot.service"
@@ -60,32 +64,26 @@ def "main ssh str" [] {
     ssh-str
 }
 
-# Build the docker image with the app's executable
+# Build all docker images
 def "main docker build" [
     --release (-r) # Build in release mode
     --push (-p) # Push the image to remote docker registry
 ] {
     cd (repo)
 
-    let image = (tf-output).docker.value.image_name
-
     let build_mode = if $release { "release" } else { "debug" }
 
-    let version_tag = $"($image):(project-version)"
-    let latest_tag = $"($image):latest"
+    let push = ($push | into int)
+    let release = ($release | into int)
 
-    let pushing_msg = if $push { " and pushing it to the remote registry" } else { "" }
-
-    info $"Building docker image ($version_tag) in ($build_mode) mode($pushing_msg)"
-
-    let output_flag = if $push { "--push" } else { "--load" }
-
+    info $"Building in ($build_mode) mode..."
     (
-        with-debug docker buildx build .
-            '--tag' $version_tag
-            '--tag' $latest_tag
-            '--build-arg' $"RUST_BUILD_MODE=($build_mode)"
-            $output_flag
+        docker-build tg-bot --push $push --release $release
+            --context . --build-args [[RUST_BUILD_MODE $build_mode]]
+    )
+    (
+        docker-build grafana --push $push --release $release
+            --context ./docker/grafana
     )
 }
 
@@ -224,18 +222,6 @@ def "main tg chat-id" [
 ################################################
 ############ Implementation details ############
 ################################################
-
-# def-env database-url [] {
-#     cached database-url {
-#         open .env
-#         | lines
-#         | str trim
-#         | where { |line| ($line | str length) != 0 }
-#         | parse "{name}={value}"
-#         | where name == DATABASE_URL
-#         | get 0.value
-#     }
-# }
 
 def-env tf-vars [] {
     ['-var' $'tg_bot_image_tag=(project-version)']
@@ -400,6 +386,49 @@ def-env wait-for-db [] {
             '--port' $db_url.port
             '--username' $db_url.username
     )}
+}
+
+# Returns a pair of tags with the exact version and "latest" tag
+def-env docker-build [
+    component: string
+    --push: int = 0
+    --release: int = 0
+    --build-args: list = []
+    --context: string
+] {
+    let push = ($push | into bool)
+    let release = ($release | into bool)
+
+    cd (repo)
+
+    let pushing_msg = if $push { " and pushing it to the remote registry" } else { "" }
+
+    let output_flag = if $push { "--push" } else { "--load" }
+
+    let image = (tf-output).docker.value.image_name
+
+    let label = if $component == "tg-bot" { "" } else { $"($component)-" }
+
+    let version_tag = $"($image):($label)(project-version)"
+    let latest_tag = $"($image):($label)latest"
+
+    info $"Building docker image ($version_tag)($pushing_msg)"
+
+    let args = (
+        [
+            buildx build $context
+            --file $"docker/($component)/Dockerfile"
+            --tag $version_tag
+            --tag $latest_tag
+            $output_flag
+        ]
+        | append ($build_args | each { |it| ['--build-arg', $"($it.0)=($it.1)"] } | flatten)
+
+    )
+
+    (
+        with-debug docker $args
+    )
 }
 
 # Retry a closure until it succeeds or retry attempts are exhausted.

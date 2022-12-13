@@ -1,7 +1,10 @@
 services:
   tg-bot:
     image: ${TG_BOT_IMAGE_NAME-veetaha/snowpity-tg-dev}:${TG_BOT_IMAGE_TAG-latest}
-    build: .
+    build:
+      context: .
+      dockerfile: docker/tg-bot/Dockerfile
+
     # We are listening only for Ctrl-C
     stop_signal: SIGINT
 
@@ -49,7 +52,7 @@ services:
       /entrypoint.sh
       "
 
-    volumes: [./provisioning/pgadmin4.json:/pgadmin4/servers.json:ro]
+    volumes: [./docker/provisioning/pgadmin4.json:/pgadmin4/servers.json:ro]
 
     networks: [postgres]
     depends_on: [postgres]
@@ -60,7 +63,7 @@ services:
     pid: host
     volumes:
       - grafana-agent:/etc/agent/data
-      - ./provisioning/grafana-agent.yml:/etc/agent/agent.yaml
+      - ./docker/provisioning/grafana-agent.yml:/etc/agent/agent.yaml
       - /:/host/root:ro,rslave
       - /sys:/host/sys:ro,rslave
       - /proc:/host/proc:ro,rslave
@@ -73,12 +76,12 @@ services:
     command: -config.file=/etc/loki/config.yml
     volumes:
       - loki:/loki
-      - ./provisioning/loki.yml:/etc/loki/config.yml:ro
+      - ./docker/provisioning/loki.yml:/etc/loki/config.yml:ro
 
     networks: [loki]
 
   victoria-metrics:
-    image: victoriametrics/victoria-metrics:v1.84.0
+    image: victoriametrics/victoria-metrics:v1.85.0
     command:
       - --storageDataPath=/storage
       - --promscrape.config=/prometheus.yml
@@ -89,13 +92,14 @@ services:
 
     volumes:
       - victoria-metrics:/storage
-      - ./provisioning/victoria-metrics.yml:/prometheus.yml:ro
+      - ./docker/provisioning/victoria-metrics.yml:/prometheus.yml:ro
 
     networks: [victoria-metrics]
 
   grafana:
-    image: grafana/grafana:9.3.1
+    image: ${TG_BOT_IMAGE_NAME-veetaha/snowpity-tg-dev}:grafana-${TG_BOT_IMAGE_TAG-latest}
     ports: [3000:3000]
+    build: docker/grafana
     environment:
       # We don't care about security of grafana yet
       GF_AUTH_ANONYMOUS_ENABLED: true
@@ -105,8 +109,6 @@ services:
 
     volumes:
       - grafana:/var/lib/grafana
-      - ./provisioning/grafana/main:/etc/grafana/provisioning:ro
-      - ./provisioning/grafana/dashboards:/var/lib/grafana/dashboards:ro
 
     networks: [loki, victoria-metrics]
     depends_on: [loki, victoria-metrics]

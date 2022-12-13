@@ -26,7 +26,7 @@ locals {
       (local.env_file_path)         = join("\n", [for k, v in local.env_vars : "${k}=${v}"])
     },
     {
-      for provisioning_file in fileset("${local.repo}", "provisioning/**") :
+      for provisioning_file in fileset("${local.repo}", "docker/provisioning/**") :
       "/var/app/${provisioning_file}" => file("${local.repo}/${provisioning_file}")
     },
     {
@@ -68,11 +68,12 @@ locals {
     PG_DATA          = local.pg_data
     DATA_VOLUME_PATH = local.data_volume_path
 
-    TG_BOT_MEDIA_CACHE_CHAT = var.tg_bot_media_cache_chat
-    TG_BOT_MAINTAINER       = var.tg_bot_maintainer
-    TG_BOT_TOKEN            = var.tg_bot_token
+    TG_BOT_ALERTS_CHAT      = var.tg_bot_alerts_chat
     TG_BOT_IMAGE_NAME       = var.tg_bot_image_name
     TG_BOT_IMAGE_TAG        = var.tg_bot_image_tag
+    TG_BOT_MAINTAINER       = var.tg_bot_maintainer
+    TG_BOT_MEDIA_CACHE_CHAT = var.tg_bot_media_cache_chat
+    TG_BOT_TOKEN            = var.tg_bot_token
     TG_BOT_LOG              = join(",", local.log_filter)
     TG_BOT_LOG_LABELS = jsonencode({
       instance = local.hostname

@@ -1,3 +1,11 @@
+variable "tg_bot_alerts_chat" {
+  nullable = false
+  type = object({
+    prod = optional(string)
+    dev  = optional(string)
+  })
+}
+
 variable "tg_bot_image_tag" {
   nullable = false
   type     = string
@@ -70,7 +78,7 @@ variable "derpi_filter" {
 }
 
 variable "allowed_ssh_ips" {
-  nullable = false
-  type     = list(string)
+  nullable  = false
+  type      = list(string)
   sensitive = true
 }

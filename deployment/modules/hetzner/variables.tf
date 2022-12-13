@@ -1,3 +1,8 @@
+variable "tg_bot_alerts_chat" {
+  nullable = false
+  type     = string
+}
+
 variable "tg_bot_media_cache_chat" {
   nullable = false
   type     = string
