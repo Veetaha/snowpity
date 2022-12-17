@@ -126,7 +126,10 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
         // .branch(Update::filter_edited_message().endpoint(updates::handle_edited_message))
         .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query))
         .branch(Update::filter_inline_query().endpoint(inline_query::handle_inline_query))
-        .branch(Update::filter_chosen_inline_result().endpoint(inline_query::handle_chosen_inline_result))
+        .branch(
+            Update::filter_chosen_inline_result()
+                .endpoint(inline_query::handle_chosen_inline_result),
+        )
         .inspect(|| tg_updates_skipped().inc());
 
     Dispatcher::builder(bot, handler)

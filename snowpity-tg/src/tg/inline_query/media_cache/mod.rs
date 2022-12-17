@@ -10,9 +10,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 
+use crate::db::CachedMedia;
 pub(crate) use derpi_cache::*;
 use std::fmt;
-use crate::db::CachedMedia;
 
 /// Maximum number of in-flight cache requests, otherwise the service will
 /// block the new requests.

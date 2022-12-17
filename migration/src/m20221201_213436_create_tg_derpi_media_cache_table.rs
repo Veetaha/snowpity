@@ -22,7 +22,7 @@ impl MigrationTrait for Migration {
             .col(
                 ColumnDef::new(TgDerpiMediaCache::TgFileType)
                     .small_integer()
-                    .not_null()
+                    .not_null(),
             );
         manager.create_table(stmt).await
     }

@@ -209,7 +209,6 @@ pub(crate) enum HttpClientError {
 
     #[error("Received an unexpected response JSON object")]
     UnexpectedResponseJsonShape { source: serde_json::Error },
-
     // #[error("Failed to write bytes to a file")]
     // WriteToFile { source: std::io::Error },
 
