@@ -17,17 +17,17 @@ where
         }))
 }
 
-// pub(crate) fn _try_from_db<App, Db>(db_val: Db) -> Result<App>
-// where
-//     Db: TryInto<App> + Clone + fmt::Debug + Send + Sync + 'static,
-//     Db::Error: Into<Box<DynError>>,
-// {
-//     db_val
-//         .clone()
-//         .try_into()
-//         .map_err(err_ctx!(DbError::Deserialize {
-//             app_ty: std::any::type_name::<App>(),
-//             db_ty: std::any::type_name::<Db>(),
-//             db_val: Box::new(db_val) as Box<_>
-//         }))
-// }
+pub(crate) fn try_from_db<App, Db>(db_val: Db) -> Result<App>
+where
+    Db: TryInto<App> + Clone + fmt::Debug + Send + Sync + 'static,
+    Db::Error: Into<Box<DynError>>,
+{
+    db_val
+        .clone()
+        .try_into()
+        .map_err(err_ctx!(DbError::Deserialize {
+            app_ty: std::any::type_name::<App>(),
+            db_ty: std::any::type_name::<Db>(),
+            db_val: Box::new(db_val) as Box<_>
+        }))
+}

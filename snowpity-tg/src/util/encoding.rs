@@ -45,11 +45,15 @@ pub(crate) fn from_json_string<'a, T: Deserialize<'a>>(input: &'a str) -> Result
     }))
 }
 
-pub(crate) fn to_json_string<T: Serialize + ?Sized>(data: &T) -> String {
+pub(crate) fn to_json_string(data: &(impl Serialize + ?Sized)) -> String {
     serialize(data, serde_json::to_string)
 }
 
-pub(crate) fn to_yaml_string<T: Serialize + ?Sized>(data: &T) -> String {
+pub(crate) fn to_json_string_pretty(data: &(impl Serialize + ?Sized)) -> String {
+    serialize(data, serde_json::to_string_pretty)
+}
+
+pub(crate) fn to_yaml_string(data: &(impl Serialize + ?Sized)) -> String {
     serialize(data, serde_yaml::to_string)
 }
 

@@ -8,6 +8,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub derpi_id: i64,
     pub tg_file_id: String,
+    pub tg_file_type: i16,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

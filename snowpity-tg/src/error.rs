@@ -210,11 +210,11 @@ pub(crate) enum HttpClientError {
     #[error("Received an unexpected response JSON object")]
     UnexpectedResponseJsonShape { source: serde_json::Error },
 
-    #[error("Failed to write bytes to a file")]
-    WriteToFile { source: std::io::Error },
+    // #[error("Failed to write bytes to a file")]
+    // WriteToFile { source: std::io::Error },
 
-    #[error("Failed to flush bytes to a file")]
-    FlushToFile { source: std::io::Error },
+    // #[error("Failed to flush bytes to a file")]
+    // FlushToFile { source: std::io::Error },
 }
 
 #[derive(Debug, Error)]
@@ -250,18 +250,18 @@ pub(crate) enum DbError {
         db_ty: &'static str,
         app_val: Box<dyn fmt::Debug + Send + Sync>,
     },
-    // #[error(
-    //     "Failed to deserialize db value into app repr.\n\
-    //     App type: {app_ty}\n\
-    //     Db type: {db_ty}\n\
-    //     Db value: {db_val:#?}"
-    // )]
-    // Deserialize {
-    //     source: Box<DynError>,
-    //     app_ty: &'static str,
-    //     db_ty: &'static str,
-    //     db_val: Box<dyn fmt::Debug + Send + Sync>,
-    // },
+    #[error(
+        "Failed to deserialize db value into app repr.\n\
+        App type: {app_ty}\n\
+        Db type: {db_ty}\n\
+        Db value: {db_val:#?}"
+    )]
+    Deserialize {
+        source: Box<DynError>,
+        app_ty: &'static str,
+        db_ty: &'static str,
+        db_val: Box<dyn fmt::Debug + Send + Sync>,
+    },
 }
 
 #[derive(Debug, Error)]
@@ -298,6 +298,12 @@ pub(crate) enum MediaError {
         media: MediaKind,
         expected: derpi::MimeType,
     },
+
+    #[error(
+        "The size of the requested file `{actual}` bytes \
+        exceeds the limit of `{max}` byttes"
+    )]
+    FileTooBig { actual: u64, max: u64 },
 
     #[error("Failed to spawn `ffmpeg` process")]
     SpawnFfmpeg { source: std::io::Error },

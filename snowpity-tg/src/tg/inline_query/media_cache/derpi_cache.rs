@@ -1,4 +1,5 @@
 use super::{Context, Response};
+use crate::db::CachedMedia;
 use crate::util::http;
 use crate::util::prelude::*;
 use crate::{derpi, err_val, tg, util, ErrorKind, MediaError, Result};
@@ -30,6 +31,7 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
     // optimistically do them concurrently
     let (media, cached) = futures::try_join!(
         async {
+            // FIXME: measure these with metrics
             let start = std::time::Instant::now();
             let media = ctx.derpi.get_media(payload.media_id).await;
             info!(
@@ -51,14 +53,11 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
 
     if let Some(cached) = cached {
         info!("Returning media from cache");
-        return Ok(Response {
-            media,
-            tg_file_id: cached.tg_file_id,
-        });
+        return Ok(Response { media, cached });
     }
 
     // FIXME: add metrics gatherting
-    let file = TgUploadContext {
+    let cached = TgUploadContext {
         base: &ctx,
         payload: &payload,
         media: &media,
@@ -66,12 +65,9 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
     .upload()
     .await?;
 
-    let cached = ctx.db.media_cache.set_derpi(media.id, &file.id).await?;
+    ctx.db.media_cache.set_derpi(cached.clone()).await?;
 
-    Ok(Response {
-        media,
-        tg_file_id: cached.tg_file_id,
-    })
+    Ok(Response { media, cached })
 }
 
 enum InputFileKind {
@@ -127,7 +123,7 @@ struct TgUploadContext<'a> {
 }
 
 impl TgUploadContext<'_> {
-    async fn upload(self) -> Result<FileMeta> {
+    async fn upload(self) -> Result<CachedMedia> {
         if self.media.mime_type.is_image() {
             self.upload_image().await
         } else {
@@ -135,8 +131,15 @@ impl TgUploadContext<'_> {
         }
     }
 
-    async fn upload_image(self) -> Result<FileMeta> {
-        let image_url = &self.media.view_url;
+    async fn upload_image(self) -> Result<CachedMedia> {
+        let max_size = 50 * MB;
+
+        if self.media.size > max_size {
+            return Err(err_val!(MediaError::FileTooBig {
+                actual: self.media.size,
+                max: max_size
+            }));
+        }
 
         // FIXME: resize image if it doesn't fit into telegram's limit
         if self.media.aspect_ratio > 20.0 {
@@ -152,63 +155,105 @@ impl TgUploadContext<'_> {
 
         // FIXME: use cached document correctly in inline query
 
-        // Tested that file with this size is the one that can be uploaded.
-        // The next file with greater size from derpibooru fails to be uploaded.
+        // We shouldn't trust derpibooru with the size of the file.
+        // There was a precedent where a media with incorrect size was
+        // found. It was reported to derpibooru's Discord:
+        // https://discord.com/channels/430829008402251796/438029140659142657/1049534872739389440
         //
-        // In fact, there is a 5MB limit for photos uploaded via a direct
-        // URL, but it looks like telegram counts megabytes using 1024 as a base,
-        // and maybe they allow some margin around the 5 MB boundary, because
-        // 1024 * 1024 * 5 == 5242880, but not the value specified here:
+        // The media that was reported is https://derpibooru.org/api/v1/json/images/1127198
+        // When dowloaded, the image's size is 4_941_837 bytes,
+        // but the API reports size as 5_259_062.
         //
-        if self.media.size <= 5 * MB {
-            // Derpibooru statistics for files according to this limit:
-            // - Under: 2_555_839  (95%)
-            // - Over:    133_821 (5%)
-            self.upload_image_direct().await
-        } else if self.media.size <= 10 * MB {
-            // Derpibooru statistics for files according to this limit:
-            // - Under: 2_651_709 (98.5%)
-            // - Over:     37_953 (1.5%)
-            self.upload_image_indirect().await
-        } else {
-            let thumb = self.media.representations.thumb_small.clone();
-            let func = |tg_bot: &tg::Bot, chat_id, input_file| {
-                tg_bot
-                    .send_document(chat_id, input_file)
-                    .thumb(InputFile::url(thumb))
-            };
-            self.upload_imp(func, InputFileKind::DownloadedUrl(image_url.clone()))
-                .await
-        }
-    }
+        // Unfortunatelly, it does't seem this bug will be fixed anytime soon,
+        // so the workaround is falling back to uploading as indirect image
+        // or as a document, while optimistically trying the easiest way first
 
-    async fn upload_image_direct(self) -> Result<FileMeta> {
-        let input_file = InputFileKind::Url(self.media.view_url.clone());
-        match self.upload_imp(tg::Bot::send_photo, input_file).await {
-            Ok(file) => return Ok(file),
-            Err(err) => {
-                warn!(
-                    err = tracing_err(&err),
-                    derpi_mime = %self.media.mime_type,
-                    derpi_size = self.media.size,
-                    derpi_id = %self.media.id,
-                    "Failed to upload image directly. \
-                    Retrying with an intermediate download..."
-                );
+        if self.media.size <= 5 * MB {
+            match self.upload_photo_by_url().await {
+                Ok(cached) => return Ok(cached),
+                Err(err) => {
+                    warn!(
+                        err = tracing_err(&err),
+                        derpi_mime = %self.media.mime_type,
+                        derpi_size = self.media.size,
+                        derpi_id = %self.media.id,
+                        "Failed to upload image using a direct URL. \
+                        Falling back to intermediate download of the image..."
+                    );
+                }
             }
         }
-        self.upload_image_indirect().await
+
+        if self.media.size <= 10 * MB {
+            match self.upload_photo_downloaded().await {
+                Ok(cached) => return Ok(cached),
+                Err(err) => {
+                    warn!(
+                        err = tracing_err(&err),
+                        derpi_mime = %self.media.mime_type,
+                        derpi_size = self.media.size,
+                        derpi_id = %self.media.id,
+                        "Failed to upload image using an intermediate download. \
+                        Falling back to direct URL document upload..."
+                    );
+                }
+            }
+        }
+
+        if self.media.size <= 20 * MB {
+            match self.upload_document_by_url().await {
+                Ok(cached) => return Ok(cached),
+                Err(err) => {
+                    warn!(
+                        err = tracing_err(&err),
+                        derpi_mime = %self.media.mime_type,
+                        derpi_size = self.media.size,
+                        derpi_id = %self.media.id,
+                        "Failed to upload image using a direct URL document upload. \
+                        Falling back to intermediate download of the document..."
+                    );
+                }
+            }
+        }
+
+        self.upload_document_downloaded().await
     }
 
-    async fn upload_image_indirect(self) -> Result<FileMeta> {
-        self.upload_imp(
-            tg::Bot::send_photo,
-            InputFileKind::DownloadedUrl(self.media.view_url.clone()),
-        )
-        .await
+    // Derpibooru statistics for files according to 5 MB limit:
+    // - Under: 2_555_839  (95%)
+    // - Over:    133_821 (5%)
+    async fn upload_photo_by_url(self) -> Result<CachedMedia> {
+        let input_file = InputFileKind::Url(self.media.view_url.clone());
+        self.upload_imp(tg::Bot::send_photo, input_file).await
     }
 
-    async fn upload_video(self) -> Result<FileMeta> {
+    // Derpibooru statistics for files according to 10 MB limit:
+    // - Under: 2_651_709 (98.5%)
+    // - Over:     37_953 (1.5%)
+    async fn upload_photo_downloaded(self) -> Result<CachedMedia> {
+        let input_file = InputFileKind::DownloadedUrl(self.media.view_url.clone());
+        self.upload_imp(tg::Bot::send_photo, input_file).await
+    }
+
+    async fn upload_document_by_url(self) -> Result<CachedMedia> {
+        let input_file = InputFileKind::Url(self.media.view_url.clone());
+        self.upload_imp(tg::Bot::send_document, input_file).await
+    }
+
+    async fn upload_document_downloaded(self) -> Result<CachedMedia> {
+        // FIXME: create thumbnails by converting them and coercing to
+        // telegram requirements via ffmpeg
+        // let thumb = self.media.representations.thumb_tiny.clone();
+        // let func = |tg_bot: &tg::Bot, chat_id, input_file| {
+        //     tg_bot
+        //         .send_document(chat_id, input_file)
+        //         .thumb(InputFile::url(thumb))
+        // };
+        let input_file = InputFileKind::DownloadedUrl(self.media.view_url.clone());
+        self.upload_imp(tg::Bot::send_document, input_file).await
+    }
+
+    async fn upload_video(self) -> Result<CachedMedia> {
         info!("Started converting a video");
         let start = Instant::now();
         let tmp_output = crate::media::convert_to_mp4(&self.media.view_url).await?;
@@ -222,7 +267,8 @@ impl TgUploadContext<'_> {
             tg::Bot::send_video,
             InputFileKind::File(tmp_output.to_path_buf()),
         )
-        .await
+        .await?;
+        todo!("Video uploads are not implemented yet")
     }
 
     #[instrument(skip_all, fields(
@@ -236,53 +282,57 @@ impl TgUploadContext<'_> {
         self,
         send_payload_method: impl FnOnce(&tg::Bot, ChatId, InputFile) -> S,
         input_file: InputFileKind,
-    ) -> Result<FileMeta>
+    ) -> Result<CachedMedia>
     where
         S: util::SendPayloadExt,
     {
         info!("Uploading to telegram cache chat");
 
         let caption = format!(
-            "{}\n*Requested by:* {}",
+            "{}\n*Requested by: {}\\. Uploaded as {}*",
             core_caption(&self.media),
-            self.payload.requested_by.md_link()
+            self.payload.requested_by.md_link(),
+            S::TYPE,
         );
 
         let input_file = input_file
             .into_input_file(&self.base.http_client)
             .await?
-            .file_name(self.file_name());
+            .file_name(file_name(&self.media));
 
         let chat = self.base.cfg.media_cache_chat;
         let msg = send_payload_method(&self.base.bot, chat, input_file)
             .caption(caption)
             .await?;
 
-        find_file(self.media.mime_type, msg)
-    }
+        let file_meta = find_file(self.media.mime_type, msg)?;
 
-    fn file_name(&self) -> String {
-        fn join_tags(tags: &mut dyn Iterator<Item = &str>) -> String {
-            let joined = tags.map(derpi::sanitize_tag).join("+");
-            if joined.chars().count() <= 100 {
-                return joined;
-            }
-            joined.chars().take(97).chain(['.', '.', '.']).collect()
+        Ok(CachedMedia {
+            derpi_id: self.media.id,
+            tg_file_id: file_meta.id,
+            tg_file_type: S::TYPE,
+        })
+    }
+}
+
+/// Short name of the file (not more than 255 characters) for the media
+pub(crate) fn file_name(media: &derpi::Media) -> String {
+    fn join_tags(tags: &mut dyn Iterator<Item = &str>) -> String {
+        let joined = tags.map(derpi::sanitize_tag).join("+");
+        if joined.chars().count() <= 100 {
+            return joined;
         }
-
-        let ratings = join_tags(&mut self.media.rating_tags());
-        let artists = join_tags(&mut self.media.artists());
-
-        let prefix = ["derpibooru", ratings.as_str(), artists.as_str()]
-            .into_iter()
-            .format("-");
-
-        format!(
-            "{prefix}-{}.{}",
-            self.media.id,
-            self.media.mime_type.file_extension()
-        )
+        joined.chars().take(97).chain(['.', '.', '.']).collect()
     }
+
+    let ratings = join_tags(&mut media.rating_tags());
+    let artists = join_tags(&mut media.artists());
+
+    let prefix = ["derpibooru", ratings.as_str(), artists.as_str()]
+        .into_iter()
+        .format("-");
+
+    format!("{prefix}-{}.{}", media.id, media.mime_type.file_extension())
 }
 
 fn find_file(expected: derpi::MimeType, msg: Message) -> Result<FileMeta> {

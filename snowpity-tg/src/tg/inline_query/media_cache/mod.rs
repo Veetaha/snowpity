@@ -12,6 +12,7 @@ use tokio::sync::{mpsc, oneshot};
 
 pub(crate) use derpi_cache::*;
 use std::fmt;
+use crate::db::CachedMedia;
 
 /// Maximum number of in-flight cache requests, otherwise the service will
 /// block the new requests.
@@ -43,7 +44,7 @@ impl<P: fmt::Debug> fmt::Debug for Envelope<P> {
 #[derive(Clone)]
 pub(crate) struct Response {
     pub(crate) media: derpi::Media,
-    pub(crate) tg_file_id: String,
+    pub(crate) cached: CachedMedia,
 }
 
 pub(crate) fn spawn_service(ctx: Context) -> Client {

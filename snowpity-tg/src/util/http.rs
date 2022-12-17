@@ -1,23 +1,33 @@
+use crate::metrics::def_metrics;
 use crate::util::prelude::*;
 use crate::{err_ctx, err_val, HttpClientError, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
 use easy_ext::ext;
+use prometheus::labels;
 use reqwest_middleware::RequestBuilder;
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::time::Duration;
-use crate::metrics::def_metrics;
 
-// def_metrics! {
-//     /// Number of http requests
-//     http_requests: IntCounter;
+def_metrics! {
+    /// Number of http requests partitioned by status codes and methods
+    http_requests_total: IntCounterVec [version, method, host, status];
 
-//     /// Number of http requests that failed
-//     http_requests_errors: Int;
-// }
+    /// Number of http requests that failed due to fatal error.
+    /// Doesn't include 500 errors.
+    http_requests_fatal_total: IntCounterVec [version, method, host];
+
+    /// Time spent on http requests partitioned by status codes and methods
+    [buckets: *prometheus::DEFAULT_BUCKETS]
+    http_request_duration_seconds: HistogramVec [version, method, host];
+
+    /// Same as `http_requests_time` but includes the time it took to retry the request.
+    [buckets: *prometheus::DEFAULT_BUCKETS]
+    http_request_effective_duration_seconds: HistogramVec [version, method, host];
+}
 
 pub type Client = reqwest_middleware::ClientWithMiddleware;
 
@@ -30,7 +40,7 @@ pub(crate) fn create_client() -> Client {
 
     reqwest_middleware::ClientBuilder::new(teloxide::net::client_from_env())
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .with(LoggingMiddleware)
+        .with(InnermostObservingMiddleware)
         .with_init(|request_builder: RequestBuilder| {
             request_builder.header(
                 // XXX: this header important for derpibooru,
@@ -46,46 +56,110 @@ pub(crate) fn create_client() -> Client {
         .build()
 }
 
-struct LoggingMiddleware;
+struct OutermostObservingMiddleware;
 
 #[async_trait]
-impl reqwest_middleware::Middleware for LoggingMiddleware {
+impl reqwest_middleware::Middleware for OutermostObservingMiddleware {
     async fn handle(
         &self,
-        req: reqwest::Request,
+        request: reqwest::Request,
         extensions: &mut task_local_extensions::Extensions,
         next: reqwest_middleware::Next<'_>,
     ) -> reqwest_middleware::Result<reqwest::Response> {
-        let method = req.method();
-        let url = req.url();
-        let scheme = req.version();
         let span = info_span!(
             "request",
-            ?scheme,
-            %method,
-            %url,
+            version = ?request.version(),
+            method = %request.method(),
+            url = %request.url(),
         );
-        async {
-            debug!("Sending request");
-            // http_requests().inc();
 
-            let result = next.run(req, extensions).await;
-            match &result {
-                Ok(response) => {
-                    if let Err(err) = response.error_for_status_ref() {
-                        error!(err = tracing_err(&err), "Request failed (error status)");
-                        // http_requests_errors().with_label_values()
-                    }
-                }
-                Err(err) => {
-                    error!(err = tracing_err(err), "Request failed");
-                }
-            }
-            result
-        }
+        measure_request(
+            http_requests_effective_time(),
+            http_requests::version,
+            http_requests::method,
+            http_requests::host,
+            request,
+            extensions,
+            next,
+        )
         .instrument(span)
         .await
     }
+}
+
+struct InnermostObservingMiddleware;
+
+#[async_trait]
+impl reqwest_middleware::Middleware for InnermostObservingMiddleware {
+    async fn handle(
+        &self,
+        request: reqwest::Request,
+        extensions: &mut task_local_extensions::Extensions,
+        next: reqwest_middleware::Next<'_>,
+    ) -> reqwest_middleware::Result<reqwest::Response> {
+        let method = request.method().to_string();
+        let host = request.url().host_str().unwrap_or("{unknown}").to_owned();
+        let version = format!("{:?}", request.version());
+
+        debug!("Sending request");
+
+        let result = measure_request(
+            http_requests_time(),
+            http_requests_time::version,
+            http_requests_time::method,
+            http_requests_time::host,
+            request,
+            extensions,
+            next,
+        )
+        .await;
+
+        match &result {
+            Ok(response) => {
+                let status = response.status();
+                let labels = &labels! {
+                    http_requests::version => version.as_str(),
+                    http_requests::status => status.as_str(),
+                    http_requests::method => method.as_str(),
+                    http_requests::host => host.as_str(),
+                };
+                http_requests().with(labels).inc();
+
+                if let Err(err) = response.error_for_status_ref() {
+                    error!(err = tracing_err(&err), "Request failed (error status)");
+                }
+            }
+            Err(err) => {
+                let labels = &labels! {
+                    http_requests_fatal::version => version.as_str(),
+                    http_requests_fatal::method => method.as_str(),
+                    http_requests_fatal::host => host.as_str(),
+                };
+                http_requests_fatal().with(labels).inc();
+                error!(err = tracing_err(err), "Request failed");
+            }
+        }
+        result
+    }
+}
+
+async fn measure_request(
+    histogram: &prometheus::HistogramVec,
+    version_label: &str,
+    method_label: &str,
+    host_label: &str,
+    request: reqwest::Request,
+    extensions: &mut task_local_extensions::Extensions,
+    next: reqwest_middleware::Next<'_>,
+) -> reqwest_middleware::Result<reqwest::Response> {
+    let version = format!("{:?}", request.version());
+    let labels = &labels! {
+        version_label => version.as_str(),
+        method_label => request.method().as_str(),
+        host_label => request.url().host_str().unwrap_or("{unknown}"),
+    };
+    let _guard = histogram.with(labels).start_timer();
+    next.run(request, extensions).await
 }
 
 #[ext(RequestBuilderExt)]
@@ -128,10 +202,15 @@ pub(crate) impl RequestBuilder {
                 Err(err) => format!("Could not collect the error response body text: {}", err),
             };
 
-            return Err(err_val!(HttpClientError::BadResponseStatusCode { status, body }));
+            return Err(err_val!(HttpClientError::BadResponseStatusCode {
+                status,
+                body
+            }));
         }
 
-        res.bytes().await.map_err(err_ctx!(HttpClientError::ReadResponse))
+        res.bytes()
+            .await
+            .map_err(err_ctx!(HttpClientError::ReadResponse))
     }
 
     // async fn read_to_temp_file(self) -> Result<tempfile::TempPath> {

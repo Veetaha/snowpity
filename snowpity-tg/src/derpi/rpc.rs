@@ -2,7 +2,6 @@
 //! Use TypeScript declarations as a reference (though they may go out of date):
 //! https://github.com/octet-stream/dinky/blob/master/lib/Dinky.d.ts
 use crate::derpi::derpi;
-use chrono::prelude::*;
 use derive_more::{Display, FromStr};
 use itertools::Itertools;
 use reqwest::Url;

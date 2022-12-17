@@ -18,6 +18,11 @@ impl MigrationTrait for Migration {
                 ColumnDef::new(TgDerpiMediaCache::TgFileId)
                     .string_len(100)
                     .not_null(),
+            )
+            .col(
+                ColumnDef::new(TgDerpiMediaCache::TgFileType)
+                    .small_integer()
+                    .not_null()
             );
         manager.create_table(stmt).await
     }
@@ -34,4 +39,5 @@ enum TgDerpiMediaCache {
     Table,
     DerpiId,
     TgFileId,
+    TgFileType,
 }

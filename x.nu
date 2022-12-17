@@ -89,7 +89,6 @@ def "main docker build" [
 
 # Start all services locally using `docker compose`
 def "main start" [
-    --detach           # Run the services in the background
     --no-tg-bot        # Don't start the tg_bot service
     --no-observability # Don't start the pgadmin and observability services
     --fresh (-f)       # Executes `drop-data` before starting the database (run `db drop --help` for details)
@@ -100,8 +99,7 @@ def "main start" [
     }
 
     mut args = (
-        [up --remove-orphans --build postgres]
-        | append-if $detach '--wait'
+        [up --remove-orphans --build --wait postgres]
         | append-if (not $no_tg_bot) tg-bot
         | append-if (not $no_observability) [
             pgadmin
@@ -113,6 +111,7 @@ def "main start" [
     )
 
     docker-compose $args
+    docker-compose logs '--follow' tg-bot
 }
 
 # Shutdown the local containers and clean the persistent data volumes
@@ -195,7 +194,7 @@ def "main tf output" [] {
 # output the generated code to the working tree.
 def "main orm gen" [] {
     cd (repo)
-    main start --fresh --no-tg-bot --no-observability --detach
+    main start --fresh --no-tg-bot --no-observability # --detach
     wait-for-db
     sea-orm-cli migrate
     sea-orm-cli generate entity --with-copy-enums --output-dir entities/src/generated
@@ -364,13 +363,13 @@ def-env docker-compose-config [] {
 def-env wait-for-db [] {
     let db_url = (
         docker-compose-config
-        | get services.tg_bot.environment.DATABASE_URL
+        | get services.tg-bot.environment.DATABASE_URL
         | url parse
     )
 
     let db_name = ($db_url.path | parse "/{name}").0.name
 
-    let postgres_image = (docker-compose-config).services.pg.image
+    let postgres_image = (docker-compose-config).services.postgres.image
 
     let wait_time = 1min
     let delay = 200ms
@@ -378,7 +377,7 @@ def-env wait-for-db [] {
 
     with-retry --fixed --max-retries $max_retries --delay $delay {(
         with-debug docker run
-            '--network' 'snowpity_pg'
+            '--network' 'snowpity_postgres'
             $postgres_image
             pg_isready
             '--dbname' $db_name

@@ -11,8 +11,8 @@ use crate::derpi::{self, DerpiService};
 use crate::ftai::FtaiService;
 use crate::metrics::def_metrics;
 use crate::sysinfo::SysInfoService;
-use crate::util;
 use crate::util::prelude::*;
+use crate::util::{self, encoding};
 use crate::Result;
 use captcha::CaptchaCtx;
 use dptree::di::DependencyMap;
@@ -89,7 +89,14 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
         .await?;
 
     let handler = dptree::entry()
-        .inspect(|| tg_updates().inc())
+        .inspect(|update: Update| {
+            tg_updates().inc();
+            trace!(
+                target: "tg_updates",
+                "{}",
+                encoding::to_json_string_pretty(&update),
+            );
+        })
         .branch(
             Update::filter_message()
                 .chain(Message::filter_new_chat_members())
@@ -119,6 +126,7 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
         // .branch(Update::filter_edited_message().endpoint(updates::handle_edited_message))
         .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query))
         .branch(Update::filter_inline_query().endpoint(inline_query::handle_inline_query))
+        .branch(Update::filter_chosen_inline_result().endpoint(inline_query::handle_chosen_inline_result))
         .inspect(|| tg_updates_skipped().inc());
 
     Dispatcher::builder(bot, handler)

@@ -1,13 +1,14 @@
 use crate::metrics::def_metrics;
 use crate::util::prelude::*;
-use crate::util::DynResult;
+use crate::util::{DynResult, TgFileType};
 use crate::{derpi, tg, Error};
 use futures::prelude::*;
 use lazy_regex::regex_captures;
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::{
-    InlineQuery, InlineQueryResultCachedPhoto, InlineQueryResultCachedVideo, ParseMode,
+    InlineQuery, InlineQueryResultCachedDocument, InlineQueryResultCachedPhoto,
+    InlineQueryResultCachedVideo, ParseMode,
 };
 
 pub(crate) mod media_cache;
@@ -18,6 +19,9 @@ def_metrics! {
 
     /// Number of errors while handling inline queries
     inline_queries_errors: IntCounter;
+
+    /// Number of inline queries which were accepted
+    chosen_inline_results: IntCounter;
 }
 
 pub(crate) struct InlineQueryService {
@@ -52,7 +56,7 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
             media_id,
         };
 
-        let media_cache::Response { media, tg_file_id } = inline_query
+        let media_cache::Response { media, cached } = inline_query
             .media_cache_client
             .get_tg_derpi_media(payload)
             .await?;
@@ -60,21 +64,41 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
         // FIXME: ensure the caption doesn't overflow 1024 characters
         let caption = media_cache::core_caption(&media);
 
-        let result = if media.mime_type.is_image() {
-            info!("Returning image for inline query");
+        let file_name = media_cache::file_name(&media);
 
-            InlineQueryResultCachedPhoto::new(media_id.to_string(), tg_file_id)
+        let result = match cached.tg_file_type {
+            TgFileType::Photo => {
+                info!("Returning image for inline query");
+
+                InlineQueryResultCachedPhoto::new(media_id.to_string(), cached.tg_file_id)
+                    .caption(caption)
+                    .parse_mode(ParseMode::MarkdownV2)
+                    .into()
+            }
+            TgFileType::Document => {
+                info!("Returning document for inline query");
+
+                InlineQueryResultCachedDocument::new(
+                    media_id.to_string(),
+                    file_name,
+                    cached.tg_file_id,
+                )
                 .caption(caption)
                 .parse_mode(ParseMode::MarkdownV2)
                 .into()
-        } else {
-            info!("Returning video for inline query");
+            }
+            TgFileType::Video => {
+                info!("Returning video for inline query");
 
-            let title = "2000 kb/s";
-            InlineQueryResultCachedVideo::new(media_id.to_string(), tg_file_id, title)
+                InlineQueryResultCachedVideo::new(
+                    media_id.to_string(),
+                    cached.tg_file_id,
+                    file_name,
+                )
                 .caption(caption)
                 .parse_mode(ParseMode::MarkdownV2)
                 .into()
+            }
         };
 
         bot.answer_inline_query(inline_query_id, [result])
@@ -102,6 +126,11 @@ fn parse_query(str: &str) -> Option<derpi::MediaId> {
         .find(|capture| !capture.is_empty())?
         .parse()
         .ok()
+}
+
+pub(crate) async fn handle_chosen_inline_result() -> DynResult {
+    chosen_inline_results().inc();
+    Ok(())
 }
 
 #[cfg(test)]

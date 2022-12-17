@@ -1,7 +1,9 @@
 use assert_matches::assert_matches;
 use duplicate::duplicate_item;
 use easy_ext::ext;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::future::IntoFuture;
+use strum::Display;
 use teloxide::payloads::setters::*;
 use teloxide::payloads::{
     SendDocument, SendDocumentSetters, SendPhoto, SendPhotoSetters, SendVideo, SendVideoSetters,
@@ -93,21 +95,31 @@ pub(crate) impl MessageId {
     }
 }
 
+/// Determines the API method used when the media was uploaded to Telegram.
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, Display)]
+#[repr(i16)]
+pub(crate) enum TgFileType {
+    Photo = 0,
+    Document = 1,
+    Video = 2,
+}
+
 pub(crate) trait SendPayloadExt:
     IntoFuture<Output = Result<Message, teloxide::RequestError>>
 {
-    const TYPE: &'static str;
+    const TYPE: TgFileType;
+
     fn caption(self, caption: impl Into<String>) -> Self;
 }
 
 #[duplicate_item(
-    SendPayload    Setters;
-    [SendPhoto]    [SendPhotoSetters];
-    [SendVideo]    [SendVideoSetters];
-    [SendDocument] [SendDocumentSetters];
+    SendPayload    Setters               FileType;
+    [SendPhoto]    [SendPhotoSetters]    [Photo];
+    [SendVideo]    [SendVideoSetters]    [Video];
+    [SendDocument] [SendDocumentSetters] [Document];
 )]
 impl SendPayloadExt for crate::tg::Request<SendPayload> {
-    const TYPE: &'static str = stringify!(SendPayload);
+    const TYPE: TgFileType = TgFileType::FileType;
     fn caption(self, caption: impl Into<String>) -> Self {
         Setters::caption(self, caption)
     }
