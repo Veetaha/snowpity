@@ -1,6 +1,6 @@
 /// Convenience macro to define a [`prometheus`] metric.
 ///
-/// The syntax is similar as of delcaring a variable with the type of the metric
+/// The syntax is similar as of declaring a variable with the type of the metric
 /// as the type annotation. However, there is no `let` or `static` keyword required.
 /// The optional block `{ .. }` accepts a mapping of `const_label => "const_label_val"`
 /// pairs that will be used as constant labels for the metric. Another optional

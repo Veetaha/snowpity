@@ -34,10 +34,10 @@ pub(crate) type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
 pub(crate) type Request<T> = TraceRequest<ThrottlingRequest<MultipartRequest<T>>>;
 
 def_metrics! {
-    /// Number of updates recieved from telegram
+    /// Number of updates received from telegram
     tg_updates: IntCounter;
 
-    /// Number of updates recieved from telegram, that were skipped by the bot
+    /// Number of updates received from telegram, that were skipped by the bot
     tg_updates_skipped: IntCounter;
 }
 

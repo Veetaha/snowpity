@@ -14,7 +14,7 @@ use teloxide::types::{
 pub(crate) mod media_cache;
 
 def_metrics! {
-    /// Number of inline queries recieved by the bot
+    /// Number of inline queries received by the bot
     inline_queries: IntCounter;
 
     /// Number of errors while handling inline queries

@@ -161,10 +161,10 @@ impl TgUploadContext<'_> {
         // https://discord.com/channels/430829008402251796/438029140659142657/1049534872739389440
         //
         // The media that was reported is https://derpibooru.org/api/v1/json/images/1127198
-        // When dowloaded, the image's size is 4_941_837 bytes,
+        // When downloaded, the image's size is 4_941_837 bytes,
         // but the API reports size as 5_259_062.
         //
-        // Unfortunatelly, it does't seem this bug will be fixed anytime soon,
+        // Unfortunately, it does't seem this bug will be fixed anytime soon,
         // so the workaround is falling back to uploading as indirect image
         // or as a document, while optimistically trying the easiest way first
 

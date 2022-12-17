@@ -6,4 +6,8 @@
 extend-exclude = [
   # Exclude generated files that are checked in to source control
   "Cargo.lock",
+
+  # This grafana dashboard was copy-pasted from the internet, better leave
+  # it as is, event with typos in it
+  "docker/grafana/provisioning/dashboards/node-exporter-full_rev29.json"
 ]

@@ -20,7 +20,7 @@ pub(crate) async fn run_metrics(abort: impl Future<Output = ()>) -> Result {
 
         future::ok::<_, Infallible>(service_fn(move |request| {
             handle_metrics(request).instrument(info_span!(
-                "incomming_connection",
+                "incoming_connection",
                 %remote_addr,
                 %local_addr
             ))

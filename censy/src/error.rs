@@ -14,7 +14,7 @@ pub enum TemplatePhraseError {
 
     #[error(
         "Образец фразы не должен превышать {} символов (длина заданной фразы: {}, фраза: {phrase})",
-        crate::MAX_TEMPLATE_PHARSE_LEN,
+        crate::MAX_TEMPLATE_PHRASE_LEN,
         phrase.len(),
     )]
     TooLong { phrase: String },

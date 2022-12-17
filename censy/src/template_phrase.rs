@@ -2,7 +2,7 @@ use crate::TemplatePhraseError;
 use itertools::Itertools;
 use std::fmt;
 
-pub(crate) const MAX_TEMPLATE_PHARSE_LEN: usize = 60;
+pub(crate) const MAX_TEMPLATE_PHRASE_LEN: usize = 60;
 
 #[derive(Debug, Clone)]
 pub struct TemplatePhrase(String);
@@ -12,7 +12,7 @@ impl TemplatePhrase {
         // Normalize whitespace and casing in the phrase
         let phrase = phrase.to_lowercase().split_whitespace().join(" ");
 
-        if phrase.len() > MAX_TEMPLATE_PHARSE_LEN {
+        if phrase.len() > MAX_TEMPLATE_PHRASE_LEN {
             return Err(TemplatePhraseError::TooLong { phrase });
         }
 
