@@ -1,6 +1,6 @@
 //! Missing batteries for [`metrics`] crate.
 //!
-//! It includes various utilites to make defining labels and metrics with their
+//! It includes various utilities to make defining labels and metrics with their
 //! descriptions very laconic.
 //!
 //! ```
@@ -151,7 +151,7 @@ macro_rules! metric_macros {
     ) => {
 
         #[doc = concat!(
-            "Defines a function that accepts a value impementing [`metrics::IntoLabels`] and returns a ",
+            "Defines a function that accepts a value implementing [`metrics::IntoLabels`] and returns a ",
             "[`metrics::", stringify!($metric_ty), "`]\n\n",
             "This is the version of the macro that generates a metric name that is ",
             stringify!($prefixed), " with the name of the crate.\n\n",
