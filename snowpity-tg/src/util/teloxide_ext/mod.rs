@@ -1,43 +1,27 @@
+mod requester;
+
 use assert_matches::assert_matches;
 use duplicate::duplicate_item;
 use easy_ext::ext;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::future::IntoFuture;
-use strum::Display;
-use teloxide::payloads::setters::*;
 use teloxide::payloads::{
     SendDocument, SendDocumentSetters, SendPhoto, SendPhotoSetters, SendVideo, SendVideoSetters,
 };
-use teloxide::prelude::*;
-use teloxide::types::{Chat, Message, MessageCommon, MessageId, MessageKind, User};
+use teloxide::types::{Chat, Message, MessageCommon, MessageId, MessageKind, UpdateKind, User};
 use teloxide::utils::markdown;
+
+pub(crate) mod prelude {
+    pub(crate) use super::{
+        requester::UtilRequesterExt as _, ChatExt as _, MessageIdExt as _, MessageKindExt as _,
+        SendPayloadExt as _, UserExt as _, UpdateKindExt as _,
+    };
+}
 
 #[ext(MessageKindExt)]
 pub(crate) impl MessageKind {
     fn unwrap_as_common(&self) -> &MessageCommon {
         assert_matches!(self, MessageKind::Common(common) => common)
-    }
-}
-
-/// There is [`RequesterExt`] in [`teloxide::prelude`]. We name this symbol
-/// different to avoid collisions.
-#[ext(UtilRequesterExt)]
-pub(crate) impl<T> T
-where
-    Self: Requester,
-{
-    /// Send a message to the chat, but split it into multiple ones if it's too long.
-    fn reply_chunked(&self, msg: &Message, text: impl Into<String>) -> Self::SendMessage {
-        self.send_message(msg.chat.id, text)
-            .reply_to_message_id(msg.id)
-            .allow_sending_without_reply(true)
-    }
-
-    fn reply_help_md_escaped<Cmd: teloxide::utils::command::BotCommands>(
-        &self,
-        msg: &Message,
-    ) -> Self::SendMessage {
-        self.reply_chunked(msg, markdown::escape(&Cmd::descriptions().to_string()))
     }
 }
 
@@ -96,7 +80,9 @@ pub(crate) impl MessageId {
 }
 
 /// Determines the API method used when the media was uploaded to Telegram.
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, Display)]
+#[derive(
+    Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, strum::Display, strum::IntoStaticStr,
+)]
 #[repr(i16)]
 pub(crate) enum TgFileType {
     Photo = 0,
@@ -122,5 +108,34 @@ impl SendPayloadExt for crate::tg::Request<SendPayload> {
     const TYPE: TgFileType = TgFileType::FileType;
     fn caption(self, caption: impl Into<String>) -> Self {
         Setters::caption(self, caption)
+    }
+}
+
+#[ext(UpdateKindExt)]
+pub(crate) impl UpdateKind {
+    fn discriminator(&self) -> &'static str {
+        macro_rules! stringify_enum {
+            ($val:expr, $($variant:ident)*) => {
+                match $val {$( UpdateKind::$variant(_) => stringify!($variant), )*}
+            }
+        }
+        stringify_enum! {
+            self,
+            Message
+            EditedMessage
+            ChannelPost
+            EditedChannelPost
+            InlineQuery
+            ChosenInlineResult
+            CallbackQuery
+            ShippingQuery
+            PreCheckoutQuery
+            Poll
+            PollAnswer
+            MyChatMember
+            ChatMember
+            ChatJoinRequest
+            Error
+        }
     }
 }

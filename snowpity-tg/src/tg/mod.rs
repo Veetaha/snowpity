@@ -9,7 +9,6 @@ mod updates;
 use crate::db;
 use crate::derpi::{self, DerpiService};
 use crate::ftai::FtaiService;
-use crate::metrics::def_metrics;
 use crate::sysinfo::SysInfoService;
 use crate::util::prelude::*;
 use crate::util::{self, encoding};
@@ -33,12 +32,16 @@ pub(crate) use config::*;
 pub(crate) type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
 pub(crate) type Request<T> = TraceRequest<ThrottlingRequest<MultipartRequest<T>>>;
 
-def_metrics! {
-    /// Number of updates received from telegram
-    tg_updates: IntCounter;
+metrics_bat::labels! {
+    TgUpdateLabels { kind }
+}
 
-    /// Number of updates received from telegram, that were skipped by the bot
-    tg_updates_skipped: IntCounter;
+metrics_bat::counters! {
+    /// Number of updates received from Telegram
+    tg_updates_total;
+
+    /// Number of updates received from Telegram, that were skipped by the bot
+    tg_updates_skipped_total;
 }
 
 pub(crate) struct Ctx {
@@ -90,9 +93,12 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
 
     let handler = dptree::entry()
         .inspect(|update: Update| {
-            tg_updates().inc();
+            let labels = TgUpdateLabels {
+                kind: update.kind.discriminator(),
+            };
+            tg_updates_total(labels).increment(1);
             trace!(
-                target: "tg_updates",
+                target: "tg_update",
                 "{}",
                 encoding::to_json_string_pretty(&update),
             );
@@ -130,7 +136,12 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
             Update::filter_chosen_inline_result()
                 .endpoint(inline_query::handle_chosen_inline_result),
         )
-        .inspect(|| tg_updates_skipped().inc());
+        .inspect(|update: Update| {
+            let labels = TgUpdateLabels {
+                kind: update.kind.discriminator(),
+            };
+            tg_updates_skipped_total(labels).increment(1)
+        });
 
     Dispatcher::builder(bot, handler)
         .dependencies(di)

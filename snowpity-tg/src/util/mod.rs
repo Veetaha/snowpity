@@ -19,11 +19,8 @@ pub(crate) use tokio_ext::*;
 pub(crate) mod prelude {
     pub(crate) use super::chrono_ext::DateTimeExt as _;
     pub(crate) use super::http::RequestBuilderExt as _;
-    pub(crate) use super::std_ext::{ErrorExt as _, OptionExt as _, ResultExt as _};
-    pub(crate) use super::teloxide_ext::{
-        ChatExt as _, MessageIdExt as _, MessageKindExt as _, SendPayloadExt, UserExt as _,
-        UtilRequesterExt as _,
-    };
+    pub(crate) use super::std_ext::prelude::*;
+    pub(crate) use super::teloxide_ext::prelude::*;
 
     pub(crate) use super::tracing_err;
     pub(crate) use tracing::{

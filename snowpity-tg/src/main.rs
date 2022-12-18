@@ -3,6 +3,7 @@ use snowpity_tg::util::tracing_err;
 use std::panic::AssertUnwindSafe;
 use std::process::ExitCode;
 use tracing::{error, info, warn};
+use metrics_bat::prelude::*;
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -12,10 +13,14 @@ async fn main() -> ExitCode {
 
     let logging_task = snowpity_tg::LoggingConfig::load_or_panic().init_logging();
 
-    let abort_signal = abort_signal().shared();
+    metrics_exporter_prometheus::PrometheusBuilder::new()
+        .with_http_listener(([0, 0, 0, 0], 2000))
+        .set_default_buckets()
+        .install()
+        .expect("BUG: failed to initialize the metrics listener");
 
     let main_fut = AssertUnwindSafe(async {
-        let result = try_main(abort_signal.clone()).await;
+        let result = try_main().await;
 
         result.map(|()| ExitCode::SUCCESS).unwrap_or_else(|err| {
             error!(err = tracing_err(&err), "Exitting with an error...");
@@ -39,14 +44,7 @@ async fn main() -> ExitCode {
                 info!("Main task has finished, exiting...");
                 exit_code
             }
-            result = tokio::signal::ctrl_c() => {
-                if let Err(err) = result {
-                    warn!(err = tracing_err(&err), "Failed to wait for Ctrl+C, exiting...");
-                } else {
-                    info!("Ctrl+C received, exiting forcefully...");
-                }
-                ExitCode::SUCCESS
-            }
+            result = abort_signal() => ExitCode::SUCCESS,
         }
     };
 
@@ -72,9 +70,9 @@ async fn main() -> ExitCode {
     exit_code
 }
 
-async fn try_main(abort: impl Future<Output = ()>) -> snowpity_tg::Result {
+async fn try_main() -> snowpity_tg::Result {
     let config = snowpity_tg::Config::load_or_panic();
-    snowpity_tg::run(config, abort).await
+    snowpity_tg::run(config).await
 }
 
 async fn abort_signal() {

@@ -8,6 +8,15 @@ use migration::{Migrator, MigratorTrait};
 pub(crate) use config::*;
 pub(crate) use tg_media_cache::*;
 
+metrics_bat::labels! {
+    DbQueryLabels { sql, result }
+}
+
+metrics_bat::histograms! {
+    /// Database query duration in seconds
+    db_query_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
+}
+
 pub(crate) struct Repo {
     pub(crate) media_cache: TgMediaCacheRepo,
 }
@@ -19,9 +28,17 @@ pub(crate) async fn init(cfg: Config) -> Result<Repo> {
     // Verify that the connection is working early.
     // The connection created here can also be reused by the migrations down the road.
     // The default idle timeout should be enough for that.
-    let db = sea_orm::Database::connect(opts)
+    let mut db = sea_orm::Database::connect(opts)
         .await
         .map_err(err_ctx!(DbError::Connect))?;
+
+    db.set_metric_callback(|metric| {
+        db_query_duration_seconds(DbQueryLabels {
+            sql: metric.statement.sql.clone(),
+            result: if metric.failed { "err" } else { "ok" },
+        })
+        .record(metric.elapsed);
+    });
 
     Migrator::up(&db, None)
         .await

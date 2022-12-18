@@ -6,6 +6,7 @@ use crate::{derpi, err_val, tg, util, ErrorKind, MediaError, Result};
 use assert_matches::assert_matches;
 use fs_err::tokio as fs;
 use itertools::Itertools;
+use metrics_bat::prelude::*;
 use reqwest::Url;
 use std::fmt;
 use std::path::PathBuf;
@@ -14,7 +15,55 @@ use teloxide::prelude::*;
 use teloxide::types::{FileMeta, InputFile, MessageKind, User};
 use teloxide::utils::markdown;
 
-const MB: u64 = 1024 * 1024;
+const KB: u64 = 1024;
+const MB: u64 = 1024 * KB;
+
+const KB_F: f64 = KB as f64;
+const MB_F: f64 = MB as f64;
+
+metrics_bat::labels! {
+    CacheLabels {
+        user
+    }
+    TgUploadLabels {
+        user,
+        derpi_mime,
+        tg_method,
+    }
+}
+
+metrics_bat::counters! {
+    /// Number of times we hit the database cache for derpibooru media
+    derpi_cache_hits_total;
+
+    /// Number of times we missed the database cache for derpibooru media
+    derpi_cache_misses_total;
+}
+
+metrics_bat::histograms! {
+    /// Number of seconds it took to upload derpibooru media to Telegram.
+    /// It doensn't include the time to query the media from derpibooru and db cache.
+    derpi_tg_media_upload_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
+
+    /// Number of seconds it took to download media from derpibooru.
+    derpi_media_download_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
+
+    /// Size of media requested to be uploaded to Telegram
+    derpi_tg_media_upload_file_size_bytes = [
+        KB_F * 4.,
+        KB_F * 16.,
+        KB_F * 64.,
+        KB_F * 256.,
+        MB_F * 1.,
+        MB_F * 2.,
+        MB_F * 4.,
+        MB_F * 6.,
+        MB_F * 8.,
+        MB_F * 10.,
+        MB_F * 20.,
+        MB_F * 50.,
+    ];
+}
 
 #[derive(Debug)]
 pub(crate) struct Request {
@@ -30,33 +79,21 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
     // It's very likely neither of the requests will fail, so we
     // optimistically do them concurrently
     let (media, cached) = futures::try_join!(
-        async {
-            // FIXME: measure these with metrics
-            let start = std::time::Instant::now();
-            let media = ctx.derpi.get_media(payload.media_id).await;
-            info!(
-                duration = format_args!("{:.2?}", start.elapsed()),
-                "Fetched media meta from Derpibooru"
-            );
-            media
-        },
-        async {
-            let start = std::time::Instant::now();
-            let cached = ctx.db.media_cache.get_from_derpi(payload.media_id).await;
-            info!(
-                duration = format_args!("{:.2?}", start.elapsed()),
-                "Read the cache from the database"
-            );
-            cached
-        }
+        ctx.derpi.get_media(payload.media_id),
+        ctx.db.media_cache.get_from_derpi(payload.media_id)
     )?;
+
+    let labels = CacheLabels {
+        user: payload.requested_by.debug_id(),
+    };
 
     if let Some(cached) = cached {
         info!("Returning media from cache");
+        derpi_cache_hits_total(labels).increment(1);
         return Ok(Response { media, cached });
     }
+    derpi_cache_misses_total(labels).increment(1);
 
-    // FIXME: add metrics gatherting
     let cached = TgUploadContext {
         base: &ctx,
         payload: &payload,
@@ -70,6 +107,7 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
     Ok(Response { media, cached })
 }
 
+#[derive(strum::AsRefStr)]
 enum InputFileKind {
     /// The URL will be directly forwarded to telegram.
     Url(Url),
@@ -98,19 +136,7 @@ impl InputFileKind {
         Ok(match self {
             Self::Url(url) => InputFile::url(url),
             Self::File(path) => InputFile::file(path),
-            Self::DownloadedUrl(url) => {
-                let start = Instant::now();
-                let bytes = http_client.get(url).read_bytes().await?;
-                let elapsed = start.elapsed();
-                let actual_size = bytes.len();
-                let file = InputFile::memory(bytes);
-                info!(
-                    %actual_size,
-                    took = format_args!("{elapsed:.2?}"),
-                    "Downloaded file"
-                );
-                file
-            }
+            Self::DownloadedUrl(url) => InputFile::memory(http_client.get(url).read_bytes().await?),
         })
     }
 }
@@ -288,6 +314,15 @@ impl TgUploadContext<'_> {
     {
         info!("Uploading to telegram cache chat");
 
+        let derpi_mime: &'static str = self.media.mime_type.into();
+        let tg_method: &'static str = S::TYPE.into();
+
+        let labels = TgUploadLabels {
+            user: self.payload.requested_by.debug_id(),
+            derpi_mime,
+            tg_method,
+        };
+
         let caption = format!(
             "{}\n*Requested by: {}\\. Uploaded as {}*",
             core_caption(&self.media),
@@ -295,14 +330,23 @@ impl TgUploadContext<'_> {
             S::TYPE,
         );
 
-        let input_file = input_file
-            .into_input_file(&self.base.http_client)
-            .await?
-            .file_name(file_name(&self.media));
+        let measure_download = matches!(input_file, InputFileKind::DownloadedUrl(_));
+        let file_fut = input_file.into_input_file(&self.base.http_client);
+
+        let file = if measure_download {
+            file_fut
+                .record_duration(derpi_media_download_duration_seconds, labels.clone())
+                .await
+        } else {
+            file_fut.await
+        }?
+        .file_name(file_name(&self.media));
 
         let chat = self.base.cfg.media_cache_chat;
-        let msg = send_payload_method(&self.base.bot, chat, input_file)
+        let msg = send_payload_method(&self.base.bot, chat, file)
             .caption(caption)
+            .into_future()
+            .record_duration(derpi_tg_media_upload_duration_seconds, labels)
             .await?;
 
         let file_meta = find_file(self.media.mime_type, msg)?;

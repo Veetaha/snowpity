@@ -4,11 +4,9 @@ mod derpi;
 mod error;
 mod ftai;
 mod media;
-mod metrics;
 mod sysinfo;
 mod tg;
-
-use futures::prelude::*;
+mod metrics;
 
 pub mod util;
 
@@ -16,10 +14,9 @@ pub use crate::error::*;
 pub use config::*;
 
 /// Run the telegram bot processing loop
-pub async fn run(config: Config, abort: impl Future<Output = ()>) -> Result<()> {
-    futures::try_join!(metrics::run_metrics(abort), async {
-        let db = db::init(config.db).await?;
-        tg::run_bot(config.tg, config.derpi, db).await
-    },)?;
+pub async fn run(config: Config) -> Result<()> {
+    let db = db::init(config.db).await?;
+    tg::run_bot(config.tg, config.derpi, db).await?;
+
     Ok(())
 }

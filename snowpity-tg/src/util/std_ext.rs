@@ -1,6 +1,10 @@
 use crate::util::prelude::*;
 use easy_ext::ext;
 
+pub(crate) mod prelude {
+    pub(crate) use super::{ErrorExt as _, OptionExt as _, ResultExt as _};
+}
+
 #[ext(OptionExt)]
 pub(crate) impl<T> Option<T> {
     #[track_caller]

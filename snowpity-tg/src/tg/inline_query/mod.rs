@@ -1,27 +1,34 @@
-use crate::metrics::def_metrics;
 use crate::util::prelude::*;
 use crate::util::{DynResult, TgFileType};
 use crate::{derpi, tg, Error};
 use futures::prelude::*;
 use lazy_regex::regex_captures;
+use metrics_bat::prelude::*;
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::{
-    InlineQuery, InlineQueryResultCachedDocument, InlineQueryResultCachedPhoto,
+    ChosenInlineResult, InlineQuery, InlineQueryResultCachedDocument, InlineQueryResultCachedPhoto,
     InlineQueryResultCachedVideo, ParseMode,
 };
 
 pub(crate) mod media_cache;
 
-def_metrics! {
-    /// Number of inline queries received by the bot
-    inline_queries: IntCounter;
+metrics_bat::labels! {
+    InlineQuerySkippedLabels { user }
+    InlineQueryLabels { user, media_host }
+}
 
-    /// Number of errors while handling inline queries
-    inline_queries_errors: IntCounter;
+metrics_bat::counters! {
+    /// Number of inline queries received by the bot, but rejected due to parse errors
+    inline_queries_skipped_total;
 
-    /// Number of inline queries which were accepted
-    chosen_inline_results: IntCounter;
+    /// Number of inline queries that were accepted
+    chosen_inline_results_total;
+}
+
+metrics_bat::histograms! {
+    /// Duration of a single inline query
+    inline_query_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 }
 
 pub(crate) struct InlineQueryService {
@@ -38,19 +45,25 @@ impl InlineQueryService {
 
 #[instrument(skip_all, fields(query = %query.query))]
 pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
+    let tg::Ctx {
+        bot, inline_query, ..
+    } = &*ctx;
+
+    let inline_query_id = query.id;
+
+    let Some((media_host, media_id)) = parse_query(&query.query) else {
+        inline_queries_skipped_total(InlineQuerySkippedLabels {
+            user: query.from.debug_id(),
+        }).increment(1);
+        return Ok(());
+    };
+
+    let labels = InlineQueryLabels {
+        user: query.from.debug_id(),
+        media_host: media_host.to_owned(),
+    };
+
     async {
-        inline_queries().inc();
-
-        let tg::Ctx {
-            bot, inline_query, ..
-        } = &*ctx;
-
-        let inline_query_id = query.id;
-
-        let Some(media_id) = parse_query(&query.query) else {
-            return Ok(());
-        };
-
         let payload = media_cache::DerpiRequest {
             requested_by: query.from,
             media_id,
@@ -108,28 +121,29 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
 
         Ok::<_, Error>(())
     }
-    .inspect_err(|_| inline_queries_errors().inc())
+    .record_duration(inline_query_duration_seconds, labels)
     .err_into()
     .await
 }
 
-fn parse_query(str: &str) -> Option<derpi::MediaId> {
-    // FIXME: support all possible derpicdn URLs
-    let (_, booru, cdn_repr, cdn_view) = regex_captures!(
-        "(?:derpibooru.org/images/(\\d+))\
-        |(?:derpicdn.net/img/\\d+/\\d+/\\d+/(\\d+))
-        |(?:derpicdn.net/img/view/\\d+/\\d+/\\d+/(\\d+))",
-        str.trim()
-    )?;
-    [booru, cdn_repr, cdn_view]
-        .iter()
-        .find(|capture| !capture.is_empty())?
-        .parse()
-        .ok()
+fn parse_query(str: &str) -> Option<(&str, derpi::MediaId)> {
+    let str = str.trim();
+    let (_, host, id) = regex_captures!("(derpibooru.org/images)/(\\d+)", str)
+        .or_else(|| regex_captures!("(derpicdn.net/img)/\\d+/\\d+/\\d+/(\\d+)", str))
+        .or_else(|| regex_captures!("(derpicdn.net/img/view)/\\d+/\\d+/\\d+/(\\d+)", str))?;
+    Some((host, id.parse().ok()?))
 }
 
-pub(crate) async fn handle_chosen_inline_result() -> DynResult {
-    chosen_inline_results().inc();
+pub(crate) async fn handle_chosen_inline_result(result: ChosenInlineResult) -> DynResult {
+    let media_host = parse_query(&result.query)
+        .map(|(host, _id)| host)
+        .unwrap_or("{unknown}");
+
+    chosen_inline_results_total(InlineQueryLabels {
+        user: result.from.debug_id(),
+        media_host: media_host.to_owned(),
+    })
+    .increment(1);
     Ok(())
 }
 
@@ -140,10 +154,10 @@ mod tests {
 
     #[track_caller]
     fn assert_parse_query(query: &str, expected: Expect) {
-        let actual = if let Some(id) = parse_query(query) {
-            id.to_string()
+        let actual = if let Some((media_host, id)) = parse_query(query) {
+            format!("{media_host}:{id}")
         } else {
-            "None".to_string()
+            "None".to_owned()
         };
         expected.assert_eq(&actual);
     }
@@ -152,8 +166,23 @@ mod tests {
     fn query_parsing() {
         use assert_parse_query as test;
         test("123", expect!["None"]);
-        test("derpibooru.org/images/123", expect!["123"]);
-        test("derpibooru.org/images/123/", expect!["123"]);
         test("furbooru.org/images/123/", expect!["None"]);
+
+        test(
+            "derpibooru.org/images/123",
+            expect!["derpibooru.org/images:123"],
+        );
+        test(
+            "derpibooru.org/images/123/",
+            expect!["derpibooru.org/images:123"],
+        );
+        test(
+            "https://derpicdn.net/img/2022/12/17/3008328/large.jpg",
+            expect!["derpicdn.net/img:3008328"],
+        );
+        test(
+            "https://derpicdn.net/img/view/2022/12/17/3008328.jpg",
+            expect!["derpicdn.net/img/view:3008328"],
+        );
     }
 }

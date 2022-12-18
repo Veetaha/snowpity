@@ -77,12 +77,6 @@ pub(crate) enum ErrorKind {
     },
 
     #[error(transparent)]
-    HttpServer {
-        #[from]
-        source: HttpServerError,
-    },
-
-    #[error(transparent)]
     FtAi {
         #[from]
         source: FtAiError,
@@ -214,12 +208,6 @@ pub(crate) enum HttpClientError {
 
     // #[error("Failed to flush bytes to a file")]
     // FlushToFile { source: std::io::Error },
-}
-
-#[derive(Debug, Error)]
-pub(crate) enum HttpServerError {
-    #[error("Failure serving HTTP")]
-    Serve { source: hyper::Error },
 }
 
 /// Most likely unrecoverable errors from database communication layer

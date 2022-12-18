@@ -2,7 +2,6 @@
 //! Use TypeScript declarations as a reference (though they may go out of date):
 //! https://github.com/octet-stream/dinky/blob/master/lib/Dinky.d.ts
 use crate::derpi::derpi;
-use derive_more::{Display, FromStr};
 use itertools::Itertools;
 use reqwest::Url;
 use serde::Deserialize;
@@ -18,7 +17,9 @@ const RATING_TAGS: &[&str] = &[
     "grotesque",
 ];
 
-#[derive(Display, FromStr, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[derive(
+    derive_more::Display, derive_more::FromStr, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize,
+)]
 #[serde(transparent)]
 pub struct MediaId(pub(crate) u64);
 
@@ -55,26 +56,26 @@ pub(crate) struct ImageRepresentations {
     pub(crate) thumb_small: Url,
 }
 
-#[derive(Display, Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(strum::Display, strum::IntoStaticStr, Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MimeType {
     #[serde(rename = "image/gif")]
-    #[display(fmt = "image/gif")]
+    #[strum(to_string = "image/gif")]
     ImageGif,
 
     #[serde(rename = "image/jpeg")]
-    #[display(fmt = "image/jpeg")]
+    #[strum(to_string = "image/jpeg")]
     ImageJpeg,
 
     #[serde(rename = "image/png")]
-    #[display(fmt = "image/png")]
+    #[strum(to_string = "image/png")]
     ImagePng,
 
     #[serde(rename = "image/svg+xml")]
-    #[display(fmt = "image/svg+xml")]
+    #[strum(to_string = "image/svg+xml")]
     ImageSvgXml,
 
     #[serde(rename = "video/webm")]
-    #[display(fmt = "video/webm")]
+    #[strum(to_string = "video/webm")]
     VideoWebm,
 }
 

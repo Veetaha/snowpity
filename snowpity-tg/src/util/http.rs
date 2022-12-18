@@ -1,32 +1,28 @@
-use crate::metrics::def_metrics;
 use crate::util::prelude::*;
 use crate::{err_ctx, err_val, HttpClientError, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
 use easy_ext::ext;
-use prometheus::labels;
 use reqwest_middleware::RequestBuilder;
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-def_metrics! {
-    /// Number of http requests partitioned by status codes and methods
-    http_requests_total: IntCounterVec [version, method, host, status];
+metrics_bat::labels! {
+    HttpRequestLabels { version, method, host }
+    HttpResponseLabels { version, method, host, status }
+}
 
-    /// Number of http requests that failed due to fatal error.
-    /// Doesn't include 500 errors.
-    http_requests_fatal_total: IntCounterVec [version, method, host];
+metrics_bat::histograms! {
+    /// Duration of a single real http request. If there were retries, then these
+    /// will appear as as separate observations.
+    http_request_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 
-    /// Time spent on http requests partitioned by status codes and methods
-    [buckets: *prometheus::DEFAULT_BUCKETS]
-    http_request_duration_seconds: HistogramVec [version, method, host];
-
-    /// Same as `http_requests_time` but includes the time it took to retry the request.
-    [buckets: *prometheus::DEFAULT_BUCKETS]
-    http_request_effective_duration_seconds: HistogramVec [version, method, host];
+    /// Same as `http_requests_duration_seconds` but covers the time it took to
+    /// do retries of the request.
+    http_request_effective_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 }
 
 pub type Client = reqwest_middleware::ClientWithMiddleware;
@@ -72,12 +68,8 @@ impl reqwest_middleware::Middleware for OutermostObservingMiddleware {
             method = %request.method(),
             url = %request.url(),
         );
-
         measure_request(
-            http_requests_effective_time(),
-            http_requests::version,
-            http_requests::method,
-            http_requests::host,
+            http_request_effective_duration_seconds,
             request,
             extensions,
             next,
@@ -97,69 +89,61 @@ impl reqwest_middleware::Middleware for InnermostObservingMiddleware {
         extensions: &mut task_local_extensions::Extensions,
         next: reqwest_middleware::Next<'_>,
     ) -> reqwest_middleware::Result<reqwest::Response> {
-        let method = request.method().to_string();
-        let host = request.url().host_str().unwrap_or("{unknown}").to_owned();
-        let version = format!("{:?}", request.version());
-
         debug!("Sending request");
 
-        let result = measure_request(
-            http_requests_time(),
-            http_requests_time::version,
-            http_requests_time::method,
-            http_requests_time::host,
-            request,
-            extensions,
-            next,
-        )
-        .await;
+        let result =
+            measure_request(http_request_duration_seconds, request, extensions, next).await;
 
         match &result {
             Ok(response) => {
-                let status = response.status();
-                let labels = &labels! {
-                    http_requests::version => version.as_str(),
-                    http_requests::status => status.as_str(),
-                    http_requests::method => method.as_str(),
-                    http_requests::host => host.as_str(),
-                };
-                http_requests().with(labels).inc();
-
                 if let Err(err) = response.error_for_status_ref() {
                     error!(err = tracing_err(&err), "Request failed (error status)");
                 }
             }
             Err(err) => {
-                let labels = &labels! {
-                    http_requests_fatal::version => version.as_str(),
-                    http_requests_fatal::method => method.as_str(),
-                    http_requests_fatal::host => host.as_str(),
-                };
-                http_requests_fatal().with(labels).inc();
                 error!(err = tracing_err(err), "Request failed");
             }
-        }
+        };
+
         result
     }
 }
 
 async fn measure_request(
-    histogram: &prometheus::HistogramVec,
-    version_label: &str,
-    method_label: &str,
-    host_label: &str,
+    histogram: fn(HttpResponseLabels) -> metrics::Histogram,
     request: reqwest::Request,
     extensions: &mut task_local_extensions::Extensions,
     next: reqwest_middleware::Next<'_>,
 ) -> reqwest_middleware::Result<reqwest::Response> {
-    let version = format!("{:?}", request.version());
-    let labels = &labels! {
-        version_label => version.as_str(),
-        method_label => request.method().as_str(),
-        host_label => request.url().host_str().unwrap_or("{unknown}"),
+    let labels = request_labels(&request);
+
+    let start = Instant::now();
+    let result = next.run(request, extensions).await;
+    let elapsed = start.elapsed();
+
+    let status = match &result {
+        Ok(response) => response.status().to_string(),
+        Err(_) => "{fatal}".to_owned(),
     };
-    let _guard = histogram.with(labels).start_timer();
-    next.run(request, extensions).await
+
+    let labels = HttpResponseLabels {
+        status,
+        version: labels.version,
+        method: labels.method,
+        host: labels.host,
+    };
+
+    histogram(labels).record(elapsed);
+
+    result
+}
+
+fn request_labels(request: &reqwest::Request) -> HttpRequestLabels {
+    HttpRequestLabels {
+        version: format!("{:?}", request.version()),
+        method: request.method().to_string(),
+        host: request.url().host_str().unwrap_or("{unknown}").to_owned(),
+    }
 }
 
 #[ext(RequestBuilderExt)]
