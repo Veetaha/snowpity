@@ -9,5 +9,5 @@ extend-exclude = [
 
   # This grafana dashboard was copy-pasted from the internet, better leave
   # it as is, event with typos in it
-  "docker/grafana/provisioning/dashboards/node-exporter-full_rev29.json"
+  "docker/grafana/provisioning/dashboards/node-exporter-full_rev29.json",
 ]

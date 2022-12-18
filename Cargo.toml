@@ -1,11 +1,11 @@
 [workspace]
 members = [
-    "censy",
-    "snowpity-tg",
-    "xtask",
-    "migration",
-    "entities",
-    "metrics-bat",
+  "censy",
+  "snowpity-tg",
+  "xtask",
+  "migration",
+  "entities",
+  "metrics-bat",
 ]
 
 [profile.dev]
