@@ -1,11 +1,11 @@
 //! Rust analyzer is very slow on processing requester extension here, so extracted
 //! it to a separate module to limit the scope of analysis.
 
+use easy_ext::ext;
+use teloxide::prelude::*;
 use teloxide::requests::Requester;
 use teloxide::types::Message;
 use teloxide::utils::markdown;
-use teloxide::prelude::*;
-use easy_ext::ext;
 
 /// There is [`RequesterExt`] in [`teloxide::prelude`]. We name this symbol
 /// different to avoid collisions.

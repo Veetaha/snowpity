@@ -1,9 +1,9 @@
 use futures::{prelude::*, TryFutureExt};
+use metrics_bat::prelude::*;
 use snowpity_tg::util::tracing_err;
 use std::panic::AssertUnwindSafe;
 use std::process::ExitCode;
 use tracing::{error, info, warn};
-use metrics_bat::prelude::*;
 
 #[tokio::main]
 async fn main() -> ExitCode {

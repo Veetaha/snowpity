@@ -14,7 +14,7 @@ use teloxide::utils::markdown;
 pub(crate) mod prelude {
     pub(crate) use super::{
         requester::UtilRequesterExt as _, ChatExt as _, MessageIdExt as _, MessageKindExt as _,
-        SendPayloadExt as _, UserExt as _, UpdateKindExt as _,
+        SendPayloadExt as _, UpdateKindExt as _, UserExt as _,
     };
 }
 

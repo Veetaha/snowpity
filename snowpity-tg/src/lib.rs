@@ -4,9 +4,9 @@ mod derpi;
 mod error;
 mod ftai;
 mod media;
+mod metrics;
 mod sysinfo;
 mod tg;
-mod metrics;
 
 pub mod util;
 
