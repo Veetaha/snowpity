@@ -1,8 +1,5 @@
 use crate::{db, derpi, tg};
-use serde::{de::DeserializeOwned, Deserialize};
-use serde_with::serde_as;
-use std::collections::HashMap;
-use tracing_subscriber::prelude::*;
+use serde::de::DeserializeOwned;
 
 pub struct Config {
     pub(crate) tg: tg::Config,
@@ -20,56 +17,7 @@ impl Config {
     }
 }
 
-#[serde_as]
-#[derive(Deserialize)]
-pub struct LoggingConfig {
-    loki_url: url::Url,
-    #[serde_as(as = "serde_with::json::JsonString")]
-    tg_bot_log_labels: HashMap<String, String>,
-}
-
-impl LoggingConfig {
-    pub fn load_or_panic() -> LoggingConfig {
-        from_env_or_panic("")
-    }
-
-    pub fn init_logging(self) -> tokio::task::JoinHandle<()> {
-        let env_filter = tracing_subscriber::EnvFilter::from_env("TG_BOT_LOG");
-
-        let fmt = tracing_subscriber::fmt::layer()
-            .with_target(true)
-            .with_ansi(std::env::var("COLORS").as_deref() != Ok("0"))
-            .pretty();
-
-        let additional_labels = [
-            ("app_version", env!("VERGEN_BUILD_SEMVER")),
-            ("app_git_commit", env!("VERGEN_GIT_SHA")),
-            ("source", "snowpity-tg"),
-        ];
-
-        let mut labels = self.tg_bot_log_labels;
-        labels.extend(
-            additional_labels
-                .into_iter()
-                .map(|(k, v)| (k.to_owned(), v.to_owned())),
-        );
-
-        let (loki, task) = tracing_loki::layer(self.loki_url, labels, HashMap::new()).unwrap();
-
-        let join_handle = tokio::spawn(task);
-
-        tracing_subscriber::registry()
-            .with(fmt)
-            .with(loki)
-            .with(env_filter)
-            .with(tracing_error::ErrorLayer::default())
-            .init();
-
-        join_handle
-    }
-}
-
-fn from_env_or_panic<T: DeserializeOwned>(prefix: &str) -> T {
+pub(crate) fn from_env_or_panic<T: DeserializeOwned>(prefix: &str) -> T {
     envy::prefixed(prefix).from_env().unwrap_or_else(|err| {
         panic!(
             "BUG: Couldn't load config from environment for {}: {:#?}",

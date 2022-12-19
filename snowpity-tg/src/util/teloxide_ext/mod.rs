@@ -14,7 +14,7 @@ use teloxide::utils::markdown;
 pub(crate) mod prelude {
     pub(crate) use super::{
         requester::UtilRequesterExt as _, ChatExt as _, MessageIdExt as _, MessageKindExt as _,
-        SendPayloadExt as _, UpdateKindExt as _, UserExt as _,
+        UpdateKindExt as _, UserExt as _,
     };
 }
 
@@ -27,14 +27,17 @@ pub(crate) impl MessageKind {
 
 #[ext(UserExt)]
 pub(crate) impl User {
+    fn username(&self) -> String {
+        self.username.clone().unwrap_or_else(|| self.full_name())
+    }
+
     fn md_link(&self) -> String {
-        let mention_text =
-            markdown::escape(&self.username.clone().unwrap_or_else(|| self.full_name()));
+        let mention_text = markdown::escape(&self.username());
         markdown::link(&self.url().to_string(), &mention_text)
     }
 
     fn debug_id(&self) -> String {
-        self.md_link()
+        format!("{} ({})", self.username(), self.id)
     }
 }
 

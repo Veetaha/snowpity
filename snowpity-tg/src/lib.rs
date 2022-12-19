@@ -4,7 +4,7 @@ mod derpi;
 mod error;
 mod ftai;
 mod media;
-mod metrics;
+mod observability;
 mod sysinfo;
 mod tg;
 
@@ -12,6 +12,7 @@ pub mod util;
 
 pub use crate::error::*;
 pub use config::*;
+pub use observability::*;
 
 /// Run the telegram bot processing loop
 pub async fn run(config: Config) -> Result<()> {

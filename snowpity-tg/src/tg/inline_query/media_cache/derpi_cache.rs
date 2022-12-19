@@ -36,8 +36,8 @@ metrics_bat::counters! {
     /// Number of times we hit the database cache for derpibooru media
     derpi_cache_hits_total;
 
-    /// Number of times we missed the database cache for derpibooru media
-    derpi_cache_misses_total;
+    /// Number of times we queried the database cache for derpibooru media
+    derpi_cache_queries_total;
 }
 
 metrics_bat::histograms! {
@@ -87,12 +87,15 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
         user: payload.requested_by.debug_id(),
     };
 
+    derpi_cache_queries_total(labels.clone()).increment(1);
+
     if let Some(cached) = cached {
         info!("Returning media from cache");
         derpi_cache_hits_total(labels).increment(1);
         return Ok(Response { media, cached });
     }
-    derpi_cache_misses_total(labels).increment(1);
+
+    derpi_tg_media_upload_file_size_bytes(labels).record(media.size as f64);
 
     let cached = TgUploadContext {
         base: &ctx,

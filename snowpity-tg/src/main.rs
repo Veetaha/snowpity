@@ -11,13 +11,8 @@ async fn main() -> ExitCode {
         eprintln!("Dotenv config was not found, ignoring this...")
     }
 
-    let logging_task = snowpity_tg::LoggingConfig::load_or_panic().init_logging();
-
-    metrics_exporter_prometheus::PrometheusBuilder::new()
-        .with_http_listener(([0, 0, 0, 0], 2000))
-        .set_default_buckets()
-        .install()
-        .expect("BUG: failed to initialize the metrics listener");
+    let logging_task = snowpity_tg::init_logging();
+    snowpity_tg::init_metrics();
 
     let main_fut = AssertUnwindSafe(async {
         let result = try_main().await;
