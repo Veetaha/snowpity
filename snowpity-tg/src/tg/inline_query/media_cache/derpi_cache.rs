@@ -22,11 +22,8 @@ const KB_F: f64 = KB as f64;
 const MB_F: f64 = MB as f64;
 
 metrics_bat::labels! {
-    CacheLabels {
-        user
-    }
+    CacheLabels {}
     TgUploadLabels {
-        user,
         derpi_mime,
         tg_method,
     }
@@ -83,11 +80,9 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
         ctx.db.media_cache.get_from_derpi(payload.media_id)
     )?;
 
-    let labels = CacheLabels {
-        user: payload.requested_by.debug_id(),
-    };
+    let labels = CacheLabels {};
 
-    derpi_cache_queries_total(labels.clone()).increment(1);
+    derpi_cache_queries_total(labels).increment(1);
 
     if let Some(cached) = cached {
         info!("Returning media from cache");
@@ -321,7 +316,6 @@ impl TgUploadContext<'_> {
         let tg_method: &'static str = S::TYPE.into();
 
         let labels = TgUploadLabels {
-            user: self.payload.requested_by.debug_id(),
             derpi_mime,
             tg_method,
         };

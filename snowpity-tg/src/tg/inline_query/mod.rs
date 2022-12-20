@@ -14,8 +14,9 @@ use teloxide::types::{
 pub(crate) mod media_cache;
 
 metrics_bat::labels! {
-    InlineQuerySkippedLabels { user }
-    InlineQueryLabels { user, media_host }
+    InlineQueryTotalLabels { user }
+    InlineQuerySkippedLabels { }
+    InlineQueryLabels { media_host }
 }
 
 metrics_bat::counters! {
@@ -24,6 +25,9 @@ metrics_bat::counters! {
 
     /// Number of inline queries that were accepted
     chosen_inline_results_total;
+
+    /// Number of inline queries taken into processing per user
+    inline_queries_total;
 }
 
 metrics_bat::histograms! {
@@ -52,14 +56,16 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
     let inline_query_id = query.id;
 
     let Some((media_host, media_id)) = parse_query(&query.query) else {
-        inline_queries_skipped_total(InlineQuerySkippedLabels {
-            user: query.from.debug_id(),
-        }).increment(1);
+        inline_queries_skipped_total(InlineQuerySkippedLabels {}).increment(1);
         return Ok(());
     };
 
-    let labels = InlineQueryLabels {
+    inline_queries_total(InlineQueryTotalLabels {
         user: query.from.debug_id(),
+    })
+    .increment(1);
+
+    let labels = InlineQueryLabels {
         media_host: media_host.to_owned(),
     };
 

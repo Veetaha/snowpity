@@ -101,7 +101,7 @@ services:
     ports: [3000:3000]
     build: docker/grafana
     environment:
-      # We don't care about security of grafana yet
+      # We don't care about security of grafana yet. It's exposed only privately via an SSH tunnel
       GF_AUTH_ANONYMOUS_ENABLED: true
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
       TG_BOT_TOKEN: ${TG_BOT_TOKEN}
