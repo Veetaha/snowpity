@@ -35,6 +35,7 @@ pub(crate) fn create_client() -> Client {
         .build_with_total_retry_duration(Duration::from_secs(60));
 
     reqwest_middleware::ClientBuilder::new(teloxide::net::client_from_env())
+        .with(OutermostObservingMiddleware)
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
         .with(InnermostObservingMiddleware)
         .with_init(|request_builder: RequestBuilder| {

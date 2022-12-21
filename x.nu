@@ -111,7 +111,7 @@ def "main start" [
     )
 
     docker-compose $args
-    docker-compose logs '--follow' tg-bot
+    docker-compose logs '--follow' '--no-log-prefix' tg-bot
 }
 
 # Shutdown the local containers and clean the persistent data volumes

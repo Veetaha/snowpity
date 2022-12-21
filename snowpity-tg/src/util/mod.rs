@@ -15,7 +15,6 @@ pub(crate) use tokio_ext::*;
 // We don't care if some of the imports here are not used. They may be used
 // at some point. It's just convenient not to import them manually all the
 // time a new logging macro is needed.
-#[allow(unused_imports)]
 pub(crate) mod prelude {
     pub(crate) use super::chrono_ext::DateTimeExt as _;
     pub(crate) use super::http::RequestBuilderExt as _;

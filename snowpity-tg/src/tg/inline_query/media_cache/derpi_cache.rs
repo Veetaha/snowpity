@@ -78,7 +78,7 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
     let (media, cached) = futures::try_join!(
         ctx.derpi
             .get_media(payload.media_id)
-            .with_duration_log("Fetching media meta from Derpibooru"),
+            .instrument(info_span!("Fetching media meta from Derpibooru")),
         ctx.db
             .media_cache
             .get_from_derpi(payload.media_id)
@@ -133,7 +133,10 @@ impl fmt::Debug for InputFileKind {
 }
 
 impl InputFileKind {
-    async fn into_input_file(self, http_client: &http::Client) -> Result<InputFile> {
+    async fn into_input_file(
+        self,
+        http_client: &http::Client,
+    ) -> Result<(InputFile, Option<usize>)> {
         Ok(match self {
             Self::Url(url) => InputFile::url(url),
             Self::File(path) => InputFile::file(path),
@@ -342,14 +345,21 @@ impl TgUploadContext<'_> {
         let measure_download = matches!(input_file, InputFileKind::DownloadedUrl(_));
         let file_fut = input_file.into_input_file(&self.base.http_client);
 
-        let file = if measure_download {
+        let (file, actual_size) = if measure_download {
             file_fut
                 .record_duration(derpi_media_download_duration_seconds, labels)
                 .await
         } else {
             file_fut.await
-        }?
-        .file_name(file_name(self.media));
+        }?;
+
+        if let Some(size) = actual_size {
+            if size as u64 > self.media.size {
+                warn!(actual_size = size, "Wrong file size reported by derpibooru");
+            }
+        }
+
+        let file = file.file_name(file_name(self.media));
 
         let chat = self.base.cfg.media_cache_chat;
         let msg = send_payload_method(&self.base.bot, chat, file)
@@ -429,7 +439,7 @@ pub(crate) fn core_caption(media: &derpi::Media) -> String {
     let ratings = if matches!(ratings.as_str(), "" | "safe") {
         "".to_owned()
     } else {
-        format!(" \\({}\\)", ratings)
+        format!(" \\({}\\)", markdown::escape(&ratings))
     };
 
     format!(
