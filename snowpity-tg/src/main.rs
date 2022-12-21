@@ -1,6 +1,5 @@
-use futures::{prelude::*, TryFutureExt};
-use metrics_bat::prelude::*;
-use snowpity_tg::util::tracing_err;
+use futures::prelude::*;
+use snowpity_tg::tracing_err;
 use std::panic::AssertUnwindSafe;
 use std::process::ExitCode;
 use tracing::{error, info, warn};
@@ -12,6 +11,7 @@ async fn main() -> ExitCode {
     }
 
     let logging_task = snowpity_tg::init_logging();
+
     snowpity_tg::init_metrics();
 
     let main_fut = AssertUnwindSafe(async {
@@ -39,7 +39,7 @@ async fn main() -> ExitCode {
                 info!("Main task has finished, exiting...");
                 exit_code
             }
-            result = abort_signal() => ExitCode::SUCCESS,
+            () = abort_signal() => ExitCode::SUCCESS,
         }
     };
 

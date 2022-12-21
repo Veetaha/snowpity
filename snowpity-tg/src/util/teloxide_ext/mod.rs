@@ -1,6 +1,5 @@
 mod requester;
 
-use assert_matches::assert_matches;
 use duplicate::duplicate_item;
 use easy_ext::ext;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -8,21 +7,14 @@ use std::future::IntoFuture;
 use teloxide::payloads::{
     SendDocument, SendDocumentSetters, SendPhoto, SendPhotoSetters, SendVideo, SendVideoSetters,
 };
-use teloxide::types::{Chat, Message, MessageCommon, MessageId, MessageKind, UpdateKind, User};
+use teloxide::types::{Chat, Message, MessageId, UpdateKind, User};
 use teloxide::utils::markdown;
 
 pub(crate) mod prelude {
     pub(crate) use super::{
-        requester::UtilRequesterExt as _, ChatExt as _, MessageIdExt as _, MessageKindExt as _,
-        UpdateKindExt as _, UserExt as _,
+        requester::UtilRequesterExt as _, ChatExt as _, MessageIdExt as _, UpdateKindExt as _,
+        UserExt as _,
     };
-}
-
-#[ext(MessageKindExt)]
-pub(crate) impl MessageKind {
-    fn unwrap_as_common(&self) -> &MessageCommon {
-        assert_matches!(self, MessageKind::Common(common) => common)
-    }
 }
 
 #[ext(UserExt)]
@@ -33,7 +25,7 @@ pub(crate) impl User {
 
     fn md_link(&self) -> String {
         let mention_text = markdown::escape(&self.username());
-        markdown::link(&self.url().to_string(), &mention_text)
+        markdown::link(self.url().as_str(), &mention_text)
     }
 
     fn debug_id(&self) -> String {
@@ -91,6 +83,7 @@ pub(crate) enum TgFileType {
     Photo = 0,
     Document = 1,
     Video = 2,
+    // Amimation = 3,
 }
 
 pub(crate) trait SendPayloadExt:

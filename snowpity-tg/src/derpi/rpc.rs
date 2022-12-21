@@ -37,7 +37,6 @@ pub(crate) struct GetImageResponse {
 pub(crate) struct Media {
     pub(crate) id: MediaId,
     pub(crate) mime_type: MimeType,
-    pub(crate) representations: ImageRepresentations,
     pub(crate) tags: Vec<String>,
     // pub(crate) created_at: DateTime<Utc>,
     // The number of upvotes minus the number of downvotes.
@@ -49,11 +48,6 @@ pub(crate) struct Media {
     pub(crate) width: u64,
     pub(crate) height: u64,
     pub(crate) aspect_ratio: f64,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct ImageRepresentations {
-    pub(crate) thumb_small: Url,
 }
 
 #[derive(strum::Display, strum::IntoStaticStr, Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -80,10 +74,6 @@ pub(crate) enum MimeType {
 }
 
 impl Media {
-    pub(crate) fn webpage_url(&self) -> Url {
-        media_id_to_webpage_url(self.id)
-    }
-
     pub(crate) fn artists(&self) -> impl Iterator<Item = &str> {
         self.tags
             .iter()
@@ -105,21 +95,23 @@ pub(crate) fn artist_to_webpage_url(artist: &str) -> Url {
     url
 }
 
-pub(crate) fn media_id_to_webpage_url(media_id: MediaId) -> Url {
-    derpi(["images", &media_id.to_string()])
+impl MediaId {
+    pub(crate) fn to_webpage_url(self) -> Url {
+        derpi(["images", &self.to_string()])
+    }
 }
+
 
 pub(crate) fn sanitize_tag(tag: &str) -> impl fmt::Display + '_ {
     tag.chars()
         .flat_map(char::to_lowercase)
-        .filter_map(|char| {
+        .map(|char| {
             if char.is_whitespace() {
-                return Some('-');
+                return '-';
+            } else if char.is_alphanumeric() {
+                return char
             }
-            if char.is_alphanumeric() {
-                return Some(char);
-            }
-            Some('_')
+            '_'
         })
         .format("")
 }

@@ -1,4 +1,4 @@
-use crate::util::prelude::*;
+use crate::prelude::*;
 use crate::{err_val, tg, Error, Result, UserError};
 use std::str::FromStr;
 use teloxide::prelude::*;

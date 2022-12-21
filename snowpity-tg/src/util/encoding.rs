@@ -1,4 +1,4 @@
-use crate::util::prelude::*;
+use crate::prelude::*;
 use crate::{err_ctx, DeserializeError, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};

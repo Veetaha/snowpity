@@ -1,4 +1,4 @@
-use crate::util::prelude::*;
+use crate::prelude::*;
 use crate::util::DynError;
 use std::backtrace::Backtrace;
 use std::fmt;
@@ -282,7 +282,7 @@ pub(crate) enum DeserializeError {
 pub(crate) enum MediaError {
     #[error("Unexpected media kind for mime type {expected:?}: {media:#?}")]
     UnexpectedMediaKind {
-        media: MediaKind,
+        media: Box<MediaKind>,
         expected: derpi::MimeType,
     },
 

@@ -89,7 +89,7 @@ pub mod prelude {
 pub fn default_histogram_buckets() -> impl Iterator<Item = (&'static str, &'static [f64])> {
     inventory::iter::<imp::Bucket>
         .into_iter()
-        .map(|bucket| (bucket.metric.clone(), bucket.buckets.clone()))
+        .map(|bucket| (bucket.metric, bucket.buckets))
 }
 
 /// Defines a struct with fields equal to label names, and values of generic
@@ -108,7 +108,7 @@ macro_rules! labels {
     ) => {
         $(
             // XXX: not qualifying the derives from `imp` because rust-analyzer
-            // stop resolving the derived impls when we do this for some reason
+            // stops resolving the derived impls when we do this for some reason
             #[derive(Clone, Copy, Debug)]
             #[allow(non_camel_case_types)]
             $vis struct $Labels<$($label = $crate::imp::String,)*> {
@@ -167,7 +167,7 @@ macro_rules! metric_macros {
                 $d (
                     $d( #[doc = $d help] )*
                     $d vis fn $d metric(
-                        labels: impl $d crate::imp::metrics::IntoLabels
+                        labels: impl $crate::imp::metrics::IntoLabels
                     ) -> $crate::imp::metrics::$metric_ty
                     {
                         use $crate::imp::{std::sync::Once, metrics};

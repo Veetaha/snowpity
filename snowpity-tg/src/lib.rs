@@ -14,6 +14,12 @@ pub use crate::error::*;
 pub use config::*;
 pub use observability::*;
 
+mod prelude {
+    pub(crate) use crate::util::prelude::*;
+    pub(crate) use crate::observability::logging::prelude::*;
+}
+
+
 /// Run the telegram bot processing loop
 pub async fn run(config: Config) -> Result<()> {
     let db = db::init(config.db).await?;

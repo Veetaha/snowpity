@@ -1,4 +1,4 @@
-use crate::util::prelude::*;
+use crate::prelude::*;
 use crate::{err_ctx, err_val, HttpClientError, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -89,10 +89,10 @@ impl reqwest_middleware::Middleware for InnermostObservingMiddleware {
         extensions: &mut task_local_extensions::Extensions,
         next: reqwest_middleware::Next<'_>,
     ) -> reqwest_middleware::Result<reqwest::Response> {
-        debug!("Sending request");
-
         let result =
-            measure_request(http_request_duration_seconds, request, extensions, next).await;
+            measure_request(http_request_duration_seconds, request, extensions, next)
+                .with_duration_log("Sending request")
+                .await;
 
         match &result {
             Ok(response) => {

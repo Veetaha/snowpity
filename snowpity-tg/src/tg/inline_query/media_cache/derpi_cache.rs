@@ -1,7 +1,8 @@
 use super::{Context, Response};
 use crate::db::CachedMedia;
+use crate::observability::logging::prelude::*;
+use crate::prelude::*;
 use crate::util::http;
-use crate::util::prelude::*;
 use crate::{derpi, err_val, tg, util, ErrorKind, MediaError, Result};
 use assert_matches::assert_matches;
 use fs_err::tokio as fs;
@@ -22,7 +23,6 @@ const KB_F: f64 = KB as f64;
 const MB_F: f64 = MB as f64;
 
 metrics_bat::labels! {
-    CacheLabels {}
     TgUploadLabels {
         derpi_mime,
         tg_method,
@@ -76,21 +76,24 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
     // It's very likely neither of the requests will fail, so we
     // optimistically do them concurrently
     let (media, cached) = futures::try_join!(
-        ctx.derpi.get_media(payload.media_id),
-        ctx.db.media_cache.get_from_derpi(payload.media_id)
+        ctx.derpi
+            .get_media(payload.media_id)
+            .with_duration_log("Fetching media meta from Derpibooru"),
+        ctx.db
+            .media_cache
+            .get_from_derpi(payload.media_id)
+            .with_duration_log("Reading the cache from the database"),
     )?;
 
-    let labels = CacheLabels {};
-
-    derpi_cache_queries_total(labels).increment(1);
+    derpi_cache_queries_total(vec![]).increment(1);
 
     if let Some(cached) = cached {
         info!("Returning media from cache");
-        derpi_cache_hits_total(labels).increment(1);
+        derpi_cache_hits_total(vec![]).increment(1);
         return Ok(Response { media, cached });
     }
 
-    derpi_tg_media_upload_file_size_bytes(labels).record(media.size as f64);
+    derpi_tg_media_upload_file_size_bytes(vec![]).record(media.size as f64);
 
     let cached = TgUploadContext {
         base: &ctx,
@@ -134,7 +137,16 @@ impl InputFileKind {
         Ok(match self {
             Self::Url(url) => InputFile::url(url),
             Self::File(path) => InputFile::file(path),
-            Self::DownloadedUrl(url) => InputFile::memory(http_client.get(url).read_bytes().await?),
+            Self::DownloadedUrl(url) => {
+                let (bytes, duration) =
+                    http_client.get(url).read_bytes().with_duration_ok().await?;
+                info!(
+                    actual_size = bytes.len(),
+                    duration = tracing_duration(duration),
+                    "Downloaded file"
+                );
+                InputFile::memory(bytes)
+            }
         })
     }
 }
@@ -322,7 +334,7 @@ impl TgUploadContext<'_> {
 
         let caption = format!(
             "{}\n*Requested by: {}\\. Uploaded as {}*",
-            core_caption(&self.media),
+            core_caption(self.media),
             self.payload.requested_by.md_link(),
             S::TYPE,
         );
@@ -332,12 +344,12 @@ impl TgUploadContext<'_> {
 
         let file = if measure_download {
             file_fut
-                .record_duration(derpi_media_download_duration_seconds, labels.clone())
+                .record_duration(derpi_media_download_duration_seconds, labels)
                 .await
         } else {
             file_fut.await
         }?
-        .file_name(file_name(&self.media));
+        .file_name(file_name(self.media));
 
         let chat = self.base.cfg.media_cache_chat;
         let msg = send_payload_method(&self.base.bot, chat, file)
@@ -401,7 +413,7 @@ pub(crate) fn core_caption(media: &derpi::Media) -> String {
         .map(|artist| {
             markdown::link(
                 derpi::artist_to_webpage_url(artist).as_str(),
-                &format!("{}", markdown::escape(artist)),
+                &markdown::escape(artist),
             )
         })
         .collect();
@@ -423,7 +435,7 @@ pub(crate) fn core_caption(media: &derpi::Media) -> String {
     format!(
         "*Art from {}{artists}{ratings}*",
         markdown::link(
-            &String::from(derpi::media_id_to_webpage_url(media.id)),
+            &String::from(media.id.to_webpage_url()),
             r"derpibooru",
         )
     )

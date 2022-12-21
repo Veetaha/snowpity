@@ -1,9 +1,10 @@
-use crate::util::prelude::*;
+use crate::prelude::*;
 use crate::util::{DynResult, TgFileType};
 use crate::{derpi, tg, Error};
 use futures::prelude::*;
 use lazy_regex::regex_captures;
 use metrics_bat::prelude::*;
+use std::future::IntoFuture;
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::{
@@ -15,7 +16,6 @@ pub(crate) mod media_cache;
 
 metrics_bat::labels! {
     InlineQueryTotalLabels { user }
-    InlineQuerySkippedLabels { }
     InlineQueryLabels { media_host }
 }
 
@@ -56,7 +56,7 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
     let inline_query_id = query.id;
 
     let Some((media_host, media_id)) = parse_query(&query.query) else {
-        inline_queries_skipped_total(InlineQuerySkippedLabels {}).increment(1);
+        inline_queries_skipped_total(vec![]).increment(1);
         return Ok(());
     };
 
@@ -87,42 +87,35 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
 
         let result = match cached.tg_file_type {
             TgFileType::Photo => {
-                info!("Returning image for inline query");
-
                 InlineQueryResultCachedPhoto::new(media_id.to_string(), cached.tg_file_id)
                     .caption(caption)
                     .parse_mode(ParseMode::MarkdownV2)
                     .into()
             }
-            TgFileType::Document => {
-                info!("Returning document for inline query");
-
-                InlineQueryResultCachedDocument::new(
-                    media_id.to_string(),
-                    file_name,
-                    cached.tg_file_id,
-                )
-                .caption(caption)
-                .parse_mode(ParseMode::MarkdownV2)
-                .into()
-            }
-            TgFileType::Video => {
-                info!("Returning video for inline query");
-
-                InlineQueryResultCachedVideo::new(
-                    media_id.to_string(),
-                    cached.tg_file_id,
-                    file_name,
-                )
-                .caption(caption)
-                .parse_mode(ParseMode::MarkdownV2)
-                .into()
-            }
+            TgFileType::Document => InlineQueryResultCachedDocument::new(
+                media_id.to_string(),
+                file_name,
+                cached.tg_file_id,
+            )
+            .caption(caption)
+            .parse_mode(ParseMode::MarkdownV2)
+            .into(),
+            TgFileType::Video => InlineQueryResultCachedVideo::new(
+                media_id.to_string(),
+                cached.tg_file_id,
+                file_name,
+            )
+            .caption(caption)
+            .parse_mode(ParseMode::MarkdownV2)
+            .into(),
         };
 
         bot.answer_inline_query(inline_query_id, [result])
             .is_personal(false)
             .cache_time(u32::MAX)
+            .into_future()
+            .with_duration_log("Answering inline query")
+            .instrument(info_span!("payload", tg_file_type = %cached.tg_file_type))
             .await?;
 
         Ok::<_, Error>(())
@@ -146,7 +139,6 @@ pub(crate) async fn handle_chosen_inline_result(result: ChosenInlineResult) -> D
         .unwrap_or("{unknown}");
 
     chosen_inline_results_total(InlineQueryLabels {
-        user: result.from.debug_id(),
         media_host: media_host.to_owned(),
     })
     .increment(1);

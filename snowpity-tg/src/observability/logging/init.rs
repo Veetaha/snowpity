@@ -1,8 +1,10 @@
-use super::GLOBAL_LABELS;
 use crate::config::from_env_or_panic;
+use crate::observability::GLOBAL_LABELS;
+use crate::prelude::*;
 use serde::Deserialize;
 use serde_with::serde_as;
 use std::collections::HashMap;
+use std::ops::Deref;
 use tracing_subscriber::prelude::*;
 
 pub fn init_logging() -> tokio::task::JoinHandle<()> {
@@ -30,9 +32,7 @@ impl LoggingConfig {
             .with_ansi(std::env::var("COLORS").as_deref() != Ok("0"))
             .pretty();
 
-        let additional_labels = GLOBAL_LABELS
-            .into_iter()
-            .chain(&[("source", "snowpity-tg")]);
+        let additional_labels = GLOBAL_LABELS.iter().chain(&[("source", "snowpity-tg")]);
 
         let mut labels = self.tg_bot_log_labels;
         labels.extend(additional_labels.map(|(k, v)| ((*k).to_owned(), (*v).to_owned())));
@@ -48,6 +48,39 @@ impl LoggingConfig {
             .with(tracing_error::ErrorLayer::default())
             .init();
 
+        init_panic_hook();
+
         join_handle
     }
+}
+
+fn init_panic_hook() {
+    std::panic::set_hook(Box::new(move |panic_info| {
+        let backtrace = std::backtrace::Backtrace::capture();
+        let location = panic_info.location().map(|location| {
+            format!(
+                "{}:{}:{}",
+                location.file(),
+                location.line(),
+                location.column()
+            )
+        });
+
+        // If the panic message was formatted using interpolated values,
+        // it will be a `String`. Otherwise, it will be a `&str`.
+        let payload = panic_info.payload();
+        let message = payload
+            .downcast_ref::<String>()
+            .map(<_>::deref)
+            .or_else(|| payload.downcast_ref::<&str>().map(<_>::deref))
+            .unwrap_or("<unknown>");
+
+        error!(
+            target: "panic",
+            thread = std::thread::current().name(),
+            location,
+            backtrace = format_args!("\n{backtrace}"),
+            "{message}"
+        );
+    }));
 }

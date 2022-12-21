@@ -1,6 +1,6 @@
 mod derpi_cache;
 
-use crate::util::prelude::*;
+use crate::prelude::*;
 use crate::util::{self, http};
 use crate::{db, derpi, tg, Result};
 use futures::future::BoxFuture;
@@ -14,10 +14,15 @@ use crate::db::CachedMedia;
 pub(crate) use derpi_cache::*;
 use std::fmt;
 
+metrics_bat::gauges! {
+    /// Number of in-flight requests for media cache
+    media_cache_requests_in_flight_total;
+}
+
 /// Maximum number of in-flight cache requests, otherwise the service will
 /// block the new requests.
 const MAX_IN_FLIGHT: usize = 40;
-const UNEXPECTED_SERVICE_SHUTDOWN: &'static str = "BUG: Service exited unexpectedly";
+const UNEXPECTED_SERVICE_SHUTDOWN: &str = "BUG: Service exited unexpectedly";
 
 pub(crate) type DerpiEnvelope = Envelope<DerpiRequest>;
 pub(crate) type DerpiRequest = derpi_cache::Request;
@@ -127,16 +132,19 @@ impl Service {
     #[instrument(skip(self))]
     async fn run_loop(mut self) {
         loop {
+            let total_in_flight = self.total_in_flight();
+            media_cache_requests_in_flight_total(vec![]).set(total_in_flight as f64);
+
             tokio::select! {
                 // This `if` condition implements a simple backpressure mechanism
                 // to prevent receiving new requests when the number of in-flight
                 // requests is too high.
-                request = self.requests.recv(), if self.total_in_flight() <= MAX_IN_FLIGHT => {
+                request = self.requests.recv(), if total_in_flight <= MAX_IN_FLIGHT => {
                     let Some(request) = request else {
                         info!("Channel closed, exiting...");
                         return;
                     };
-                    self.process_request(request).await;
+                    self.process_request(request);
                 }
                 Some((media_id, response)) = self.in_flight_futs.next() => {
                     self.dispatch_response(media_id, response);
@@ -167,7 +175,7 @@ impl Service {
     }
 
     #[instrument(skip(self))]
-    async fn process_request(&mut self, request: Envelope<DerpiRequest>) {
+    fn process_request(&mut self, request: Envelope<DerpiRequest>) {
         let Envelope {
             request,
             return_slot,

@@ -1,7 +1,7 @@
 mod banned_phrases;
 
 use crate::tg;
-use crate::util::prelude::*;
+use crate::prelude::*;
 use crate::Result;
 use async_trait::async_trait;
 use teloxide::prelude::*;

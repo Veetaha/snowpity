@@ -1,8 +1,8 @@
-use crate::util::prelude::*;
+use crate::prelude::*;
 use easy_ext::ext;
 
 pub(crate) mod prelude {
-    pub(crate) use super::{ErrorExt as _, OptionExt as _, ResultExt as _};
+    pub(crate) use super::{ErrorExt as _, ResultExt as _};
 }
 
 #[ext(OptionExt)]

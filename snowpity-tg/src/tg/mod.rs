@@ -10,7 +10,7 @@ use crate::db;
 use crate::derpi::{self, DerpiService};
 use crate::ftai::FtaiService;
 use crate::sysinfo::SysInfoService;
-use crate::util::prelude::*;
+use crate::prelude::*;
 use crate::util::{self, encoding};
 use crate::Result;
 use captcha::CaptchaCtx;

@@ -12,6 +12,7 @@ services:
     environment:
       LOKI_URL: http://loki:3100
       DATABASE_URL: postgres://snowpity:${PG_PASSWORD}@postgres:5432/snowpity
+      RUST_BACKTRACE: full
 
     volumes:
       - /proc/stat:/proc/stat:ro

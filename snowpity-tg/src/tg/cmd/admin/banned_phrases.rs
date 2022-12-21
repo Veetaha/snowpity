@@ -10,7 +10,7 @@
 // FIXME: remove this ^
 
 use crate::tg::{self};
-use crate::util::prelude::*;
+use crate::prelude::*;
 use crate::Result;
 use teloxide::prelude::*;
 // use teloxide::types::ParseMode;

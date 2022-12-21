@@ -21,12 +21,6 @@ pub(crate) mod prelude {
     pub(crate) use super::http::RequestBuilderExt as _;
     pub(crate) use super::std_ext::prelude::*;
     pub(crate) use super::teloxide_ext::prelude::*;
-
-    pub(crate) use super::tracing_err;
-    pub(crate) use tracing::{
-        debug, debug_span, error, error_span, info, info_span, instrument, trace, trace_span, warn,
-        warn_span, Instrument as _,
-    };
 }
 
 use crate::{Result, UserError};
@@ -68,11 +62,4 @@ impl FromStr for ThemeTag {
         }
         Ok(ThemeTag(input))
     }
-}
-
-#[must_use]
-pub fn tracing_err<'a, E: std::error::Error + 'static>(
-    err: &'a E,
-) -> impl tracing::Value + std::fmt::Debug + 'a {
-    err as &dyn std::error::Error
 }

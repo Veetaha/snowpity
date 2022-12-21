@@ -1,6 +1,6 @@
 //! Symbols related to communicating with the 15.ai API
 
-use crate::util::prelude::*;
+use crate::prelude::*;
 use crate::util::{self, http};
 use crate::{err_ctx, err_val, FtAiError, Result};
 

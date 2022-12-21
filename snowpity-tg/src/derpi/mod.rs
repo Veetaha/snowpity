@@ -1,4 +1,4 @@
-use crate::util::prelude::*;
+use crate::prelude::*;
 use crate::util::{self, http, ThemeTag};
 use crate::Result;
 use itertools::Itertools;
