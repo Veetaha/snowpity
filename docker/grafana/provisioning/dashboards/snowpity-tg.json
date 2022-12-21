@@ -29,7 +29,7 @@
   "liveNow": false,
   "panels": [
     {
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -37,123 +37,124 @@
         "y": 0
       },
       "id": 40,
-      "panels": [],
+      "panels": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 1
+          },
+          "id": 38,
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": true,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "editorMode": "code",
+              "expr": "{ source=\"snowpity-tg\" } | json | _target = \"panic\" |  line_format \"{{.message}} ----- {{.location}}\"",
+              "queryType": "range",
+              "refId": "A"
+            }
+          ],
+          "title": "Panics",
+          "transparent": true,
+          "type": "logs"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 9
+          },
+          "id": 41,
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": true,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "editorMode": "code",
+              "expr": "{ source=\"snowpity-tg\", level=\"error\" } | json | line_format \"{{.message}}\"",
+              "queryType": "range",
+              "refId": "A"
+            }
+          ],
+          "title": "Errors",
+          "transparent": true,
+          "type": "logs"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 17
+          },
+          "id": 42,
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": true,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "editorMode": "code",
+              "expr": "{ source=\"snowpity-tg\", level=\"warn\" } | json | line_format \"{{.message}}\"",
+              "queryType": "range",
+              "refId": "A"
+            }
+          ],
+          "title": "Warnings",
+          "transparent": true,
+          "type": "logs"
+        }
+      ],
       "title": "Logs",
       "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 1
-      },
-      "id": 38,
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": true,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": false
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "editorMode": "code",
-          "expr": "{ source=\"snowpity-tg\" } | json | _target = \"panic\" |  line_format \"{{.message}} ----- {{.location}}\"",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Panics",
-      "transparent": true,
-      "type": "logs"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 9
-      },
-      "id": 41,
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": true,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": false
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "editorMode": "code",
-          "expr": "{ source=\"snowpity-tg\", level=\"error\" } | json | line_format \"{{.message}}\"",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Errors",
-      "transparent": true,
-      "type": "logs"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 17
-      },
-      "id": 42,
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": true,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": false
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "editorMode": "code",
-          "expr": "{ source=\"snowpity-tg\", level=\"warn\" } | json | line_format \"{{.message}}\"",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Warnings",
-      "transparent": true,
-      "type": "logs"
     },
     {
       "collapsed": false,
@@ -161,7 +162,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 1
       },
       "id": 23,
       "panels": [],
@@ -233,7 +234,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 2
       },
       "id": 21,
       "options": {
@@ -295,7 +296,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 2
       },
       "id": 24,
       "options": {
@@ -352,16 +353,234 @@
       "type": "heatmap"
     },
     {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 20,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoria-metrics"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "series",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 2,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineStyle": {
+                  "fill": "solid"
+                },
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 0,
+            "y": 37
+          },
+          "id": 14,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "timezone": [
+              ""
+            ],
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoria-metrics"
+              },
+              "editorMode": "code",
+              "expr": "sum by (kind) (\r\n    increase((snowpity_tg_tg_updates_total unless snowpity_tg_tg_updates_skipped_total)[2m])\r\n    or\r\n    increase(snowpity_tg_tg_updates_total - snowpity_tg_tg_updates_skipped_total)\r\n)",
+              "legendFormat": "(processed) {{kind}}",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoria-metrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(increase(snowpity_tg_tg_updates_total[2m]))",
+              "hide": false,
+              "legendFormat": "All updates",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoria-metrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(\r\n    increase(\r\n        (\r\n            (snowpity_tg_tg_updates_total unless snowpity_tg_tg_updates_skipped_total) \r\n            or\r\n            (snowpity_tg_tg_updates_total - snowpity_tg_tg_updates_skipped_total)\r\n        )\r\n        [2m]\r\n    )\r\n)",
+              "hide": false,
+              "legendFormat": "(proccesed) All updates",
+              "range": true,
+              "refId": "C"
+            }
+          ],
+          "title": "Telegram processed updates",
+          "transparent": true,
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoria-metrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "scaleDistribution": {
+                  "type": "linear"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 12,
+            "y": 37
+          },
+          "id": 8,
+          "options": {
+            "calculate": false,
+            "cellGap": 2,
+            "color": {
+              "exponent": 0.5,
+              "fill": "dark-orange",
+              "mode": "scheme",
+              "reverse": false,
+              "scale": "exponential",
+              "scheme": "Oranges",
+              "steps": 64
+            },
+            "exemplars": {
+              "color": "rgba(255,0,255,0.7)"
+            },
+            "filterValues": {
+              "le": 1e-9
+            },
+            "legend": {
+              "show": true
+            },
+            "rowsFrame": {
+              "layout": "auto"
+            },
+            "tooltip": {
+              "show": true,
+              "yHistogram": true
+            },
+            "yAxis": {
+              "axisPlacement": "left",
+              "reverse": false,
+              "unit": "s"
+            }
+          },
+          "pluginVersion": "9.3.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoria-metrics"
+              },
+              "editorMode": "code",
+              "expr": "increase(snowpity_tg_http_request_duration_seconds_bucket[2m])",
+              "format": "heatmap",
+              "legendFormat": "__auto",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "HTTP requests duration",
+          "transparent": true,
+          "type": "heatmap"
+        }
+      ],
+      "title": "Generic",
+      "type": "row"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 13
       },
-      "id": 20,
+      "id": 18,
       "panels": [],
-      "title": "Generic",
+      "title": "Inline queries",
       "type": "row"
     },
     {
@@ -369,7 +588,6 @@
         "type": "prometheus",
         "uid": "victoria-metrics"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -378,11 +596,12 @@
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "series",
+            "axisGridShow": true,
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 2,
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -394,7 +613,7 @@
               "fill": "solid"
             },
             "lineWidth": 1,
-            "pointSize": 5,
+            "pointSize": 4,
             "scaleDistribution": {
               "type": "linear"
             },
@@ -421,7 +640,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -429,9 +649,9 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 37
+        "y": 14
       },
-      "id": 14,
+      "id": 4,
       "options": {
         "legend": {
           "calcs": [],
@@ -439,12 +659,9 @@
           "placement": "bottom",
           "showLegend": true
         },
-        "timezone": [
-          ""
-        ],
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "asc"
         }
       },
       "targets": [
@@ -454,8 +671,8 @@
             "uid": "victoria-metrics"
           },
           "editorMode": "code",
-          "expr": "sum by (kind) (\r\n    increase((snowpity_tg_tg_updates_total unless snowpity_tg_tg_updates_skipped_total)[2m])\r\n    or\r\n    increase(snowpity_tg_tg_updates_total - snowpity_tg_tg_updates_skipped_total)\r\n)",
-          "legendFormat": "(processed) {{kind}}",
+          "expr": "increase(sum(snowpity_tg_derpi_cache_hits_total[4i])) / increase(sum(snowpity_tg_derpi_cache_queries_total[4i]))",
+          "legendFormat": "per 4i",
           "range": true,
           "refId": "A"
         },
@@ -465,26 +682,15 @@
             "uid": "victoria-metrics"
           },
           "editorMode": "code",
-          "expr": "sum(increase(snowpity_tg_tg_updates_total[2m]))",
+          "expr": "sum(snowpity_tg_derpi_cache_hits_total) / sum(snowpity_tg_derpi_cache_queries_total)",
           "hide": false,
-          "legendFormat": "All updates",
+          "legendFormat": "all time",
           "range": true,
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria-metrics"
-          },
-          "editorMode": "code",
-          "expr": "sum(\r\n    increase(\r\n        (\r\n            (snowpity_tg_tg_updates_total unless snowpity_tg_tg_updates_skipped_total) \r\n            or\r\n            (snowpity_tg_tg_updates_total - snowpity_tg_tg_updates_skipped_total)\r\n        )\r\n        [2m]\r\n    )\r\n)",
-          "hide": false,
-          "legendFormat": "(proccesed) All updates",
-          "range": true,
-          "refId": "C"
         }
       ],
-      "title": "Telegram processed updates",
+      "title": "Database media cache hits rate",
+      "transformations": [],
       "transparent": true,
       "type": "timeseries"
     },
@@ -512,87 +718,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 37
-      },
-      "id": 8,
-      "options": {
-        "calculate": false,
-        "cellGap": 2,
-        "color": {
-          "exponent": 0.5,
-          "fill": "dark-orange",
-          "mode": "scheme",
-          "reverse": false,
-          "scale": "exponential",
-          "scheme": "Oranges",
-          "steps": 64
-        },
-        "exemplars": {
-          "color": "rgba(255,0,255,0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "rowsFrame": {
-          "layout": "auto"
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": true
-        },
-        "yAxis": {
-          "axisPlacement": "left",
-          "reverse": false,
-          "unit": "s"
-        }
-      },
-      "pluginVersion": "9.3.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria-metrics"
-          },
-          "editorMode": "code",
-          "expr": "increase(snowpity_tg_http_request_duration_seconds_bucket[2m])",
-          "format": "heatmap",
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "HTTP requests duration",
-      "transparent": true,
-      "type": "heatmap"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoria-metrics"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 12,
-        "x": 12,
-        "y": 47
+        "y": 14
       },
       "id": 6,
       "options": {
@@ -663,19 +789,6 @@
       "type": "heatmap"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 57
-      },
-      "id": 18,
-      "panels": [],
-      "title": "Inline queries",
-      "type": "row"
-    },
-    {
       "datasource": {
         "type": "prometheus",
         "uid": "victoria-metrics"
@@ -688,7 +801,6 @@
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "series",
-            "axisGridShow": true,
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -705,7 +817,7 @@
               "fill": "solid"
             },
             "lineWidth": 1,
-            "pointSize": 4,
+            "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
@@ -724,35 +836,35 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
                 "value": 80
               }
             ]
-          },
-          "unit": "percentunit"
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 10,
+        "h": 9,
         "w": 12,
         "x": 0,
-        "y": 58
+        "y": 24
       },
-      "id": 4,
+      "id": 44,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "asc"
+          "sort": "none"
         }
       },
       "targets": [
@@ -762,26 +874,13 @@
             "uid": "victoria-metrics"
           },
           "editorMode": "code",
-          "expr": "increase(snowpity_tg_derpi_cache_hits_total[4i]) / increase(snowpity_tg_derpi_cache_queries_total[4i])",
-          "legendFormat": "per 4i",
+          "expr": "avg_over_time(avg(snowpity_tg_media_cache_requests_in_flight_total[4i]))",
+          "legendFormat": "In flight",
           "range": true,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria-metrics"
-          },
-          "editorMode": "code",
-          "expr": "snowpity_tg_derpi_cache_hits_total / snowpity_tg_derpi_cache_queries_total",
-          "hide": false,
-          "legendFormat": "all time",
-          "range": true,
-          "refId": "B"
         }
       ],
-      "title": "Database media cache hits rate",
-      "transformations": [],
+      "title": "Queries in flight",
       "transparent": true,
       "type": "timeseries"
     },
@@ -809,7 +908,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 58
+        "y": 24
       },
       "id": 12,
       "options": {
@@ -913,7 +1012,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -928,8 +1028,8 @@
       "gridPos": {
         "h": 11,
         "w": 12,
-        "x": 12,
-        "y": 68
+        "x": 0,
+        "y": 33
       },
       "id": 16,
       "options": {
@@ -951,7 +1051,7 @@
             "uid": "victoria-metrics"
           },
           "editorMode": "code",
-          "expr": "sum by (result) (increase(snowpity_tg_inline_query_duration_seconds_count[4i]))",
+          "expr": "sum by (result) (increase(snowpity_tg_inline_query_duration_seconds_count[8i]))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -967,7 +1067,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 79
+        "y": 44
       },
       "id": 33,
       "panels": [],
@@ -990,7 +1090,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1005,7 +1106,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 80
+        "y": 45
       },
       "id": 26,
       "options": {
@@ -1057,7 +1158,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1072,7 +1174,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 80
+        "y": 45
       },
       "id": 30,
       "options": {
@@ -1122,7 +1224,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1134,7 +1237,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 80
+        "y": 45
       },
       "id": 34,
       "options": {
@@ -1186,7 +1289,8 @@
             "mode": "percentage",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1202,7 +1306,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 80
+        "y": 45
       },
       "id": 2,
       "options": {
@@ -1227,7 +1331,7 @@
             "uid": "victoria-metrics"
           },
           "editorMode": "code",
-          "expr": "sum by (le) (running_sum(increase(snowpity_tg_inline_query_duration_seconds_bucket)))",
+          "expr": "sum by (le) (running_sum(increase(snowpity_tg_inline_query_duration_seconds_bucket{result=\"ok\"})))",
           "format": "heatmap",
           "legendFormat": "__auto",
           "range": true,
@@ -1254,7 +1358,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1269,7 +1374,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 84
+        "y": 49
       },
       "id": 31,
       "options": {
@@ -1321,7 +1426,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1336,7 +1442,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 84
+        "y": 49
       },
       "id": 35,
       "options": {
@@ -1361,7 +1467,7 @@
             "uid": "victoria-metrics"
           },
           "editorMode": "code",
-          "expr": "sum by (result) (running_sum(increase(snowpity_tg_derpi_cache_hits_total)))",
+          "expr": "sum(running_sum(increase(snowpity_tg_derpi_cache_hits_total)))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -1386,7 +1492,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1401,7 +1508,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 84
+        "y": 49
       },
       "id": 36,
       "options": {
@@ -1426,7 +1533,7 @@
             "uid": "victoria-metrics"
           },
           "editorMode": "code",
-          "expr": "sum by (result) (running_sum(increase(snowpity_tg_derpi_cache_queries_total - snowpity_tg_derpi_cache_hits_total)))",
+          "expr": "sum(running_sum(increase(snowpity_tg_derpi_cache_queries_total - snowpity_tg_derpi_cache_hits_total)))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -1608,7 +1715,7 @@
         "h": 10,
         "w": 11,
         "x": 0,
-        "y": 88
+        "y": 53
       },
       "id": 28,
       "options": {
@@ -1667,13 +1774,13 @@
     "list": []
   },
   "time": {
-    "from": "now-2d",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Snowity Telegram",
   "uid": "d4uxiEc4k",
-  "version": 18,
+  "version": 25,
   "weekStart": ""
 }

@@ -137,20 +137,22 @@ impl InputFileKind {
         self,
         http_client: &http::Client,
     ) -> Result<(InputFile, Option<usize>)> {
-        Ok(match self {
+        let file = match self {
             Self::Url(url) => InputFile::url(url),
             Self::File(path) => InputFile::file(path),
             Self::DownloadedUrl(url) => {
                 let (bytes, duration) =
                     http_client.get(url).read_bytes().with_duration_ok().await?;
+                let len = bytes.len();
                 info!(
                     actual_size = bytes.len(),
                     duration = tracing_duration(duration),
                     "Downloaded file"
                 );
-                InputFile::memory(bytes)
+                return Ok((InputFile::memory(bytes), Some(len)));
             }
-        })
+        };
+        Ok((file, None))
     }
 }
 
@@ -336,7 +338,7 @@ impl TgUploadContext<'_> {
         };
 
         let caption = format!(
-            "{}\n*Requested by: {}\\. Uploaded as {}*",
+            "{}\n*Requested by: {}\\.\nUploaded as: {}*",
             core_caption(self.media),
             self.payload.requested_by.md_link(),
             S::TYPE,
