@@ -7,8 +7,8 @@
 // FIXME: remove this ^
 // FIXME: remove this ^
 
-use crate::tg::{Bot, Ctx};
 use crate::prelude::*;
+use crate::tg::{Bot, Ctx};
 use crate::util::{DynError, DynResult};
 use crate::Error;
 use crate::Result;

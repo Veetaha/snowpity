@@ -89,10 +89,9 @@ impl reqwest_middleware::Middleware for InnermostObservingMiddleware {
         extensions: &mut task_local_extensions::Extensions,
         next: reqwest_middleware::Next<'_>,
     ) -> reqwest_middleware::Result<reqwest::Response> {
-        let result =
-            measure_request(http_request_duration_seconds, request, extensions, next)
-                .with_duration_log("Sending request")
-                .await;
+        let result = measure_request(http_request_duration_seconds, request, extensions, next)
+            .with_duration_log("Sending request")
+            .await;
 
         match &result {
             Ok(response) => {

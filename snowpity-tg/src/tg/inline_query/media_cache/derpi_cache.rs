@@ -434,9 +434,6 @@ pub(crate) fn core_caption(media: &derpi::Media) -> String {
 
     format!(
         "*Art from {}{artists}{ratings}*",
-        markdown::link(
-            &String::from(media.id.to_webpage_url()),
-            r"derpibooru",
-        )
+        markdown::link(&String::from(media.id.to_webpage_url()), r"derpibooru",)
     )
 }

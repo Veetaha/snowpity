@@ -101,7 +101,6 @@ impl MediaId {
     }
 }
 
-
 pub(crate) fn sanitize_tag(tag: &str) -> impl fmt::Display + '_ {
     tag.chars()
         .flat_map(char::to_lowercase)
@@ -109,7 +108,7 @@ pub(crate) fn sanitize_tag(tag: &str) -> impl fmt::Display + '_ {
             if char.is_whitespace() {
                 return '-';
             } else if char.is_alphanumeric() {
-                return char
+                return char;
             }
             '_'
         })
