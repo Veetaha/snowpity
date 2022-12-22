@@ -11,6 +11,7 @@ use crate::derpi::{self, DerpiService};
 use crate::ftai::FtaiService;
 use crate::prelude::*;
 use crate::sysinfo::SysInfoService;
+use crate::tg::inline_query::media_cache;
 use crate::util::{self, encoding};
 use crate::Result;
 use captcha::CaptchaCtx;
@@ -26,8 +27,8 @@ use teloxide::requests::MultipartRequest;
 use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
 
-use crate::tg::inline_query::media_cache;
 pub(crate) use config::*;
+pub(crate) use media_cache::TgFileType;
 
 pub(crate) type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
 pub(crate) type Request<T> = TraceRequest<ThrottlingRequest<MultipartRequest<T>>>;

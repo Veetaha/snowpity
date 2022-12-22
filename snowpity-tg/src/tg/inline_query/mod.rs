@@ -1,15 +1,16 @@
 use crate::prelude::*;
-use crate::util::{DynResult, TgFileType};
+use crate::util::DynResult;
 use crate::{derpi, tg, Error};
 use futures::prelude::*;
 use lazy_regex::regex_captures;
+use media_cache::TgFileType;
 use metrics_bat::prelude::*;
 use std::future::IntoFuture;
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::{
-    ChosenInlineResult, InlineQuery, InlineQueryResultCachedDocument, InlineQueryResultCachedPhoto,
-    InlineQueryResultCachedVideo, ParseMode,
+    ChosenInlineResult, InlineQuery, InlineQueryResultCachedDocument, InlineQueryResultCachedGif,
+    InlineQueryResultCachedPhoto, InlineQueryResultCachedVideo, ParseMode,
 };
 
 pub(crate) mod media_cache;
@@ -85,29 +86,30 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
 
         let file_name = media_cache::file_name(&media);
 
+        let media_id = media_id.to_string();
+        let parse_mode = ParseMode::MarkdownV2;
+
         let result = match cached.tg_file_type {
-            TgFileType::Photo => {
-                InlineQueryResultCachedPhoto::new(media_id.to_string(), cached.tg_file_id)
+            TgFileType::Photo => InlineQueryResultCachedPhoto::new(media_id, cached.tg_file_id)
+                .caption(caption)
+                .parse_mode(parse_mode)
+                .into(),
+            TgFileType::Document => {
+                InlineQueryResultCachedDocument::new(media_id, file_name, cached.tg_file_id)
                     .caption(caption)
-                    .parse_mode(ParseMode::MarkdownV2)
+                    .parse_mode(parse_mode)
                     .into()
             }
-            TgFileType::Document => InlineQueryResultCachedDocument::new(
-                media_id.to_string(),
-                file_name,
-                cached.tg_file_id,
-            )
-            .caption(caption)
-            .parse_mode(ParseMode::MarkdownV2)
-            .into(),
-            TgFileType::Video => InlineQueryResultCachedVideo::new(
-                media_id.to_string(),
-                cached.tg_file_id,
-                file_name,
-            )
-            .caption(caption)
-            .parse_mode(ParseMode::MarkdownV2)
-            .into(),
+            TgFileType::Video => {
+                InlineQueryResultCachedVideo::new(media_id, cached.tg_file_id, file_name)
+                    .caption(caption)
+                    .parse_mode(parse_mode)
+                    .into()
+            }
+            TgFileType::Gif => InlineQueryResultCachedGif::new(media_id, cached.tg_file_id)
+                .caption(caption)
+                .parse_mode(parse_mode)
+                .into(),
         };
 
         bot.answer_inline_query(inline_query_id, [result])
@@ -127,7 +129,8 @@ pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -
 
 fn parse_query(str: &str) -> Option<(&str, derpi::MediaId)> {
     let str = str.trim();
-    let (_, host, id) = regex_captures!("(derpibooru.org/images)/(\\d+)", str)
+    let (_, host, id) = None
+        .or_else(|| regex_captures!("(derpibooru.org(?:/images)?)/(\\d+)", str))
         .or_else(|| regex_captures!("(derpicdn.net/img)/\\d+/\\d+/\\d+/(\\d+)", str))
         .or_else(|| regex_captures!("(derpicdn.net/img/view)/\\d+/\\d+/\\d+/(\\d+)", str))?;
     Some((host, id.parse().ok()?))
@@ -166,6 +169,8 @@ mod tests {
         test("123", expect!["None"]);
         test("furbooru.org/images/123/", expect!["None"]);
 
+        test("derpibooru.org/123/", expect!["derpibooru.org:123"]);
+        test("derpibooru.org/123", expect!["derpibooru.org:123"]);
         test(
             "derpibooru.org/images/123",
             expect!["derpibooru.org/images:123"],

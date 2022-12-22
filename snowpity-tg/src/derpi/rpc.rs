@@ -97,7 +97,7 @@ pub(crate) fn artist_to_webpage_url(artist: &str) -> Url {
 
 impl MediaId {
     pub(crate) fn to_webpage_url(self) -> Url {
-        derpi(["images", &self.to_string()])
+        derpi([&self.to_string()])
     }
 }
 
@@ -116,13 +116,6 @@ pub(crate) fn sanitize_tag(tag: &str) -> impl fmt::Display + '_ {
 }
 
 impl MimeType {
-    pub(crate) fn is_image(self) -> bool {
-        use MimeType::*;
-        match self {
-            ImageGif | ImageJpeg | ImagePng | ImageSvgXml => true,
-            VideoWebm => false,
-        }
-    }
     pub(crate) fn file_extension(self) -> &'static str {
         use MimeType::*;
         match self {

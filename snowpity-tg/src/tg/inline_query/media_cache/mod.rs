@@ -1,18 +1,19 @@
 mod derpi_cache;
 
+use crate::db::CachedMedia;
 use crate::prelude::*;
 use crate::util::{self, http};
 use crate::{db, derpi, tg, Result};
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use futures::stream::FuturesUnordered;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 
-use crate::db::CachedMedia;
 pub(crate) use derpi_cache::*;
-use std::fmt;
 
 metrics_bat::gauges! {
     /// Number of in-flight requests for media cache
@@ -26,6 +27,19 @@ const UNEXPECTED_SERVICE_SHUTDOWN: &str = "BUG: Service exited unexpectedly";
 
 pub(crate) type DerpiEnvelope = Envelope<DerpiRequest>;
 pub(crate) type DerpiRequest = derpi_cache::Request;
+
+/// Determines the API method used when the media was uploaded to Telegram.
+#[derive(
+    Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, strum::Display, strum::IntoStaticStr,
+)]
+#[repr(i16)]
+pub(crate) enum TgFileType {
+    Photo = 0,
+    Document = 1,
+    Video = 2,
+    Gif = 3,
+    // Mpeg4Gif = 4,
+}
 
 pub(crate) struct Envelope<R> {
     request: R,

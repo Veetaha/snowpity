@@ -1,4 +1,4 @@
-use super::{Context, Response};
+use super::{Context, Response, TgFileType};
 use crate::db::CachedMedia;
 use crate::observability::logging::prelude::*;
 use crate::prelude::*;
@@ -6,6 +6,8 @@ use crate::util::http;
 use crate::{derpi, err_val, tg, util, ErrorKind, MediaError, Result};
 use assert_matches::assert_matches;
 use fs_err::tokio as fs;
+use futures::future::BoxFuture;
+use futures::prelude::*;
 use itertools::Itertools;
 use metrics_bat::prelude::*;
 use reqwest::Url;
@@ -111,20 +113,25 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
 #[derive(strum::AsRefStr)]
 enum InputFileKind {
     /// The URL will be directly forwarded to telegram.
-    Url(Url),
+    DirectUrl(Url),
     /// We'll download the content ourselves and upload it to telegram using
     /// [`InputFile::memory`] kind. This is useful when the size of the file
     /// exceeds the limits for direct URL uploads.
-    DownloadedUrl(Url),
+    IntermediateDownload(Url),
+    // FIXME: will be used when we use ffmpeg
+    #[allow(dead_code)]
     File(PathBuf),
 }
 
 impl fmt::Debug for InputFileKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Url(url) => f.debug_tuple("Url").field(&format_args!("{url}")).finish(),
-            Self::DownloadedUrl(url) => f
-                .debug_tuple("DownloadedUrl")
+            Self::DirectUrl(url) => f
+                .debug_tuple("DirectUrl")
+                .field(&format_args!("{url}"))
+                .finish(),
+            Self::IntermediateDownload(url) => f
+                .debug_tuple("IntermediateDownload")
                 .field(&format_args!("{url}"))
                 .finish(),
             Self::File(path) => f.debug_tuple("File").field(path).finish(),
@@ -138,9 +145,9 @@ impl InputFileKind {
         http_client: &http::Client,
     ) -> Result<(InputFile, Option<usize>)> {
         let file = match self {
-            Self::Url(url) => InputFile::url(url),
+            Self::DirectUrl(url) => InputFile::url(url),
             Self::File(path) => InputFile::file(path),
-            Self::DownloadedUrl(url) => {
+            Self::IntermediateDownload(url) => {
                 let (bytes, duration) =
                     http_client.get(url).read_bytes().with_duration_ok().await?;
                 let len = bytes.len();
@@ -154,8 +161,28 @@ impl InputFileKind {
         };
         Ok((file, None))
     }
+
+    fn describe(&self) -> &'static str {
+        match self {
+            Self::DirectUrl(_) => "via direct URL",
+            Self::IntermediateDownload(_) => "via intermediate download",
+            Self::File(_) => "from file",
+        }
+    }
 }
 
+/// We shouldn't trust derpibooru with the size of the file.
+/// There was a precedent where a media with incorrect size was
+/// found. It was reported to derpibooru's Discord:
+/// https://discord.com/channels/430829008402251796/438029140659142657/1049534872739389440
+///
+/// The media that was reported is https://derpibooru.org/api/v1/json/images/1127198
+/// When downloaded, the image's size is 4_941_837 bytes,
+/// but the API reports size as 5_259_062.
+///
+/// Unfortunately, it does't seem this bug will be fixed anytime soon,
+/// so the workaround is falling back to uploading as indirect image
+/// or as a document, while optimistically trying the easiest way first
 #[derive(Clone, Copy)]
 struct TgUploadContext<'a> {
     base: &'a Context,
@@ -163,16 +190,8 @@ struct TgUploadContext<'a> {
     media: &'a derpi::Media,
 }
 
-impl TgUploadContext<'_> {
+impl<'a> TgUploadContext<'a> {
     async fn upload(self) -> Result<CachedMedia> {
-        if self.media.mime_type.is_image() {
-            self.upload_image().await
-        } else {
-            self.upload_video().await
-        }
-    }
-
-    async fn upload_image(self) -> Result<CachedMedia> {
         let max_size = 50 * MB;
 
         if self.media.size > max_size {
@@ -182,6 +201,64 @@ impl TgUploadContext<'_> {
             }));
         }
 
+        use derpi::MimeType::*;
+
+        match self.media.mime_type {
+            ImageJpeg | ImagePng | ImageSvgXml => self.upload_image().await,
+            ImageGif => self.upload_gif().await,
+            VideoWebm => {
+                // TODO: implement videos
+                Err(err_val!(ErrorKind::Todo {
+                    message: "support videos"
+                }))
+            }
+        }
+    }
+
+    fn warn_failed_upload(self, err: &crate::Error, msg: &str) {
+        warn!(
+            err = tracing_err(err),
+            derpi_mime = %self.media.mime_type,
+            derpi_size = self.media.size,
+            derpi_id = %self.media.id,
+            "{msg}"
+        );
+    }
+
+    async fn upload_pipeline(
+        self,
+        pipeline: &[(u64, fn(Self) -> BoxFuture<'a, Result<CachedMedia>>, &str)],
+    ) -> Result<CachedMedia> {
+        for (max_size, method, error_msg) in pipeline {
+            if self.media.size > *max_size * MB {
+                continue;
+            }
+            match method(self).await {
+                Ok(cached) => return Ok(cached),
+                Err(err) => {
+                    self.warn_failed_upload(&err, error_msg);
+                }
+            }
+        }
+        self.upload_document_intermediate_download().await
+    }
+
+    async fn upload_gif(self) -> Result<CachedMedia> {
+        self.upload_pipeline(&[
+            (
+                20,
+                |me| me.upload_gif_direct_url().boxed(),
+                "Failed to upload GIF using a direct URL. \
+                Falling back to intermediate download of the GIF...",
+            ),
+            // Uploading via send_animation through an intermediate download
+            // doesn't seem to work. Even though the file is uploaded, it doesn't
+            // show up in the inline query results
+        ])
+        .await
+    }
+
+    async fn upload_image(self) -> Result<CachedMedia> {
         // FIXME: resize image if it doesn't fit into telegram's limit
         if self.media.aspect_ratio > 20.0 {
             return Err(err_val!(ErrorKind::Todo {
@@ -194,94 +271,60 @@ impl TgUploadContext<'_> {
             }));
         }
 
-        // FIXME: use cached document correctly in inline query
-
-        // We shouldn't trust derpibooru with the size of the file.
-        // There was a precedent where a media with incorrect size was
-        // found. It was reported to derpibooru's Discord:
-        // https://discord.com/channels/430829008402251796/438029140659142657/1049534872739389440
-        //
-        // The media that was reported is https://derpibooru.org/api/v1/json/images/1127198
-        // When downloaded, the image's size is 4_941_837 bytes,
-        // but the API reports size as 5_259_062.
-        //
-        // Unfortunately, it does't seem this bug will be fixed anytime soon,
-        // so the workaround is falling back to uploading as indirect image
-        // or as a document, while optimistically trying the easiest way first
-
-        if self.media.size <= 5 * MB {
-            match self.upload_photo_by_url().await {
-                Ok(cached) => return Ok(cached),
-                Err(err) => {
-                    warn!(
-                        err = tracing_err(&err),
-                        derpi_mime = %self.media.mime_type,
-                        derpi_size = self.media.size,
-                        derpi_id = %self.media.id,
-                        "Failed to upload image using a direct URL. \
-                        Falling back to intermediate download of the image..."
-                    );
-                }
-            }
-        }
-
-        if self.media.size <= 10 * MB {
-            match self.upload_photo_downloaded().await {
-                Ok(cached) => return Ok(cached),
-                Err(err) => {
-                    warn!(
-                        err = tracing_err(&err),
-                        derpi_mime = %self.media.mime_type,
-                        derpi_size = self.media.size,
-                        derpi_id = %self.media.id,
-                        "Failed to upload image using an intermediate download. \
-                        Falling back to direct URL document upload..."
-                    );
-                }
-            }
-        }
-
-        if self.media.size <= 20 * MB {
-            match self.upload_document_by_url().await {
-                Ok(cached) => return Ok(cached),
-                Err(err) => {
-                    warn!(
-                        err = tracing_err(&err),
-                        derpi_mime = %self.media.mime_type,
-                        derpi_size = self.media.size,
-                        derpi_id = %self.media.id,
-                        "Failed to upload image using a direct URL document upload. \
-                        Falling back to intermediate download of the document..."
-                    );
-                }
-            }
-        }
-
-        self.upload_document_downloaded().await
+        self.upload_pipeline(&[
+            (
+                5,
+                |me| me.upload_photo_direct_url().boxed(),
+                "Failed to upload image using a direct URL. \
+                Falling back to intermediate download of the image...",
+            ),
+            (
+                10,
+                |me| me.upload_photo_intermediate_download().boxed(),
+                "Failed to upload image using an intermediate download. \
+                Falling back to direct URL document upload...",
+            ),
+            (
+                20,
+                |me| me.upload_document_direct_url().boxed(),
+                "Failed to upload image using a direct URL document upload. \
+                Falling back to intermediate download of the document...",
+            ),
+        ])
+        .await
     }
 
     // Derpibooru statistics for files according to 5 MB limit:
     // - Under: 2_555_839  (95%)
     // - Over:    133_821 (5%)
-    async fn upload_photo_by_url(self) -> Result<CachedMedia> {
-        let input_file = InputFileKind::Url(self.media.view_url.clone());
-        self.upload_imp(tg::Bot::send_photo, input_file).await
+    async fn upload_photo_direct_url(self) -> Result<CachedMedia> {
+        let input_file = InputFileKind::DirectUrl(self.media.view_url.clone());
+        self.upload_imp(TgFileType::Photo, tg::Bot::send_photo, input_file)
+            .await
     }
 
     // Derpibooru statistics for files according to 10 MB limit:
     // - Under: 2_651_709 (98.5%)
     // - Over:     37_953 (1.5%)
-    async fn upload_photo_downloaded(self) -> Result<CachedMedia> {
-        let input_file = InputFileKind::DownloadedUrl(self.media.view_url.clone());
-        self.upload_imp(tg::Bot::send_photo, input_file).await
+    async fn upload_photo_intermediate_download(self) -> Result<CachedMedia> {
+        let input_file = InputFileKind::IntermediateDownload(self.media.view_url.clone());
+        self.upload_imp(TgFileType::Photo, tg::Bot::send_photo, input_file)
+            .await
     }
 
-    async fn upload_document_by_url(self) -> Result<CachedMedia> {
-        let input_file = InputFileKind::Url(self.media.view_url.clone());
-        self.upload_imp(tg::Bot::send_document, input_file).await
+    async fn upload_document_direct_url(self) -> Result<CachedMedia> {
+        let input_file = InputFileKind::DirectUrl(self.media.view_url.clone());
+        self.upload_imp(TgFileType::Document, tg::Bot::send_document, input_file)
+            .await
     }
 
-    async fn upload_document_downloaded(self) -> Result<CachedMedia> {
+    async fn upload_gif_direct_url(self) -> Result<CachedMedia> {
+        let input_file = InputFileKind::DirectUrl(self.media.view_url.clone());
+        self.upload_imp(TgFileType::Gif, tg::Bot::send_animation, input_file)
+            .await
+    }
+
+    async fn upload_document_intermediate_download(self) -> Result<CachedMedia> {
         // FIXME: create thumbnails by converting them and coercing to
         // telegram requirements via ffmpeg
         // let thumb = self.media.representations.thumb_tiny.clone();
@@ -290,11 +333,12 @@ impl TgUploadContext<'_> {
         //         .send_document(chat_id, input_file)
         //         .thumb(InputFile::url(thumb))
         // };
-        let input_file = InputFileKind::DownloadedUrl(self.media.view_url.clone());
-        self.upload_imp(tg::Bot::send_document, input_file).await
+        let input_file = InputFileKind::IntermediateDownload(self.media.view_url.clone());
+        self.upload_imp(TgFileType::Document, tg::Bot::send_document, input_file)
+            .await
     }
 
-    async fn upload_video(self) -> Result<CachedMedia> {
+    async fn _upload_video(self) -> Result<CachedMedia> {
         info!("Started converting a video");
         let start = Instant::now();
         let tmp_output = crate::media::convert_to_mp4(&self.media.view_url).await?;
@@ -305,6 +349,7 @@ impl TgUploadContext<'_> {
             "Finished converting a video"
         );
         self.upload_imp(
+            TgFileType::Video,
             tg::Bot::send_video,
             InputFileKind::File(tmp_output.to_path_buf()),
         )
@@ -313,7 +358,7 @@ impl TgUploadContext<'_> {
     }
 
     #[instrument(skip_all, fields(
-        tg_method = %S::TYPE,
+        %tg_file_type,
         derpi_mime = %self.media.mime_type,
         derpi_size = self.media.size,
         derpi_id = %self.media.id,
@@ -321,16 +366,18 @@ impl TgUploadContext<'_> {
     ))]
     async fn upload_imp<S>(
         self,
+        tg_file_type: TgFileType,
         send_payload_method: impl FnOnce(&tg::Bot, ChatId, InputFile) -> S,
         input_file: InputFileKind,
     ) -> Result<CachedMedia>
     where
         S: util::SendPayloadExt,
+        S::IntoFuture: Send,
     {
         info!("Uploading to telegram cache chat");
 
         let derpi_mime: &'static str = self.media.mime_type.into();
-        let tg_method: &'static str = S::TYPE.into();
+        let tg_method: &'static str = tg_file_type.into();
 
         let labels = TgUploadLabels {
             derpi_mime,
@@ -338,13 +385,14 @@ impl TgUploadContext<'_> {
         };
 
         let caption = format!(
-            "{}\n*Requested by: {}\\.\nUploaded as: {}*",
+            "{}\n*Requested by: {}\\\nUploaded as {} {}*",
             core_caption(self.media),
             self.payload.requested_by.md_link(),
-            S::TYPE,
+            tg_file_type.to_string().to_lowercase(),
+            input_file.describe(),
         );
 
-        let measure_download = matches!(input_file, InputFileKind::DownloadedUrl(_));
+        let measure_download = matches!(input_file, InputFileKind::IntermediateDownload(_));
         let file_fut = input_file.into_input_file(&self.base.http_client);
 
         let (file, actual_size) = if measure_download {
@@ -367,6 +415,7 @@ impl TgUploadContext<'_> {
         let msg = send_payload_method(&self.base.bot, chat, file)
             .caption(caption)
             .into_future()
+            .with_duration_log("Send file to telegram")
             .record_duration(derpi_tg_media_upload_duration_seconds, labels)
             .await?;
 
@@ -375,7 +424,7 @@ impl TgUploadContext<'_> {
         Ok(CachedMedia {
             derpi_id: self.media.id,
             tg_file_id: file_meta.id,
-            tg_file_type: S::TYPE,
+            tg_file_type,
         })
     }
 }
@@ -408,8 +457,9 @@ fn find_file(expected: derpi::MimeType, msg: Message) -> Result<FileMeta> {
         Document(media) => media.document.file,
         Photo(media) => media.photo.into_iter().next().unwrap().file,
         Video(media) => media.video.file,
-        media @ (Animation(_) | Audio(_) | Contact(_) | Game(_) | Venue(_) | Location(_)
-        | Poll(_) | Sticker(_) | Text(_) | VideoNote(_) | Voice(_) | Migration(_)) => {
+        Animation(media) => media.animation.file,
+        media @ (Audio(_) | Contact(_) | Game(_) | Venue(_) | Location(_) | Poll(_)
+        | Sticker(_) | Text(_) | VideoNote(_) | Voice(_) | Migration(_)) => {
             return Err(err_val!(MediaError::UnexpectedMediaKind {
                 media,
                 expected

@@ -118,11 +118,14 @@ def "main start" [
 def "main down" [
     --drop-data # Remove all data volumes
 ] {
-    let args = ([down '--timeout' 60] | append-if $drop_data '--volumes')
-
     # We increase the timeout, because shutting down `teloxide` takes a while
     # The issue in `teloxide`: https://github.com/teloxide/teloxide/issues/711
-    docker-compose $args
+    docker-compose down '--timeout' 60
+
+    if $drop_data {
+        with-debug docker volume rm snowpity_postgres
+    }
+
 }
 
 # Deploy the full application's stack

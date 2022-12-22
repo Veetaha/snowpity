@@ -1,6 +1,6 @@
 use crate::db::conv;
 use crate::prelude::*;
-use crate::util::TgFileType;
+use crate::tg::TgFileType;
 use crate::{derpi, Result};
 use sea_orm::prelude::*;
 use sea_orm::Set;
