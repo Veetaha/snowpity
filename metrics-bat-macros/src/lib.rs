@@ -12,7 +12,7 @@ type Result<T = (), E = darling::Error> = std::result::Result<T, E>;
 ///   It is inferred using `type_name_of_val` and trimming `::{{closure}}` suffixes.
 ///
 /// - `result`: present only when the function returns a `Result` type, and
-///   is set to `ok` or `err` depeding on the outcome of the function.
+///   is set to `ok` or `err` depending on the outcome of the function.
 ///
 /// Note that the detection of the `Result` type is done by checking if the
 /// return type name ends with `Result` suffix.
