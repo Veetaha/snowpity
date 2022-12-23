@@ -1,5 +1,5 @@
-use proc_macro2::TokenStream as TokenStream2;
 use crate::Result;
+use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 
 pub(crate) fn generate(_: syn::AttributeArgs, func: syn::ItemFn) -> Result<TokenStream2> {

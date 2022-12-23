@@ -229,7 +229,7 @@ pub(crate) enum DbError {
     SqlxBat {
         #[from]
         source: sqlx_bat::Error,
-    }
+    },
 }
 
 #[derive(Debug, Error)]
