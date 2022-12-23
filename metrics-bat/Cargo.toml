@@ -16,6 +16,7 @@ exporter-prometheus = ["dep:metrics-exporter-prometheus"]
 easy-ext                    = { workspace = true }
 inventory                   = { workspace = true }
 metrics                     = { workspace = true }
+metrics-bat-macros          = { workspace = true }
 metrics-exporter-prometheus = { workspace = true, optional = true }
 pin-project-lite            = { workspace = true }
 tracing                     = { workspace = true }

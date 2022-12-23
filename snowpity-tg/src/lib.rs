@@ -17,6 +17,8 @@ pub use observability::*;
 mod prelude {
     pub(crate) use crate::observability::logging::prelude::*;
     pub(crate) use crate::util::prelude::*;
+    pub(crate) use metrics_bat::prelude::*;
+    pub(crate) use snowpity_tg_macros::metered_db;
 }
 
 /// Run the telegram bot processing loop

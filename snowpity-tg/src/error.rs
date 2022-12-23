@@ -214,41 +214,22 @@ pub(crate) enum HttpClientError {
 #[derive(Debug, Error)]
 pub(crate) enum DbError {
     #[error("Failed to connect to the database")]
-    Connect { source: sea_orm::DbErr },
+    Connect { source: sqlx::Error },
 
     #[error("Failed to migrate the database")]
-    Migrate { source: sea_orm::DbErr },
+    Migrate { source: sqlx::Error },
 
     #[error("Database query failed")]
     Query {
         #[from]
-        source: sea_orm::DbErr,
+        source: sqlx::Error,
     },
 
-    #[error(
-        "Failed to serialize app value into db repr.\n\
-        App type: {app_ty}\n\
-        Db type: {db_ty}\n\
-        App value: {app_val:#?}"
-    )]
-    Serialize {
-        source: Box<DynError>,
-        app_ty: &'static str,
-        db_ty: &'static str,
-        app_val: Box<dyn fmt::Debug + Send + Sync>,
-    },
-    #[error(
-        "Failed to deserialize db value into app repr.\n\
-        App type: {app_ty}\n\
-        Db type: {db_ty}\n\
-        Db value: {db_val:#?}"
-    )]
-    Deserialize {
-        source: Box<DynError>,
-        app_ty: &'static str,
-        db_ty: &'static str,
-        db_val: Box<dyn fmt::Debug + Send + Sync>,
-    },
+    #[error(transparent)]
+    SqlxBat {
+        #[from]
+        source: sqlx_bat::Error,
+    }
 }
 
 #[derive(Debug, Error)]

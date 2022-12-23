@@ -82,7 +82,7 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
             .get_media(payload.media_id)
             .instrument(info_span!("Fetching media meta from Derpibooru")),
         ctx.db
-            .media_cache
+            .tg_media_cache
             .get_from_derpi(payload.media_id)
             .with_duration_log("Reading the cache from the database"),
     )?;
@@ -105,7 +105,7 @@ pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
     .upload()
     .await?;
 
-    ctx.db.media_cache.set_derpi(cached.clone()).await?;
+    ctx.db.tg_media_cache.set_derpi(cached.clone()).await?;
 
     Ok(Response { media, cached })
 }

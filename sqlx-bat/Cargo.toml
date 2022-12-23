@@ -1,0 +1,18 @@
+[package]
+name = "sqlx-bat"
+
+description = "Missing batteries for `sqlx`"
+
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+publish = { workspace = true }
+version = { workspace = true }
+
+[dependencies]
+easy-ext  = { workspace = true }
+sqlx      = { workspace = true }
+thiserror = { workspace = true }
+
+# Need to be defined here to implement conversion traits
+teloxide = { workspace = true }

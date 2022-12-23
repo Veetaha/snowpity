@@ -64,6 +64,7 @@ mod exporter_prometheus;
 
 mod timing;
 
+pub use metrics_bat_macros::*;
 pub use timing::HistogramTimer;
 
 pub mod prelude {
@@ -71,6 +72,7 @@ pub mod prelude {
     pub use crate::exporter_prometheus::PrometheusBuilderExt as _;
     pub use crate::timing::FutureExt as _;
     pub use crate::timing::HistogramExt as _;
+    pub use metrics_bat_macros::metered;
 }
 
 /// Returns an iterator over histogram metric names and their respective buckets
@@ -234,6 +236,15 @@ metric_macros! {
 
 #[doc(hidden)]
 pub mod imp {
+    pub mod proc_macros {
+        pub use crate::timing::FutureExt;
+        pub use metrics;
+
+        pub fn type_name_of_val<T: ?Sized>(_: &T) -> &'static str {
+            std::any::type_name::<T>()
+        }
+    }
+
     pub use inventory;
     pub use metrics;
     pub use std;

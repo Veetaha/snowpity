@@ -26,7 +26,6 @@ humansize                   = { workspace = true }
 itertools                   = { workspace = true }
 lazy-regex                  = { workspace = true }
 metrics                     = { workspace = true }
-metrics-bat                 = { workspace = true, features = ["exporter-prometheus"] }
 metrics-exporter-prometheus = { workspace = true, features = ["http-listener"] }
 nanoid                      = { workspace = true }
 num_enum                    = { workspace = true }
@@ -36,11 +35,11 @@ parking_lot                 = { workspace = true }
 reqwest                     = { workspace = true, features = ["json"] }
 reqwest-middleware          = { workspace = true }
 reqwest-retry               = { workspace = true }
-sea-orm                     = { workspace = true, features = ["macros", "debug-print"] }
 serde                       = { workspace = true }
 serde_json                  = { workspace = true }
 serde_with                  = { workspace = true }
 serde_yaml                  = { workspace = true }
+sqlx                        = { workspace = true }
 strum                       = { workspace = true }
 sysinfo                     = { workspace = true }
 task-local-extensions       = { workspace = true }
@@ -57,9 +56,9 @@ tracing-subscriber          = { workspace = true }
 url                         = { workspace = true, features = ["serde"] }
 wav_io                      = { workspace = true }
 
-entities  = { path = "../entities" }
-migration = { path = "../migration" }
-
+metrics-bat        = { workspace = true, features = ["exporter-prometheus"] }
+snowpity-tg-macros = { workspace = true }
+sqlx-bat           = { workspace = true }
 
 [dev-dependencies]
 expect-test = { workspace = true }

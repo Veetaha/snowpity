@@ -111,7 +111,10 @@ def "main start" [
     )
 
     docker-compose $args
-    docker-compose logs '--follow' '--no-log-prefix' tg-bot
+
+    let service = if $no_tg_bot { 'postgres' } else { 'tg-bot' }
+
+    docker-compose logs '--follow' '--no-log-prefix' $service
 }
 
 # Shutdown the local containers and clean the persistent data volumes

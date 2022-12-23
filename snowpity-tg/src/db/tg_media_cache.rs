@@ -1,12 +1,9 @@
-use crate::db::conv;
 use crate::prelude::*;
 use crate::tg::TgFileType;
 use crate::{derpi, Result};
-use sea_orm::prelude::*;
-use sea_orm::Set;
 
 pub(crate) struct TgMediaCacheRepo {
-    db: DatabaseConnection,
+    db: sqlx::PgPool,
 }
 
 #[derive(Clone, Debug)]
@@ -17,20 +14,21 @@ pub(crate) struct CachedMedia {
 }
 
 impl TgMediaCacheRepo {
-    pub(crate) fn new(db: DatabaseConnection) -> Self {
+    pub(crate) fn new(db: sqlx::PgPool) -> Self {
         Self { db }
     }
 
     #[instrument(skip(self))]
+    #[metered_db]
     pub(crate) async fn set_derpi(&self, media: CachedMedia) -> Result {
-        let model = entities::tg_derpi_media_cache::ActiveModel {
-            derpi_id: Set(conv::try_into_db(media.derpi_id.0)?),
-            tg_file_id: Set(media.tg_file_id),
-            tg_file_type: Set(media.tg_file_type.into()),
-        };
-        entities::TgDerpiMediaCache::insert(model)
-            .exec(&self.db)
-            .await?;
+        // let model = entities::tg_derpi_media_cache::ActiveModel {
+        //     derpi_id: Set(conv::try_into_db(media.derpi_id.0)?),
+        //     tg_file_id: Set(media.tg_file_id),
+        //     tg_file_type: Set(media.tg_file_type.into()),
+        // };
+        // entities::TgDerpiMediaCache::insert(model)
+        //     .exec(&self.db)
+        //     .await?;
 
         Ok(())
     }
@@ -39,16 +37,18 @@ impl TgMediaCacheRepo {
         &self,
         derpi_id: derpi::MediaId,
     ) -> Result<Option<CachedMedia>> {
-        entities::TgDerpiMediaCache::find_by_id(conv::try_into_db(derpi_id.0)?)
-            .one(&self.db)
-            .await?
-            .map(|media| {
-                Ok(CachedMedia {
-                    derpi_id,
-                    tg_file_id: media.tg_file_id,
-                    tg_file_type: conv::try_from_db(media.tg_file_type)?,
-                })
-            })
-            .transpose()
+        // entities::TgDerpiMediaCache::find_by_id(conv::try_into_db(derpi_id.0)?)
+        //     .one(&self.db)
+        //     .await?
+        //     .map(|media| {
+        //         Ok(CachedMedia {
+        //             derpi_id,
+        //             tg_file_id: media.tg_file_id,
+        //             tg_file_type: conv::try_from_db(media.tg_file_type)?,
+        //         })
+        //     })
+        //     .transpose()
+
+        todo!()
     }
 }
