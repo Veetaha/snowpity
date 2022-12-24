@@ -1,7 +1,7 @@
 use chrono::prelude::*;
-use sqlx_bat::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::Serialize;
+use sqlx_bat::prelude::*;
 use teloxide::types::{self as tg_api, ChatId, UserId};
 
 #[derive(Debug, sqlx::FromRow, Serialize)]

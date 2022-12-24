@@ -15,11 +15,7 @@ pub(crate) fn filter(msg: Message) -> Option<Chat> {
     })
 }
 
-pub(crate) async fn handle(
-    bot: Bot,
-    msg: Message,
-    sender_chat: Chat,
-) -> DynResult {
+pub(crate) async fn handle(bot: Bot, msg: Message, sender_chat: Chat) -> DynResult {
     async {
         info!(
             sender_chat = format_args!("{sender_chat:#?}"),
