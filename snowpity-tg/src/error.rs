@@ -167,7 +167,7 @@ pub(crate) enum UserError {
     )]
     FtaiTextTooLong { actual_len: usize },
 
-    #[error("The command for 15.ai must have the charater name, a comma (,) and the text: <character name>,<text>")]
+    #[error("The command for 15.ai must have the character name, a comma (,) and the text: <character name>,<text>")]
     FtaiInvalidFormat,
 
     #[error("No reply message in describe command")]

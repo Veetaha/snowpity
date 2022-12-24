@@ -12,7 +12,7 @@ macro_rules! simple_expr_vec {
     };
 }
 
-/// Unfortunatelly, [`sqlx`] query types are limited to borrowing the SQL string,
+/// Unfortunately, [`sqlx`] query types are limited to borrowing the SQL string,
 /// so we must have this intermediate wrapper, that is also borrowed by a unique
 /// reference during the method call chain to let us keep it in scope while the
 /// [`sqlx`] query is being used.
