@@ -48,7 +48,7 @@ impl SysInfoService {
 
         let boot_time = Utc
             .timestamp(inf.boot_time().try_into().unwrap_or_default(), 0)
-            .to_ymd_hms();
+            .to_human_readable();
 
         let uptime = crate::util::human_duration(Duration::from_secs(inf.uptime()));
 

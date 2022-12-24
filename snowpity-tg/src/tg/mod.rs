@@ -1,10 +1,11 @@
 //! Telegram commands root module
 
+mod bot_joined_chat;
 mod captcha;
 mod cmd;
 mod config;
 mod inline_query;
-mod updates;
+mod message_from_channel;
 
 use crate::db;
 use crate::derpi::{self, DerpiService};
@@ -47,6 +48,7 @@ metrics_bat::counters! {
 
 pub(crate) struct Ctx {
     bot: Bot,
+    db: Arc<db::Repo>,
     cfg: Arc<Config>,
     ftai: FtaiService,
     captcha: CaptchaCtx,
@@ -75,10 +77,11 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
         bot: bot.clone(),
         derpi,
         cfg: tg_cfg.clone(),
-        db,
+        db: db.clone(),
     };
 
     di.insert(Arc::new(Ctx {
+        db,
         bot: bot.clone(),
         cfg: tg_cfg,
         ftai,
@@ -116,8 +119,8 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
         )
         .branch(
             Update::filter_message()
-                .chain(dptree::filter_map(updates::filter_message_from_channel))
-                .endpoint(updates::handle_message_from_channel),
+                .chain(dptree::filter_map(message_from_channel::filter))
+                .endpoint(message_from_channel::handle),
         )
         .branch(
             Update::filter_message()
@@ -126,16 +129,26 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
         )
         .branch(
             Update::filter_message()
+                .filter_command::<cmd::admin::Cmd>()
+                .chain(dptree::filter_async(cmd::admin::filter))
+                .endpoint(cmd::handle::<cmd::admin::Cmd>()),
+        )
+        .branch(
+            Update::filter_message()
                 .filter_command::<cmd::maintainer::Cmd>()
-                .chain(dptree::filter(cmd::maintainer::is_maintainer))
+                .chain(dptree::filter(cmd::maintainer::filter))
                 .endpoint(cmd::handle::<cmd::maintainer::Cmd>()),
         )
-        // .branch(Update::filter_edited_message().endpoint(updates::handle_edited_message))
         .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query))
-        .branch(Update::filter_inline_query().endpoint(inline_query::handle_inline_query))
+        .branch(Update::filter_inline_query().endpoint(inline_query::handle))
         .branch(
             Update::filter_chosen_inline_result()
                 .endpoint(inline_query::handle_chosen_inline_result),
+        )
+        .branch(
+            Update::filter_my_chat_member()
+                .filter(bot_joined_chat::filter)
+                .endpoint(bot_joined_chat::handle),
         )
         .inspect(|update: Update| {
             let labels = TgUpdateLabels {

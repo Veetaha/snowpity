@@ -35,7 +35,7 @@ services:
     networks: [postgres]
 
   pgadmin:
-    image: dpage/pgadmin4:6.16
+    image: dpage/pgadmin4:6.18
     environment:
       PGADMIN_DEFAULT_EMAIL: snowpity@snowpity.com
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-snowpity}
@@ -46,10 +46,10 @@ services:
     # The files in that directory are required to be owned by pgadmin user.
     entrypoint: >
       /bin/sh -c "
-      mkdir -p -m 700                            /var/lib/pgadmin/storage/snowpity_snowpity.com;
-      chown -R pgadmin:pgadmin                   /var/lib/pgadmin/storage/snowpity_snowpity.com;
-      echo 'pg:5432:*:snowpity:${PG_PASSWORD}' > /var/lib/pgadmin/storage/snowpity_snowpity.com/pgpass;
-      chmod 600                                  /var/lib/pgadmin/storage/snowpity_snowpity.com/pgpass;
+      mkdir -p -m 700                                  /var/lib/pgadmin/storage/snowpity_snowpity.com;
+      chown -R pgadmin:pgadmin                         /var/lib/pgadmin/storage/snowpity_snowpity.com;
+      echo 'postgres:5432:*:snowpity:${PG_PASSWORD}' > /var/lib/pgadmin/storage/snowpity_snowpity.com/pgpass;
+      chmod 600                                        /var/lib/pgadmin/storage/snowpity_snowpity.com/pgpass;
       /entrypoint.sh
       "
 

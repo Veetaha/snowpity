@@ -10,9 +10,11 @@ publish = { workspace = true }
 version = { workspace = true }
 
 [dependencies]
-easy-ext  = { workspace = true }
-sqlx      = { workspace = true }
-thiserror = { workspace = true }
+easy-ext         = { workspace = true }
+sea-query        = { workspace = true }
+sea-query-binder = { workspace = true }
+sqlx             = { workspace = true }
+thiserror        = { workspace = true }
 
 # Need to be defined here to implement conversion traits
 teloxide = { workspace = true }

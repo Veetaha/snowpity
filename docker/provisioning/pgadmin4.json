@@ -3,7 +3,7 @@
     "1": {
       "Name": "snowpity-tg",
       "Group": "snowpity-tg-group",
-      "Host": "pg",
+      "Host": "postgres",
       "Port": 5432,
       "MaintenanceDB": "snowpity",
       "Username": "snowpity",

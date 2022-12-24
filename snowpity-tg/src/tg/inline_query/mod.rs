@@ -49,7 +49,7 @@ impl InlineQueryService {
 }
 
 #[instrument(skip_all, fields(query = %query.query))]
-pub(crate) async fn handle_inline_query(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
+pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     let tg::Ctx {
         bot, inline_query, ..
     } = &*ctx;

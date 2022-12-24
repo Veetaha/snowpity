@@ -14,10 +14,10 @@ pub use crate::error::*;
 pub use config::*;
 pub use observability::*;
 
+#[allow(unused_imports)]
 mod prelude {
     pub(crate) use crate::observability::logging::prelude::*;
     pub(crate) use crate::util::prelude::*;
-    pub(crate) use metrics_bat::prelude::*;
     pub(crate) use snowpity_tg_macros::metered_db;
 }
 

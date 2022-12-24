@@ -93,16 +93,17 @@ def "main start" [
     --no-observability # Don't start the pgadmin and observability services
     --fresh (-f)       # Executes `drop-data` before starting the database (run `db drop --help` for details)
 ] {
+    cd (repo)
+
     if $fresh {
         info "--fresh was specified, so deleting the data volumes..."
         main down --drop-data
     }
 
     mut args = (
-        [up --remove-orphans --build --wait postgres]
+        [up --remove-orphans --build --wait postgres pgadmin]
         | append-if (not $no_tg_bot) tg-bot
         | append-if (not $no_observability) [
-            pgadmin
             victoria-metrics
             grafana
             loki
@@ -112,18 +113,22 @@ def "main start" [
 
     docker-compose $args
 
-    let service = if $no_tg_bot { 'postgres' } else { 'tg-bot' }
+    with-debug sqlx migrate run '--source' snowpity-tg/migrations
 
-    docker-compose logs '--follow' '--no-log-prefix' $service
+    let args = (
+        [logs '--follow']
+        | append-if ($no_tg_bot) pgadmin postgres
+        | append-if (not $no_tg_bot) '--no-log-prefix' tg-bot
+    )
+
+    docker-compose $args
 }
 
 # Shutdown the local containers and clean the persistent data volumes
 def "main down" [
     --drop-data # Remove all data volumes
 ] {
-    # We increase the timeout, because shutting down `teloxide` takes a while
-    # The issue in `teloxide`: https://github.com/teloxide/teloxide/issues/711
-    docker-compose down '--timeout' 60
+    docker-compose down '--timeout' 0 '--remove-orphans'
 
     if $drop_data {
         with-debug docker volume rm snowpity_postgres
@@ -222,6 +227,11 @@ def "main tg chat-id" [
 ] {
     fetch $"https://api.telegram.org/bot($bot_token)/sendMessage?chat_id=@($chat_tag)&text=snowpity"
         | get result.chat.id
+}
+
+def "main sqlx prepare" [] {
+    cd $"(repo)/snowpity-tg"
+    with-debug cargo sqlx prepare
 }
 
 ################################################

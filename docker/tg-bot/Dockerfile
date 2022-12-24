@@ -27,6 +27,7 @@ COPY . .
 RUN --mount=type=cache,sharing=private,target=/usr/local/cargo/git \
     --mount=type=cache,sharing=private,target=/usr/local/cargo/registry \
     --mount=type=cache,sharing=private,target=/app/target \
+    SQLX_OFFLINE=true \
     cargo build ${RUST_RELEASE_FLAG} -p snowpity-tg --bin snowpity-tg && \
     # The buildkit's cache dir (`target`) isn't part of docker layers, so we need to
     # copy the binary out of that dir into somewhere where it will be part of the layer.

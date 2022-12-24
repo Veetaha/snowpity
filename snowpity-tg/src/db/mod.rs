@@ -1,13 +1,17 @@
 mod config;
 
-mod tg_chats;
+mod constraints;
+
+mod tg_chat;
 mod tg_media_cache;
 
 use crate::{err_ctx, DbError, Result};
 
 pub(crate) use config::*;
-use sqlx::postgres::PgPoolOptions;
+pub(crate) use tg_chat::*;
 pub(crate) use tg_media_cache::*;
+
+use sqlx::postgres::PgPoolOptions;
 
 metrics_bat::histograms! {
     /// Database query duration in seconds
@@ -16,8 +20,7 @@ metrics_bat::histograms! {
 
 pub(crate) struct Repo {
     pub(crate) tg_media_cache: TgMediaCacheRepo,
-    // pub(crate) tg_chats: TgChatsRepo,
-    // pub(crate) tg_chat_banned_words: TgChatBannedWordsRepo,
+    pub(crate) tg_chat: TgChatRepo,
 }
 
 pub(crate) async fn init(config: Config) -> Result<Repo> {
@@ -35,12 +38,11 @@ pub(crate) async fn init(config: Config) -> Result<Repo> {
         .await
         .map_err(err_ctx!(DbError::Migrate))?;
 
-    // // Validate that our constraint names in code are fresh
-    // db_constraints::DbConstraints::new(pool.clone())
-    //     .validate()
-    //     .await;
+    // Validate that our constraint names in code are fresh
+    constraints::validate(db.clone()).await;
 
     Ok(Repo {
-        tg_media_cache: TgMediaCacheRepo::new(db),
+        tg_media_cache: TgMediaCacheRepo::new(db.clone()),
+        tg_chat: TgChatRepo::new(db),
     })
 }

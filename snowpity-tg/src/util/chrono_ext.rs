@@ -5,7 +5,7 @@ use easy_ext::ext;
 
 #[ext(DateTimeExt)]
 pub(crate) impl<Tz: chrono::TimeZone> DateTime<Tz> {
-    fn to_ymd_hms(self) -> String
+    fn to_human_readable(self) -> String
     where
         Tz::Offset: std::fmt::Display,
     {

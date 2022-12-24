@@ -16,7 +16,7 @@ use teloxide::utils::markdown;
 #[derive(BotCommands, Clone, Debug)]
 #[command(
     rename_rule = "snake_case",
-    description = "These commands are supported for the bot maintainer:"
+    description = "The following commands are available for the bot maintainer:"
 )]
 pub(crate) enum Cmd {
     #[command(description = "display this text")]
@@ -172,6 +172,6 @@ impl tg::cmd::Command for Cmd {
     }
 }
 
-pub(crate) fn is_maintainer(ctx: Arc<tg::Ctx>, msg: Message) -> bool {
+pub(crate) fn filter(ctx: Arc<tg::Ctx>, msg: Message) -> bool {
     matches!(msg.from(), Some(sender) if sender.id == ctx.cfg.maintainer)
 }

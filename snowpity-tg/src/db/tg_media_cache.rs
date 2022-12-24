@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use crate::tg::TgFileType;
 use crate::{derpi, Result};
+use sqlx_bat::prelude::*;
 
 pub(crate) struct TgMediaCacheRepo {
     db: sqlx::PgPool,
@@ -18,37 +19,40 @@ impl TgMediaCacheRepo {
         Self { db }
     }
 
-    #[instrument(skip(self))]
     #[metered_db]
     pub(crate) async fn set_derpi(&self, media: CachedMedia) -> Result {
-        // let model = entities::tg_derpi_media_cache::ActiveModel {
-        //     derpi_id: Set(conv::try_into_db(media.derpi_id.0)?),
-        //     tg_file_id: Set(media.tg_file_id),
-        //     tg_file_type: Set(media.tg_file_type.into()),
-        // };
-        // entities::TgDerpiMediaCache::insert(model)
-        //     .exec(&self.db)
-        //     .await?;
+        sqlx::query!(
+            "insert into tg_media_cache (derpi_id, tg_file_id, tg_file_type)
+            values ($1, $2, $3)",
+            media.derpi_id.try_into_db()?,
+            media.tg_file_id,
+            media.tg_file_type.try_into_db()?,
+        )
+        .execute(&self.db)
+        .await?;
 
         Ok(())
     }
 
+    #[metered_db]
     pub(crate) async fn get_from_derpi(
         &self,
         derpi_id: derpi::MediaId,
     ) -> Result<Option<CachedMedia>> {
-        // entities::TgDerpiMediaCache::find_by_id(conv::try_into_db(derpi_id.0)?)
-        //     .one(&self.db)
-        //     .await?
-        //     .map(|media| {
-        //         Ok(CachedMedia {
-        //             derpi_id,
-        //             tg_file_id: media.tg_file_id,
-        //             tg_file_type: conv::try_from_db(media.tg_file_type)?,
-        //         })
-        //     })
-        //     .transpose()
-
-        todo!()
+        sqlx::query!(
+            "select tg_file_id, tg_file_type from tg_media_cache
+            where derpi_id = $1",
+            derpi_id.try_into_db()?,
+        )
+        .fetch_optional(&self.db)
+        .await?
+        .map(|record| {
+            Ok(CachedMedia {
+                derpi_id,
+                tg_file_id: record.tg_file_id,
+                tg_file_type: record.tg_file_type.try_into_app()?,
+            })
+        })
+        .transpose()
     }
 }

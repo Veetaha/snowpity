@@ -54,7 +54,7 @@ impl FtaiCmd {
 
         let took = format!("{:.2?}", start.elapsed());
 
-        let caption = markdown::escape(&format!("символов: {text_len}, заняло: {took}"));
+        let caption = markdown::escape(&format!("symbols: {text_len}, took: {took}"));
 
         let input_file = InputFile::memory(ogg.data).file_name("voice.ogg");
 

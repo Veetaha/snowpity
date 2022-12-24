@@ -30,7 +30,14 @@ pub(crate) type DerpiRequest = derpi_cache::Request;
 
 /// Determines the API method used when the media was uploaded to Telegram.
 #[derive(
-    Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, strum::Display, strum::IntoStaticStr,
+    Clone,
+    Copy,
+    Debug,
+    IntoPrimitive,
+    TryFromPrimitive,
+    strum::Display,
+    strum::IntoStaticStr,
+    sqlx::Type,
 )]
 #[repr(i16)]
 pub(crate) enum TgFileType {
@@ -40,6 +47,8 @@ pub(crate) enum TgFileType {
     Gif = 3,
     // Mpeg4Gif = 4,
 }
+
+sqlx_bat::impl_try_into_from_db_via_std!(TgFileType, i16);
 
 pub(crate) struct Envelope<R> {
     request: R,

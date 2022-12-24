@@ -21,7 +21,9 @@ const RATING_TAGS: &[&str] = &[
     derive_more::Display, derive_more::FromStr, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize,
 )]
 #[serde(transparent)]
-pub struct MediaId(pub(crate) u64);
+pub struct MediaId(u64);
+
+sqlx_bat::impl_try_into_db_via_newtype!(MediaId(u64));
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct SearchImagesResponse {

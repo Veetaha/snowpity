@@ -167,15 +167,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "censy"
-version = "0.4.4"
-dependencies = [
- "itertools 0.10.5",
- "once_cell",
- "thiserror",
-]
-
-[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1267,7 +1258,7 @@ dependencies = [
 
 [[package]]
 name = "metrics-bat"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "easy-ext",
  "inventory",
@@ -1280,7 +1271,7 @@ dependencies = [
 
 [[package]]
 name = "metrics-bat-macros"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "darling 0.14.2",
  "proc-macro2",
@@ -2035,6 +2026,51 @@ dependencies = [
 ]
 
 [[package]]
+name = "sea-query"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8151099c20857b1c3854647ea250a188b143d5abe99dfb39f930c49ae0cdea5"
+dependencies = [
+ "sea-query-attr",
+ "sea-query-derive",
+]
+
+[[package]]
+name = "sea-query-attr"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "878cf3d57f0e5bfacd425cdaccc58b4c06d68a7b71c63fc28710a20c88676808"
+dependencies = [
+ "darling 0.14.2",
+ "heck",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "sea-query-binder"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03548c63aec07afd4fd190923e0160d2f2fc92def27470b54154cf232da6203b"
+dependencies = [
+ "sea-query",
+ "sqlx",
+]
+
+[[package]]
+name = "sea-query-derive"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63f62030c60f3a691f5fe251713b4e220b306e50a71e1d6f9cce1f24bb781978"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn",
+ "thiserror",
+]
+
+[[package]]
 name = "semver"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2211,7 +2247,7 @@ checksum = "5e9f0ab6ef7eb7353d9119c170a436d1bf248eea575ac42d19d12f4e34130831"
 
 [[package]]
 name = "snowpity-tg"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "assert_matches",
  "async-trait",
@@ -2237,11 +2273,11 @@ dependencies = [
  "nanoid",
  "num_enum",
  "ogg-opus",
- "once_cell",
  "parking_lot 0.12.1",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
+ "sea-query",
  "serde",
  "serde_json",
  "serde_with",
@@ -2259,7 +2295,6 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-error",
- "tracing-futures",
  "tracing-loki",
  "tracing-subscriber",
  "url",
@@ -2269,7 +2304,7 @@ dependencies = [
 
 [[package]]
 name = "snowpity-tg-macros"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "darling 0.14.2",
  "proc-macro2",
@@ -2316,9 +2351,11 @@ dependencies = [
 
 [[package]]
 name = "sqlx-bat"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "easy-ext",
+ "sea-query",
+ "sea-query-binder",
  "sqlx",
  "teloxide",
  "thiserror",
@@ -2812,16 +2849,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-futures"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97d095ae15e245a057c8e8451bab9b3ee1e1f68e9ba2b4fbc18d0ac5237835f2"
-dependencies = [
- "pin-project",
- "tracing",
-]
-
-[[package]]
 name = "tracing-log"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3248,7 +3275,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "clap",

@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use crate::tg::{self, Bot};
 use crate::util::{self, DynResult};
-use crate::{err_val, Error, ErrorKind, Result};
+use crate::{db, err_val, Error, ErrorKind, Result};
 use chrono::prelude::*;
 use futures::prelude::*;
 use parking_lot::Mutex as SyncMutex;
@@ -148,7 +148,27 @@ pub(crate) async fn handle_new_chat_members(
 
         let bot_id = ctx.bot.get_me().await?.id;
 
-        let users = users.into_iter().filter(|user| user.id != bot_id);
+        let mut users = users
+            .into_iter()
+            .filter(|user| user.id != bot_id)
+            .peekable();
+
+        if let Some(user) = users.peek() {
+            let is_captcha_enabled = ctx
+                .db
+                .tg_chat
+                .get_or_update_captcha(db::TgChatQuery {
+                    chat: &msg.chat,
+                    requested_by: user,
+                    action: db::TgChatAction::HandleNewChatMember,
+                })
+                .await?;
+
+            if !is_captcha_enabled {
+                info!("Captcha is disabled for this chat, ignoring new member");
+                return Ok(());
+            }
+        }
 
         let futs = users.map(|user| {
             let span = tracing::info_span!("user", user = %user.debug_id());
@@ -302,7 +322,7 @@ pub(crate) async fn handle_new_chat_members(
 async fn kick_user_due_to_captcha(bot: &Bot, chat_id: ChatId, user_id: UserId) -> Result {
     let ban_timeout = Utc::now() + chrono::Duration::from_std(CAPTCHA_BAN_DURATION).unwrapx();
 
-    info!(until = %ban_timeout.to_ymd_hms(), "Kicking the user due to captcha...");
+    info!(until = %ban_timeout.to_human_readable(), "Kicking the user due to captcha...");
 
     bot.kick_chat_member(chat_id, user_id)
         .until_date(ban_timeout)
@@ -505,6 +525,12 @@ impl CaptchaCtx {
             .values()
             .map(|unverified| (unverified.chat_id, unverified.member.user.clone()))
             .collect()
+    }
+
+    pub(crate) fn clear_unverified_in_chat(&self, target_chat: ChatId) {
+        self.unverified_users
+            .lock()
+            .retain(|(chat_id, _), _| *chat_id != target_chat)
     }
 
     #[instrument(skip_all)]

@@ -338,7 +338,9 @@ impl<'a> TgUploadContext<'a> {
             .await
     }
 
-    async fn _upload_video(self) -> Result<CachedMedia> {
+    // TODO: implement ffmpeg conversions
+    #[allow(dead_code)]
+    async fn upload_video(self) -> Result<CachedMedia> {
         info!("Started converting a video");
         let start = Instant::now();
         let tmp_output = crate::media::convert_to_mp4(&self.media.view_url).await?;

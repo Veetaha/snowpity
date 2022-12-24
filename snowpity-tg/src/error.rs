@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use crate::util::DynError;
 use std::backtrace::Backtrace;
 use std::fmt;
 use thiserror::Error;
@@ -148,7 +147,7 @@ pub(crate) enum FtAiError {
     #[error("Failed to encode the resampled WAV to OGG")]
     EncodeWavToOpus { source: ogg_opus::Error },
 
-    #[error("Не правильный ввод. Проверьте имя персонажа на сайте 15.ai, или правильность введеного текста")]
+    #[error("Invalid input. Please check the name of the character on 15.ai website, or check your input for typos.")]
     Service { source: Box<Error> },
 }
 
@@ -159,27 +158,16 @@ pub(crate) enum UserError {
     #[error("The specified image tags contain a comma (which is prohibited): {input}")]
     CommaInImageTag { input: String },
 
-    // #[error("Запрет на слово уже существует (слово: {word})")]
-    // BannedWordAlreadyExists { word: banned_words::Word },
-
-    // #[error("Запрета на слово не существует (слово: {word})")]
-    // BannedWordNotFound { word: banned_words::Word },
-
-    // #[error("Чат уже существует в базе (chat_id: {chat_id})")]
-    // ChatAlreadyExists { chat_id: ChatId },
-
-    // #[error("Чат не был найден в базе (chat_id: {chat_id})")]
-    // ChatNotFound { chat_id: ChatId },
-    #[error("Текст для 15.ai не должен содержать цифр вне ARPAbet нотации")]
+    #[error("The text for 15.ai must not contain digits except for ARPAbet notation")]
     FtaiTextContainsNumber,
 
     #[error(
-        "Текст для 15.ai должен быть не более {} символов. Длина заданого текста: {actual_len}",
+        "The text for 15.ai must have less than {} symbols. The length of your text is {actual_len}",
         crate::ftai::MAX_TEXT_LENGTH
     )]
     FtaiTextTooLong { actual_len: usize },
 
-    #[error("Команда для 15.ai должна иметь название персонажа и текст через запятую: <персонаж>,<текст>")]
+    #[error("The command for 15.ai must have the charater name, a comma (,) and the text: <character name>,<text>")]
     FtaiInvalidFormat,
 
     #[error("No reply message in describe command")]
