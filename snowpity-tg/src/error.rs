@@ -1,12 +1,10 @@
-use crate::util::{tracing_err, DynError};
+use crate::prelude::*;
 use std::backtrace::Backtrace;
 use std::fmt;
 use thiserror::Error;
-use tracing::trace;
-// use tracing_error::SpanTrace;
+use tracing_error::SpanTrace;
 
 pub type Result<T = (), E = Error> = std::result::Result<T, E>;
-pub type DynResult<T = (), E = Box<DynError>> = std::result::Result<T, E>;
 
 /// Macro to reduce the boilerplate of creating crate-level errors.
 /// It directly accepts the body of [`ErrorKind`] variant without type name qualification.
@@ -38,19 +36,29 @@ macro_rules! err_ctx {
     };
 }
 
+use crate::derpi;
 pub(crate) use err_ctx;
 pub(crate) use err_val;
+use std::sync::Arc;
+use teloxide::types::MediaKind;
 
 /// Describes any possible error that may happen in the application lifetime.
-#[derive(Debug)]
+#[derive(Clone)]
 pub struct Error {
+    imp: Arc<ErrorImp>,
+}
+
+struct ErrorImp {
     /// Small identifier used for debugging purposes.
     /// It is mentioned in the chat when the error happens.
     /// This way we as developers can copy it and lookup the logs using this id.
     pub(crate) id: String,
-    // pub(crate) spantrace: SpanTrace,
-    pub(crate) backtrace: Option<Backtrace>,
-    pub(crate) kind: ErrorKind,
+    backtrace: Option<Backtrace>,
+    kind: ErrorKind,
+
+    // Participates only in debug impl
+    #[allow(dead_code)]
+    pub(crate) spantrace: SpanTrace,
 }
 
 #[derive(Error, Debug)]
@@ -62,9 +70,9 @@ pub(crate) enum ErrorKind {
     },
 
     #[error(transparent)]
-    Http {
+    HttpClient {
         #[from]
-        source: HttpError,
+        source: HttpClientError,
     },
 
     #[error(transparent)]
@@ -91,11 +99,32 @@ pub(crate) enum ErrorKind {
     // FIXME: display chain using human-readable format
     #[error("Multiple errors occurred: {errs:#?}")]
     Multiple { errs: Vec<Error> },
+
+    #[error(transparent)]
+    Media {
+        #[from]
+        source: MediaError,
+    },
+
+    #[error(transparent)]
+    Io {
+        #[from]
+        source: IoError,
+    },
+
+    #[error("Not implemented yet: {message}")]
+    Todo { message: &'static str },
 }
 
 impl<T: Into<DbError>> From<T> for ErrorKind {
     fn from(err: T) -> Self {
         Self::Db { source: err.into() }
+    }
+}
+
+impl From<std::io::Error> for ErrorKind {
+    fn from(err: std::io::Error) -> Self {
+        Self::Io { source: err.into() }
     }
 }
 
@@ -118,7 +147,7 @@ pub(crate) enum FtAiError {
     #[error("Failed to encode the resampled WAV to OGG")]
     EncodeWavToOpus { source: ogg_opus::Error },
 
-    #[error("Не правильный ввод. Проверьте имя персонажа на сайте 15.ai, или правильность введеного текста")]
+    #[error("Invalid input. Please check the name of the character on 15.ai website, or check your input for typos.")]
     Service { source: Box<Error> },
 }
 
@@ -129,27 +158,16 @@ pub(crate) enum UserError {
     #[error("The specified image tags contain a comma (which is prohibited): {input}")]
     CommaInImageTag { input: String },
 
-    // #[error("Запрет на слово уже существует (слово: {word})")]
-    // BannedWordAlreadyExists { word: banned_words::Word },
-
-    // #[error("Запрета на слово не существует (слово: {word})")]
-    // BannedWordNotFound { word: banned_words::Word },
-
-    // #[error("Чат уже существует в базе (chat_id: {chat_id})")]
-    // ChatAlreadyExists { chat_id: ChatId },
-
-    // #[error("Чат не был найден в базе (chat_id: {chat_id})")]
-    // ChatNotFound { chat_id: ChatId },
-    #[error("Текст для 15.ai не должен содержать цифр вне ARPAbet нотации")]
+    #[error("The text for 15.ai must not contain digits except for ARPAbet notation")]
     FtaiTextContainsNumber,
 
     #[error(
-        "Текст для 15.ai должен быть не более {} символов. Длина заданого текста: {actual_len}",
+        "The text for 15.ai must have less than {} symbols. The length of your text is {actual_len}",
         crate::ftai::MAX_TEXT_LENGTH
     )]
     FtaiTextTooLong { actual_len: usize },
 
-    #[error("Команда для 15.ai должна иметь название персонажа и текст через запятую: <персонаж>,<текст>")]
+    #[error("The command for 15.ai must have the character name, a comma (,) and the text: <character name>,<text>")]
     FtaiInvalidFormat,
 
     #[error("No reply message in describe command")]
@@ -158,12 +176,12 @@ pub(crate) enum UserError {
 
 /// Errors at the layer of the HTTP API
 #[derive(Debug, Error)]
-pub(crate) enum HttpError {
+pub(crate) enum HttpClientError {
     #[error("Failed to send an http request")]
-    SendRequest { source: reqwest::Error },
+    SendRequest { source: reqwest_middleware::Error },
 
     #[error("Failed to read http response")]
-    ReadResponse { source: reqwest::Error },
+    ReadResponse { source: reqwest_middleware::Error },
 
     #[error("HTTP request has failed (http status code: {status}):\n{body}")]
     BadResponseStatusCode {
@@ -173,6 +191,11 @@ pub(crate) enum HttpError {
 
     #[error("Received an unexpected response JSON object")]
     UnexpectedResponseJsonShape { source: serde_json::Error },
+    // #[error("Failed to write bytes to a file")]
+    // WriteToFile { source: std::io::Error },
+
+    // #[error("Failed to flush bytes to a file")]
+    // FlushToFile { source: std::io::Error },
 }
 
 /// Most likely unrecoverable errors from database communication layer
@@ -190,30 +213,10 @@ pub(crate) enum DbError {
         source: sqlx::Error,
     },
 
-    #[error(
-        "Failed to serialize app value into db repr.\n\
-        App type: {app_ty}\n\
-        Db type: {db_ty}\n\
-        App value: {app_val:#?}"
-    )]
-    Serialize {
-        source: Box<DynError>,
-        app_ty: &'static str,
-        db_ty: &'static str,
-        app_val: Box<dyn fmt::Debug + Send + Sync>,
-    },
-
-    #[error(
-        "Failed to deserialize db value into app repr.\n\
-        App type: {app_ty}\n\
-        Db type: {db_ty}\n\
-        Db value: {db_val:#?}"
-    )]
-    Deserialize {
-        source: Box<DynError>,
-        app_ty: &'static str,
-        db_ty: &'static str,
-        db_val: Box<dyn fmt::Debug + Send + Sync>,
+    #[error(transparent)]
+    SqlxBat {
+        #[from]
+        source: sqlx_bat::Error,
     },
 }
 
@@ -244,17 +247,57 @@ pub(crate) enum DeserializeError {
     },
 }
 
-impl ErrorKind {
+#[derive(Debug, Error)]
+pub(crate) enum MediaError {
+    #[error("Unexpected media kind for mime type {expected:?}: {media:#?}")]
+    UnexpectedMediaKind {
+        media: Box<MediaKind>,
+        expected: derpi::MimeType,
+    },
+
+    #[error(
+        "The size of the requested file `{actual}` bytes \
+        exceeds the limit of `{max}` byttes"
+    )]
+    FileTooBig { actual: u64, max: u64 },
+
+    #[error("Failed to spawn `ffmpeg` process")]
+    SpawnFfmpeg { source: std::io::Error },
+
+    #[error("Failed to wait for `ffmpeg` process")]
+    WaitForFfmpeg { source: std::io::Error },
+
+    #[error("`ffmpeg` failed with the exit code {status}")]
+    Ffmpeg { status: std::process::ExitStatus },
+}
+
+#[derive(Debug, Error)]
+pub(crate) enum IoError {
+    #[error("Failed to create a temporary file")]
+    CreateTempFile { source: std::io::Error },
+
+    #[error(transparent)]
+    Other {
+        #[from]
+        source: std::io::Error,
+    },
+}
+
+impl Error {
+    pub(crate) fn id(&self) -> &str {
+        &self.imp.id
+    }
+
     pub(crate) fn is_user_error(&self) -> bool {
-        matches!(self, Self::User { .. })
+        matches!(self.imp.kind, ErrorKind::User { .. })
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Error (id: {}): {}", self.id, self.kind)?;
+        write!(f, "Error (id: {}): {}", self.imp.id, self.imp.kind)?;
 
-        if let Some(backtrace) = &self.backtrace {
+        if let Some(backtrace) = &self.imp.backtrace {
             write!(f, "\n{:?}", backtrace)?;
         }
 
@@ -264,7 +307,14 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.kind.source()
+        self.imp.kind.source()
+    }
+}
+
+impl std::fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)?;
+        fmt::Display::fmt(&self.imp.spantrace, f)
     }
 }
 
@@ -283,12 +333,14 @@ impl<T: Into<ErrorKind>> From<T> for Error {
         //     None
         // };
 
-        let err = Self {
+        let imp = ErrorImp {
             kind,
             id: nanoid::nanoid!(6),
             backtrace: None,
-            // spantrace: SpanTrace::capture()
+            spantrace: SpanTrace::capture(),
         };
+
+        let err = Self { imp: Arc::new(imp) };
 
         trace!(err = tracing_err(&err), "Created an error");
 

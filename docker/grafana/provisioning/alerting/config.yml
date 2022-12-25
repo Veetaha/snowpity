@@ -1,0 +1,58 @@
+apiVersion: 1
+
+templates:
+  # Huge shout out to https://gist.github.com/Himura2la/342603218ba2ee871f7b0e35eff9eaae
+  # Also, it seems the docs for template functions are available only in `v9.2`:
+  # https://grafana.com/docs/grafana/v9.2/alerting/fundamentals/annotation-label/example-template-functions/
+  - name: telegram.message
+    template: "\
+      {{ define \"alert_list\" }}\
+        {{ range . }}\
+          <b>{{ .Labels.alertname }}</b>\n\n\
+          {{ range .Annotations.SortedPairs }}\
+            <b>{{ .Name }}:</b> {{ .Value }}\n\
+          {{ end }}\n\
+          {{ if gt (len .GeneratorURL) 0 }}👉 <b><a href=\"{{ reReplaceAll \"://localhost\" \"://127.0.0.1\" .GeneratorURL }}\">Source</a></b>\n{{ end }}\
+          {{ if gt (len .SilenceURL)   0 }}👉 <b><a href=\"{{ reReplaceAll \"://localhost\" \"://127.0.0.1\" .SilenceURL   }}\">Silence</a></b>\n{{ end }}\
+          {{ if gt (len .DashboardURL) 0 }}👉 <b><a href=\"{{ reReplaceAll \"://localhost\" \"://127.0.0.1\" .DashboardURL }}\">Dashboard</a></b>\n{{ end }}\
+          {{ if gt (len .PanelURL)     0 }}👉 <b><a href=\"{{ reReplaceAll \"://localhost\" \"://127.0.0.1\" .PanelURL     }}\">Panel</a></b>\n{{ end }}\
+        {{ end }}\
+      {{ end }}
+
+      {{ define \"telegram.message\" }}\
+        {{ if gt (len .Alerts.Firing) 0 }}\
+          ⚠️ <b>ALERT</b> ⚠️\n\n\
+          {{ template \"alert_list\" .Alerts.Firing }}\
+          {{ if gt (len .Alerts.Resolved) 0 }}\n\n\
+          {{ end }}\
+        {{ end }}\
+        {{ if gt (len .Alerts.Resolved) 0 }}\
+          ✅ <b>RESOLVED</b> ✅\n\n\
+          {{ template \"alert_list\" .Alerts.Resolved }}\
+        {{ end }}\
+      {{ end }}"
+
+contactPoints:
+  - name: Telegram
+    receivers:
+      - uid: telegram
+        type: telegram
+        settings:
+          bottoken: $TG_BOT_TOKEN
+          chatid: $TG_BOT_ALERTS_CHAT
+          message: '{{ template "telegram.message" . }}'
+
+policies:
+  - receiver: Telegram
+    group_by: ['...']
+    # <duration> How long to initially wait to send a notification for a group
+    #            of alerts. Allows to collect more initial alerts for the same group.
+    #            (Usually ~0s to few minutes), default = 30s
+    group_wait: 30s
+    # <duration> How long to wait before sending a notification about new alerts that
+    #            are added to a group of alerts for which an initial notification has
+    #            already been sent. (Usually ~5m or more), default = 5m
+    group_interval: 5m
+    # <duration>  How long to wait before sending a notification again if it has already
+    #             been sent successfully for an alert. (Usually ~3h or more), default = 4h
+    repeat_interval: 4h

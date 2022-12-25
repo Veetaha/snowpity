@@ -1,7 +1,7 @@
 mod ftai;
 
+use crate::prelude::*;
 use crate::tg;
-use crate::util::prelude::*;
 use crate::Result;
 use async_trait::async_trait;
 use ftai::FtaiCmd;
@@ -11,13 +11,13 @@ use teloxide::utils::command::BotCommands;
 #[derive(BotCommands, Clone, Debug)]
 #[command(
     rename_rule = "snake_case",
-    description = "Следующие команды доступны:"
+    description = "The following commands are available:"
 )]
 pub(crate) enum Cmd {
-    #[command(description = "показать этот текст")]
+    #[command(description = "display this text")]
     Help,
 
-    #[command(description = "Сгенерировать аудио с помощью 15.ai: <персонаж>,<текст>")]
+    #[command(description = "Generate audio via 15.ai: <character name>,<text>")]
     Ftai(String),
 }
 

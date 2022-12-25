@@ -1,0 +1,48 @@
+apiVersion: 1
+
+groups:
+  - name: system
+    folder: system
+    interval: 10s
+    rules:
+      - id: 2
+        for: 1m
+        uid: high-disk-usage
+        ruleGroup: system
+        title: High disk usage
+        condition: condition
+        noDataState: Alerting
+        execErrState: Error
+        labels: { type: disk }
+        annotations:
+          used-disk: <code>{{ $values.display.Value }}%</code>
+          instance: <code>{{ $labels.instance }}</code>
+          mount-point: <code>{{ $labels.mountpoint }}</code>
+          device: <code>{{ $labels.device }}</code>
+
+        data:
+          - refId: data
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: victoria-metrics
+            model:
+              expr: 100 - ((node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes)
+
+          - refId: metric
+            datasourceUid: '-100'
+            model:
+              expression: data
+              reducer: max
+              type: reduce
+
+          - refId: condition
+            datasourceUid: '-100'
+            model:
+              conditions: [evaluator: { params: [30], type: gt }]
+              expression: metric
+              type: threshold
+
+          - refId: display
+            datasourceUid: '-100'
+            model:
+              expression: round($metric * 100) / 100
+              type: math

@@ -1,6 +1,9 @@
-use crate::util;
+use crate::prelude::*;
 use easy_ext::ext;
-use tracing::error;
+
+pub(crate) mod prelude {
+    pub(crate) use super::{ErrorExt as _, ResultExt as _};
+}
 
 #[ext(OptionExt)]
 pub(crate) impl<T> Option<T> {
@@ -26,10 +29,7 @@ where
         match self {
             Ok(x) => x,
             Err(err) => {
-                error!(
-                    err = util::tracing_err(&err),
-                    "The application is crashing..."
-                );
+                error!(err = tracing_err(&err), "The application is crashing...");
                 panic!("unwrap called on None");
             }
         }
@@ -44,4 +44,8 @@ where
     fn display_chain(&self) -> display_error_chain::DisplayErrorChain<'_, Self> {
         display_error_chain::DisplayErrorChain::new(self)
     }
+}
+
+pub(crate) fn type_name_of_val<T: ?Sized>(_: &T) -> &'static str {
+    std::any::type_name::<T>()
 }

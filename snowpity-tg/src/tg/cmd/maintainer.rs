@@ -1,4 +1,5 @@
-use crate::util::{encoding, prelude::*};
+use crate::prelude::*;
+use crate::util::encoding;
 use crate::Result;
 use crate::{err_val, tg, UserError};
 use async_trait::async_trait;
@@ -11,12 +12,11 @@ use teloxide::prelude::*;
 use teloxide::types::ChatMemberKind;
 use teloxide::utils::command::BotCommands;
 use teloxide::utils::markdown;
-use tracing::{error, info};
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(
     rename_rule = "snake_case",
-    description = "These commands are supported for the bot maintainer:"
+    description = "The following commands are available for the bot maintainer:"
 )]
 pub(crate) enum Cmd {
     #[command(description = "display this text")]
@@ -172,6 +172,6 @@ impl tg::cmd::Command for Cmd {
     }
 }
 
-pub(crate) fn is_maintainer(ctx: Arc<tg::Ctx>, msg: Message) -> bool {
-    matches!(msg.from(), Some(sender) if sender.id == ctx.cfg.bot_maintainer)
+pub(crate) fn filter(ctx: Arc<tg::Ctx>, msg: Message) -> bool {
+    matches!(msg.from(), Some(sender) if sender.id == ctx.cfg.maintainer)
 }

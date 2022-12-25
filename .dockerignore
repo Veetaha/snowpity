@@ -1,5 +1,8 @@
 *.env
 *.md
+deployment
 docker-compose.yml
+taplo.toml
 target
 typos.toml
+x.nu

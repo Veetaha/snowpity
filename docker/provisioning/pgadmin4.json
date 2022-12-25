@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "snowpity-tg",
+      "Group": "snowpity-tg-group",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "snowpity",
+      "Username": "snowpity",
+      "PassFile": "/pgpass",
+      "SSLMode": "prefer"
+    }
+  }
+}

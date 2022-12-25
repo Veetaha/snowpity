@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: 'Victoria Metrics'
+    folder: ''
+    disableDeletion: true
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: true

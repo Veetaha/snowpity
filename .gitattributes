@@ -1,6 +1,7 @@
 *.rs diff=rust
 
 *.conf linguist-language=INI
+Dockerfile.* linguist-language=Dockerfile
 
 # HACK: Nushell doesn't seem to have good highlighting implemented yet.
 # Python highlighting matches nushell code good enough though

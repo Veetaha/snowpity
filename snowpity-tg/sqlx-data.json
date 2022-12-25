@@ -1,3 +1,61 @@
 {
-  "db": "PostgreSQL"
+  "db": "PostgreSQL",
+  "393eb8482138bb60e3fbd9aecf7bd6119fb29ec7c890bc606e1b3e0fc38a8049": {
+    "describe": {
+      "columns": [
+        {
+          "name": "conname",
+          "ordinal": 0,
+          "type_info": "Name"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\n            select conname\n            from pg_catalog.pg_constraint\n            inner join pg_catalog.pg_namespace nsp\n            on nsp.oid = connamespace and nsp.nspname = 'public'\n            "
+  },
+  "79efe9f429a72bf7ffc46b2ca0c2b337c9bd17ba37ff1207641350350a7b7d47": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tg_file_id",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "tg_file_type",
+          "ordinal": 1,
+          "type_info": "Int2"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "select tg_file_id, tg_file_type from tg_media_cache\n            where derpi_id = $1"
+  },
+  "8c236344e61275bb81c45bf2a1e6bfffe7a88c9e68b429c15fa56877190696d5": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Varchar",
+          "Int2"
+        ]
+      }
+    },
+    "query": "insert into tg_media_cache (derpi_id, tg_file_id, tg_file_type)\n            values ($1, $2, $3)"
+  }
 }

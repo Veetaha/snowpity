@@ -1,54 +1,93 @@
 //! Telegram commands root module
 
+mod bot_joined_chat;
 mod captcha;
 mod cmd;
-mod updates;
+mod config;
+mod inline_query;
+mod message_from_channel;
 
+use crate::db;
+use crate::derpi::{self, DerpiService};
 use crate::ftai::FtaiService;
+use crate::prelude::*;
 use crate::sysinfo::SysInfoService;
-use crate::util;
-use crate::{Result, TgConfig};
+use crate::tg::inline_query::media_cache;
+use crate::util::{self, encoding};
+use crate::Result;
 use captcha::CaptchaCtx;
 use dptree::di::DependencyMap;
+use inline_query::InlineQueryService;
 use std::sync::Arc;
+use teloxide::adaptors::throttle::ThrottlingRequest;
+use teloxide::adaptors::trace::TraceRequest;
 use teloxide::adaptors::{CacheMe, DefaultParseMode, Throttle, Trace};
 use teloxide::dispatching::UpdateFilterExt;
 use teloxide::prelude::*;
+use teloxide::requests::MultipartRequest;
 use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
-use tracing::info;
 
-type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
+pub(crate) use config::*;
+pub(crate) use media_cache::TgFileType;
+
+pub(crate) type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
+pub(crate) type Request<T> = TraceRequest<ThrottlingRequest<MultipartRequest<T>>>;
+
+metrics_bat::labels! {
+    TgUpdateLabels { kind }
+}
+
+metrics_bat::counters! {
+    /// Number of updates received from Telegram
+    tg_updates_total;
+
+    /// Number of updates received from Telegram, that were skipped by the bot
+    tg_updates_skipped_total;
+}
 
 pub(crate) struct Ctx {
     bot: Bot,
-    // db: db::Repo,
-    cfg: TgConfig,
+    db: Arc<db::Repo>,
+    cfg: Arc<Config>,
     ftai: FtaiService,
     captcha: CaptchaCtx,
     sysinfo: SysInfoService,
+    inline_query: InlineQueryService,
 }
 
-pub(crate) async fn run_bot(cfg: TgConfig /*db: db::Repo*/) -> Result {
+pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Repo) -> Result {
     let mut di = DependencyMap::new();
 
-    let http = util::create_http_client();
+    let http = util::http::create_client();
 
-    let bot: Bot = teloxide::Bot::with_client(cfg.bot_token.clone(), http.clone())
+    let bot: Bot = teloxide::Bot::new(tg_cfg.token.clone())
         .throttle(Default::default())
         .parse_mode(ParseMode::MarkdownV2)
         .cache_me()
         .trace(teloxide::adaptors::trace::Settings::all());
 
-    let ftai = FtaiService::new(http);
+    let ftai = FtaiService::new(http.clone());
+    let derpi = Arc::new(DerpiService::new(derpi_cfg, http.clone()));
+    let tg_cfg = Arc::new(tg_cfg);
+    let db = Arc::new(db);
+
+    let ctx = media_cache::Context {
+        http_client: http,
+        bot: bot.clone(),
+        derpi,
+        cfg: tg_cfg.clone(),
+        db: db.clone(),
+    };
 
     di.insert(Arc::new(Ctx {
+        db,
         bot: bot.clone(),
-        // db,
-        cfg,
+        cfg: tg_cfg,
         ftai,
-        captcha: Default::default(),
         sysinfo: SysInfoService::new(),
+        captcha: Default::default(),
+        inline_query: InlineQueryService::new(ctx),
     }));
 
     info!("Starting bot...");
@@ -57,6 +96,17 @@ pub(crate) async fn run_bot(cfg: TgConfig /*db: db::Repo*/) -> Result {
         .await?;
 
     let handler = dptree::entry()
+        .inspect(|update: Update| {
+            let labels = TgUpdateLabels {
+                kind: update.kind.discriminator(),
+            };
+            tg_updates_total(labels).increment(1);
+            trace!(
+                target: "tg_update",
+                "{}",
+                encoding::to_json_string_pretty(&update),
+            );
+        })
         .branch(
             Update::filter_message()
                 .chain(Message::filter_new_chat_members())
@@ -69,8 +119,8 @@ pub(crate) async fn run_bot(cfg: TgConfig /*db: db::Repo*/) -> Result {
         )
         .branch(
             Update::filter_message()
-                .chain(dptree::filter_map(updates::filter_message_from_channel))
-                .endpoint(updates::handle_message_from_channel),
+                .chain(dptree::filter_map(message_from_channel::filter))
+                .endpoint(message_from_channel::handle),
         )
         .branch(
             Update::filter_message()
@@ -79,12 +129,33 @@ pub(crate) async fn run_bot(cfg: TgConfig /*db: db::Repo*/) -> Result {
         )
         .branch(
             Update::filter_message()
+                .filter_command::<cmd::owner::Cmd>()
+                .chain(dptree::filter_async(cmd::owner::filter))
+                .endpoint(cmd::handle::<cmd::owner::Cmd>()),
+        )
+        .branch(
+            Update::filter_message()
                 .filter_command::<cmd::maintainer::Cmd>()
-                .chain(dptree::filter(cmd::maintainer::is_maintainer))
+                .chain(dptree::filter(cmd::maintainer::filter))
                 .endpoint(cmd::handle::<cmd::maintainer::Cmd>()),
         )
-        // .branch(Update::filter_edited_message().endpoint(updates::handle_edited_message))
-        .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query));
+        .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query))
+        .branch(Update::filter_inline_query().endpoint(inline_query::handle))
+        .branch(
+            Update::filter_chosen_inline_result()
+                .endpoint(inline_query::handle_chosen_inline_result),
+        )
+        .branch(
+            Update::filter_my_chat_member()
+                .filter(bot_joined_chat::filter)
+                .endpoint(bot_joined_chat::handle),
+        )
+        .inspect(|update: Update| {
+            let labels = TgUpdateLabels {
+                kind: update.kind.discriminator(),
+            };
+            tg_updates_skipped_total(labels).increment(1)
+        });
 
     Dispatcher::builder(bot, handler)
         .dependencies(di)

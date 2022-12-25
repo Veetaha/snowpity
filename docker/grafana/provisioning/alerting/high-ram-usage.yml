@@ -1,0 +1,46 @@
+apiVersion: 1
+
+groups:
+  - name: system
+    folder: system
+    interval: 10s
+    rules:
+      - id: 3
+        for: 1m
+        uid: high-ram-usage
+        ruleGroup: system
+        title: High RAM usage
+        condition: condition
+        noDataState: Alerting
+        execErrState: Error
+        labels: { type: ram }
+        annotations:
+          used-ram: <code>{{ $values.display.Value }}%</code>
+          instance: <code>{{ $labels.instance }}</code>
+
+        data:
+          - refId: data
+            relativeTimeRange: { from: 60, to: 0 }
+            datasourceUid: victoria-metrics
+            model:
+              expr: 100 - (100 * node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+
+          - refId: metric
+            datasourceUid: '-100'
+            model:
+              expression: data
+              reducer: max
+              type: reduce
+
+          - refId: condition
+            datasourceUid: '-100'
+            model:
+              conditions: [evaluator: { params: [25], type: gt }]
+              expression: metric
+              type: threshold
+
+          - refId: display
+            datasourceUid: '-100'
+            model:
+              expression: round($metric * 100) / 100
+              type: math

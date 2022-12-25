@@ -1,64 +1,130 @@
 services:
-  tg_bot:
+  tg-bot:
     image: ${TG_BOT_IMAGE_NAME-veetaha/snowpity-tg-dev}:${TG_BOT_IMAGE_TAG-latest}
-    env_file: .env
-    user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker ...'}"
-    build: .
-    environment:
-      DATABASE_URL: postgres://snowpity:${PG_PASSWORD}@snowpity:5432
-    volumes:
-      - /proc/stat:/proc/stat:ro
-      - /proc/meminfo:/proc/meminfo:ro
+    build:
+      context: .
+      dockerfile: docker/tg-bot/Dockerfile
 
     # We are listening only for Ctrl-C
     stop_signal: SIGINT
 
-    networks: [ pg ]
-    depends_on: [ pg ]
+    env_file: .env
+    environment:
+      LOKI_URL: http://loki:3100
+      DATABASE_URL: postgres://snowpity:${PG_PASSWORD}@postgres:5432/snowpity
+      RUST_BACKTRACE: full
 
-  pg:
+    volumes:
+      - /proc/stat:/proc/stat:ro
+      - /proc/meminfo:/proc/meminfo:ro
+
+    networks: [postgres, loki, victoria-metrics]
+    depends_on: [postgres, loki, victoria-metrics]
+
+  postgres:
     image: postgres:15
-    user: "${CURRENT_UID:?'Please run as follows: CURRENT_UID=$$(id -u):$$(id -g) docker ...'}"
     environment:
       POSTGRES_USER: snowpity
       POSTGRES_DB: snowpity
       POSTGRES_PASSWORD: ${PG_PASSWORD}
 
-    volumes:
-      - ${PG_DATA:-./data/postgres}:/var/lib/postgresql/data
-      - /etc/passwd:/etc/passwd:ro
-      - /etc/group:/etc/group:ro
+    # FIXME: this is exposed for local dev purposes. We shouldn't expose it in prod
+    ports: [5432:5432]
 
-    ports:
-      - "5432:5432"
-
-    networks: [ pg ]
+    volumes: [postgres:/var/lib/postgresql/data]
+    networks: [postgres]
 
   pgadmin:
-    image: dpage/pgadmin4:6
+    image: dpage/pgadmin4:6.18
     environment:
       PGADMIN_DEFAULT_EMAIL: snowpity@snowpity.com
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-snowpity}
 
-    ports:
-      - "5000:80"
-
-    volumes:
-      - ./pgadmin4/servers.json:/pgadmin4/servers.json:ro
+    ports: [5000:80]
 
     # Create the `/pgpass` file in pgadmin's storage directory.
     # The files in that directory are required to be owned by pgadmin user.
     entrypoint: >
       /bin/sh -c "
-      mkdir -p -m 700                         /var/lib/pgadmin/storage/snowpity_snowpity.com;
-      chown -R pgadmin:pgadmin                /var/lib/pgadmin/storage/snowpity_snowpity.com;
-      echo 'pg:5432:*:admin:${PG_PASSWORD}' > /var/lib/pgadmin/storage/snowpity_snowpity.com/pgpass;
-      chmod 600                               /var/lib/pgadmin/storage/snowpity_snowpity.com/pgpass;
+      mkdir -p -m 700                                  /var/lib/pgadmin/storage/snowpity_snowpity.com;
+      chown -R pgadmin:pgadmin                         /var/lib/pgadmin/storage/snowpity_snowpity.com;
+      echo 'postgres:5432:*:snowpity:${PG_PASSWORD}' > /var/lib/pgadmin/storage/snowpity_snowpity.com/pgpass;
+      chmod 600                                        /var/lib/pgadmin/storage/snowpity_snowpity.com/pgpass;
       /entrypoint.sh
       "
 
-    networks: [ pg ]
-    depends_on: [ pg ]
+    volumes: [./docker/provisioning/pgadmin4.json:/pgadmin4/servers.json:ro]
+
+    networks: [postgres]
+    depends_on: [postgres]
+
+  grafana-agent:
+    image: grafana/agent:v0.29.0
+    cap_add: [SYS_TIME]
+    pid: host
+    volumes:
+      - grafana-agent:/etc/agent/data
+      - ./docker/provisioning/grafana-agent.yml:/etc/agent/agent.yaml
+      - /:/host/root:ro,rslave
+      - /sys:/host/sys:ro,rslave
+      - /proc:/host/proc:ro,rslave
+
+    network_mode: host
+    depends_on: [victoria-metrics]
+
+  loki:
+    image: grafana/loki:2.7.1
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - loki:/loki
+      - ./docker/provisioning/loki.yml:/etc/loki/config.yml:ro
+
+    # Exposed for local development outside of docker-compose
+    ports: [3100:3100]
+
+    networks: [loki]
+
+  victoria-metrics:
+    image: victoriametrics/victoria-metrics:v1.85.0
+    command:
+      - --storageDataPath=/storage
+      - --promscrape.config=/prometheus.yml
+
+    # Exposed the port, because grafana-agent uses host network mode
+    # and needs to push metrics to victoria-metrics as well
+    ports: [8428:8428]
+
+    volumes:
+      - victoria-metrics:/storage
+      - ./docker/provisioning/victoria-metrics.yml:/prometheus.yml:ro
+
+    networks: [victoria-metrics]
+
+  grafana:
+    image: ${TG_BOT_IMAGE_NAME-veetaha/snowpity-tg-dev}:grafana-${TG_BOT_IMAGE_TAG-latest}
+    ports: [3000:3000]
+    build: docker/grafana
+    environment:
+      # We don't care about security of grafana yet. It's exposed only privately via an SSH tunnel
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      TG_BOT_TOKEN: ${TG_BOT_TOKEN}
+      TG_BOT_ALERTS_CHAT: ${TG_BOT_ALERTS_CHAT}
+
+    volumes:
+      - grafana:/var/lib/grafana
+
+    networks: [loki, victoria-metrics]
+    depends_on: [loki, victoria-metrics]
 
 networks:
-  pg:
+  postgres:
+  victoria-metrics:
+  loki:
+
+volumes:
+  postgres:
+  grafana:
+  victoria-metrics:
+  loki:
+  grafana-agent:

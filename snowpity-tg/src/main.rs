@@ -1,8 +1,8 @@
-use futures::{prelude::*, TryFutureExt};
+use futures::prelude::*;
+use snowpity_tg::tracing_err;
 use std::panic::AssertUnwindSafe;
 use std::process::ExitCode;
 use tracing::{error, info, warn};
-use snowpity_tg::util::tracing_err;
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -10,7 +10,9 @@ async fn main() -> ExitCode {
         eprintln!("Dotenv config was not found, ignoring this...")
     }
 
-    let logging_task = snowpity_tg::LoggingConfig::load_or_panic().init_logging();
+    let logging_task = snowpity_tg::init_logging();
+
+    snowpity_tg::init_metrics();
 
     let main_fut = AssertUnwindSafe(async {
         let result = try_main().await;
@@ -37,14 +39,7 @@ async fn main() -> ExitCode {
                 info!("Main task has finished, exiting...");
                 exit_code
             }
-            result = tokio::signal::ctrl_c() => {
-                if let Err(err) = result {
-                    warn!(err = tracing_err(&err), "Failed to wait for Ctrl+C, exiting...");
-                } else {
-                    info!("Ctrl+C received, exiting forcefully...");
-                }
-                ExitCode::SUCCESS
-            }
+            () = abort_signal() => ExitCode::SUCCESS,
         }
     };
 
@@ -72,8 +67,16 @@ async fn main() -> ExitCode {
 
 async fn try_main() -> snowpity_tg::Result {
     let config = snowpity_tg::Config::load_or_panic();
+    snowpity_tg::run(config).await
+}
 
-    snowpity_tg::run(config).await?;
-
-    Ok(())
+async fn abort_signal() {
+    if let Err(err) = tokio::signal::ctrl_c().await {
+        warn!(
+            err = tracing_err(&err),
+            "Failed to wait for Ctrl+C, exiting..."
+        );
+    } else {
+        info!("Ctrl+C received, exiting forcefully...");
+    }
 }

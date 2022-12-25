@@ -1,0 +1,29 @@
+[package]
+name = "metrics-bat"
+
+description = "Missing batteries for `metrics` ecosystem of crates"
+
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+publish = { workspace = true }
+version = { workspace = true }
+
+[features]
+exporter-prometheus = ["dep:metrics-exporter-prometheus"]
+
+[dependencies]
+easy-ext                    = { workspace = true }
+inventory                   = { workspace = true }
+metrics                     = { workspace = true }
+metrics-bat-macros          = { workspace = true }
+metrics-exporter-prometheus = { workspace = true, optional = true }
+pin-project-lite            = { workspace = true }
+tracing                     = { workspace = true }
+
+
+[dev-dependencies]
+metrics-exporter-prometheus = { workspace = true, features = ["http-listener"] }
+
+[package.metadata.docs.rs]
+all-features = true

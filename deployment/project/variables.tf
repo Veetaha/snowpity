@@ -1,7 +1,22 @@
+variable "tg_bot_alerts_chat" {
+  nullable = false
+  type = object({
+    prod = optional(string)
+    dev  = optional(string)
+  })
+}
+
 variable "tg_bot_image_tag" {
   nullable = false
   type     = string
-  default  = "latest"
+}
+
+variable "tg_bot_media_cache_chat" {
+  nullable = false
+  type = object({
+    prod = optional(string)
+    dev  = optional(string)
+  })
 }
 
 variable "tg_bot_maintainer" {
@@ -10,15 +25,6 @@ variable "tg_bot_maintainer" {
 }
 
 variable "tg_bot_token" {
-  nullable  = false
-  sensitive = true
-  type = object({
-    prod = optional(string)
-    dev  = optional(string)
-  })
-}
-
-variable "grafana_cloud_api_key" {
   nullable  = false
   sensitive = true
   type = object({
@@ -51,7 +57,28 @@ variable "pgadmin_password" {
   sensitive = true
 }
 
-variable "oci_parent_compartment_id" {
+variable "hcloud_token" {
+  nullable  = false
+  sensitive = true
+  type = object({
+    prod = optional(string)
+    dev  = optional(string)
+  })
+}
+
+variable "derpi_api_key" {
+  nullable  = false
+  sensitive = true
+  type      = string
+}
+
+variable "derpi_filter" {
   nullable = false
   type     = string
+}
+
+variable "allowed_ssh_ips" {
+  nullable  = false
+  type      = list(string)
+  sensitive = true
 }

@@ -1,9 +1,9 @@
+use crate::prelude::*;
 use crate::{err_val, tg, Error, Result, UserError};
 use std::str::FromStr;
 use teloxide::prelude::*;
 use teloxide::types::{InputFile, Message};
 use teloxide::utils::markdown;
-use tracing::{info, instrument};
 
 #[derive(Debug, Clone)]
 pub(crate) struct FtaiCmd {
@@ -54,7 +54,7 @@ impl FtaiCmd {
 
         let took = format!("{:.2?}", start.elapsed());
 
-        let caption = markdown::escape(&format!("символов: {text_len}, заняло: {took}"));
+        let caption = markdown::escape(&format!("symbols: {text_len}, took: {took}"));
 
         let input_file = InputFile::memory(ogg.data).file_name("voice.ogg");
 

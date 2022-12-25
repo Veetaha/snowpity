@@ -1,45 +1,53 @@
-// TODO: the database module will be used some day
-#![allow(unused)]
+mod config;
 
-mod db_constraints;
-// mod tg_chat_banned_words;
-// mod tg_chats;
+mod constraints;
 
-use crate::{err_ctx, DbConfig, DbError, Result};
-use dptree::di::DependencyMap;
-use sqlx::postgres::PgPoolOptions;
-use std::sync::Arc;
+mod tg_chat;
+mod tg_media_cache;
 
-// pub(crate) use tg_chat_banned_words::*;
-// pub(crate) use tg_chats::*;
+use crate::{err_ctx, DbError, Result};
+use sqlx::prelude::*;
 
-pub(crate) struct Repo {
-    // pub(crate) tg_chats: TgChatsRepo,
-    // pub(crate) tg_chat_banned_words: TgChatBannedWordsRepo,
+pub(crate) use config::*;
+pub(crate) use tg_chat::*;
+pub(crate) use tg_media_cache::*;
+
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+
+metrics_bat::histograms! {
+    /// Database query duration in seconds
+    db_query_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 }
 
-pub(crate) async fn init(config: DbConfig) -> Result<Repo> {
-    let pool = PgPoolOptions::new()
+pub(crate) struct Repo {
+    pub(crate) tg_media_cache: TgMediaCacheRepo,
+    pub(crate) tg_chat: TgChatRepo,
+}
+
+pub(crate) async fn init(config: Config) -> Result<Repo> {
+    let mut connect_options = config.url.as_str().parse::<PgConnectOptions>()?;
+
+    connect_options.log_statements(log::LevelFilter::Debug);
+
+    let db = PgPoolOptions::new()
         .max_connections(config.pool_size)
         // Verify that the connection is working early.
         // The connection created here can also be reused by the migrations down the road.
         // The default idle timeout should be enough for that.
-        .connect(config.url.as_str())
+        .connect_with(connect_options)
         .await
         .map_err(err_ctx!(DbError::Connect))?;
 
     sqlx::migrate!()
-        .run(&pool)
+        .run(&db)
         .await
         .map_err(err_ctx!(DbError::Migrate))?;
 
     // Validate that our constraint names in code are fresh
-    db_constraints::DbConstraints::new(pool.clone())
-        .validate()
-        .await;
+    constraints::validate(db.clone()).await;
 
     Ok(Repo {
-        // tg_chat_banned_words: TgChatBannedWordsRepo::new(pool.clone()),
-        // tg_chats: TgChatsRepo::new(pool),
+        tg_media_cache: TgMediaCacheRepo::new(db.clone()),
+        tg_chat: TgChatRepo::new(db),
     })
 }
