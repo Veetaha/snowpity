@@ -129,9 +129,9 @@ pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Re
         )
         .branch(
             Update::filter_message()
-                .filter_command::<cmd::admin::Cmd>()
-                .chain(dptree::filter_async(cmd::admin::filter))
-                .endpoint(cmd::handle::<cmd::admin::Cmd>()),
+                .filter_command::<cmd::owner::Cmd>()
+                .chain(dptree::filter_async(cmd::owner::filter))
+                .endpoint(cmd::handle::<cmd::owner::Cmd>()),
         )
         .branch(
             Update::filter_message()

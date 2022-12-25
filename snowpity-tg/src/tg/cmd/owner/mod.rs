@@ -7,6 +7,7 @@ use teloxide::prelude::*;
 use teloxide::types::ChatMemberKind;
 use teloxide::utils::command::BotCommands;
 use teloxide::utils::markdown;
+use tracing::field;
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(
@@ -15,7 +16,7 @@ use teloxide::utils::markdown;
 )]
 pub(crate) enum Cmd {
     #[command(description = "display this text")]
-    AdminHelp,
+    OwnerHelp,
 
     #[command(description = "\
         enables (if disabled) or disables (if enabled) \
@@ -26,18 +27,26 @@ pub(crate) enum Cmd {
     ChatConfig,
 }
 
+#[instrument(skip_all, fields(chat = %msg.chat.debug_id(), user, user_kind))]
 pub(crate) async fn filter(ctx: Arc<tg::Ctx>, msg: Message) -> bool {
     async {
-        debug!("Filtering admin user");
-        let user_kind = ctx
+        let user = ctx
             .bot
             .get_chat_member(msg.chat.id, msg.from().unwrap().id)
-            .await?
-            .kind;
-        debug!("User kind: {:?}", user_kind.status());
+            .await?;
 
-        // As for now, we allow admin actions only for chat owners
-        Ok::<_, Error>(matches!(user_kind, ChatMemberKind::Owner { .. }))
+        let span = tracing::Span::current();
+
+        span.record("user_kind", field::debug(user.kind.status()));
+        span.record("user", field::display(user.user.debug_id()));
+
+        let is_owner = matches!(user.kind, ChatMemberKind::Owner { .. });
+
+        if !is_owner {
+            info!("Non-owner user tried to access owner command");
+        }
+
+        Ok::<_, Error>(is_owner)
     }
     .await
     .unwrap_or_else(|err| {
@@ -59,10 +68,13 @@ impl tg::cmd::Command for Cmd {
         };
 
         match self {
-            Cmd::AdminHelp => {
+            Cmd::OwnerHelp => {
                 ctx.bot.reply_help_md_escaped::<Cmd>(msg).await?;
             }
             Cmd::ToggleCaptcha => {
+                // FIXME: verify the bot has enough permissions to do captcha
+                // verification in the chat
+
                 let tg_chat_ctx = tg_chat_ctx(db::TgChatAction::ToggleCaptchaCommand);
 
                 let is_captcha_enabled = ctx.db.tg_chat.get_or_update_captcha(tg_chat_ctx).await?;

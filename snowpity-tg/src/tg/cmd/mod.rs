@@ -1,4 +1,4 @@
-pub(crate) mod admin;
+pub(crate) mod owner;
 pub(crate) mod maintainer;
 pub(crate) mod regular;
 use crate::prelude::*;
