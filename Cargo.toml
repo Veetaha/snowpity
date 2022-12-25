@@ -1,11 +1,11 @@
 [workspace]
 members = [
-    "metrics-bat-macros",
-    "metrics-bat",
-    "snowpity-tg-macros",
-    "snowpity-tg",
-    "sqlx-bat",
-    "xtask",
+  "metrics-bat-macros",
+  "metrics-bat",
+  "snowpity-tg-macros",
+  "snowpity-tg",
+  "sqlx-bat",
+  "xtask",
 ]
 
 [profile.dev]
