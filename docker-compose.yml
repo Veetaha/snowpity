@@ -79,6 +79,9 @@ services:
       - loki:/loki
       - ./docker/provisioning/loki.yml:/etc/loki/config.yml:ro
 
+    # Exposed for local development outside of docker-compose
+    ports: [3100:3100]
+
     networks: [loki]
 
   victoria-metrics:

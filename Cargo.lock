@@ -2267,6 +2267,7 @@ dependencies = [
  "humansize",
  "itertools 0.10.5",
  "lazy-regex",
+ "log",
  "metrics",
  "metrics-bat",
  "metrics-exporter-prometheus",
@@ -2541,9 +2542,9 @@ dependencies = [
 
 [[package]]
 name = "teloxide"
-version = "0.11.1"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94734a391eb4f3b6172b285fc10593192f9bdb4c8a377075cff063d967f0e43b"
+checksum = "59c3b28292b33a57a8d71ce000c23fdaffeb0b4aec35fa9351d4be7ec6376a3f"
 dependencies = [
  "aquamarine",
  "bytes",
@@ -2568,7 +2569,7 @@ dependencies = [
 [[package]]
 name = "teloxide-core"
 version = "0.8.0"
-source = "git+https://github.com/Veetaha/teloxide?branch=feat/add-missing-restricted-fields#c65996eb75dc5d594541bb0ef15f8b10d0c394ac"
+source = "git+https://github.com/Veetaha/teloxide?branch=feat/add-missing-restricted-fields#d0b71c358ee465d539f8e416dca682649285fce6"
 dependencies = [
  "bitflags",
  "bytes",

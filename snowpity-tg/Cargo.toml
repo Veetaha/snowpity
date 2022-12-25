@@ -25,6 +25,7 @@ futures                     = { workspace = true }
 humansize                   = { workspace = true }
 itertools                   = { workspace = true }
 lazy-regex                  = { workspace = true }
+log                         = { workspace = true }
 metrics                     = { workspace = true }
 metrics-exporter-prometheus = { workspace = true, features = ["http-listener"] }
 nanoid                      = { workspace = true }

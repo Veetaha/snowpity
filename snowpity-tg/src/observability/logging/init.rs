@@ -55,7 +55,15 @@ impl LoggingConfig {
 }
 
 fn init_panic_hook() {
+    let current_hook = std::panic::take_hook();
+
     std::panic::set_hook(Box::new(move |panic_info| {
+        // It's super-important to call the default panic hook, otherwise
+        // we may not see it in the logs at all, because the panic may
+        // happen inside of `tracing` logging system itself.
+        // See the footgun: https://github.com/rust-itertools/itertools/issues/667
+        current_hook(panic_info);
+
         let backtrace = std::backtrace::Backtrace::capture();
         let location = panic_info.location().map(|location| {
             format!(
@@ -75,10 +83,13 @@ fn init_panic_hook() {
             .or_else(|| payload.downcast_ref::<&str>().map(<_>::deref))
             .unwrap_or("<unknown>");
 
+        let span_trace = tracing_error::SpanTrace::capture();
+
         error!(
             target: "panic",
             thread = std::thread::current().name(),
             location,
+            span_trace = %span_trace,
             backtrace = format_args!("\n{backtrace}"),
             "{message}"
         );

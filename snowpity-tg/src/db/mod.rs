@@ -6,12 +6,13 @@ mod tg_chat;
 mod tg_media_cache;
 
 use crate::{err_ctx, DbError, Result};
+use sqlx::prelude::*;
 
 pub(crate) use config::*;
 pub(crate) use tg_chat::*;
 pub(crate) use tg_media_cache::*;
 
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 
 metrics_bat::histograms! {
     /// Database query duration in seconds
@@ -24,12 +25,16 @@ pub(crate) struct Repo {
 }
 
 pub(crate) async fn init(config: Config) -> Result<Repo> {
+    let mut connect_options = config.url.as_str().parse::<PgConnectOptions>()?;
+
+    connect_options.log_statements(log::LevelFilter::Debug);
+
     let db = PgPoolOptions::new()
         .max_connections(config.pool_size)
         // Verify that the connection is working early.
         // The connection created here can also be reused by the migrations down the road.
         // The default idle timeout should be enough for that.
-        .connect(config.url.as_str())
+        .connect_with(connect_options)
         .await
         .map_err(err_ctx!(DbError::Connect))?;
 

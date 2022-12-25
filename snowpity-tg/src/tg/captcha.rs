@@ -4,6 +4,7 @@ use crate::util::{self, DynResult};
 use crate::{db, err_val, Error, ErrorKind, Result};
 use chrono::prelude::*;
 use futures::prelude::*;
+use itertools::Itertools;
 use parking_lot::Mutex as SyncMutex;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -148,12 +149,9 @@ pub(crate) async fn handle_new_chat_members(
 
         let bot_id = ctx.bot.get_me().await?.id;
 
-        let mut users = users
-            .into_iter()
-            .filter(|user| user.id != bot_id)
-            .peekable();
+        let users: Vec<_> = users.into_iter().filter(|user| user.id != bot_id).collect();
 
-        if let Some(user) = users.peek() {
+        if let Some(user) = users.first() {
             let is_captcha_enabled = ctx
                 .db
                 .tg_chat
@@ -165,10 +163,15 @@ pub(crate) async fn handle_new_chat_members(
                 .await?;
 
             if !is_captcha_enabled {
-                info!("Captcha is disabled for this chat, ignoring new member");
+                info!(
+                    new_members = %users.iter().map(|user| user.debug_id()).join(", "),
+                    "Captcha is disabled for this chat, ignoring new members"
+                );
                 return Ok(());
             }
         }
+
+        let users = users.into_iter();
 
         let futs = users.map(|user| {
             let span = tracing::info_span!("user", user = %user.debug_id());
@@ -343,6 +346,14 @@ pub(crate) async fn handle_left_chat_member(
     async {
         let user_id = user.id;
         let chat_id = msg.chat.id;
+
+        let bot_id = ctx.bot.get_me().await?.id;
+
+        if user_id == bot_id {
+            info!("Bot left the chat");
+            ctx.captcha.clear_unverified_in_chat(chat_id);
+            return Ok(());
+        }
 
         info!(
             "Chat member left, canceling captcha confirmation \
@@ -528,9 +539,14 @@ impl CaptchaCtx {
     }
 
     pub(crate) fn clear_unverified_in_chat(&self, target_chat: ChatId) {
-        self.unverified_users
-            .lock()
-            .retain(|(chat_id, _), _| *chat_id != target_chat)
+        let mut unverified_users = self.unverified_users.lock();
+        let prev_len = unverified_users.len();
+        unverified_users.retain(|(chat_id, _), _| *chat_id != target_chat);
+
+        info!(
+            total_cleared = prev_len - unverified_users.len(),
+            "Cleared all unverified users in chat"
+        );
     }
 
     #[instrument(skip_all)]

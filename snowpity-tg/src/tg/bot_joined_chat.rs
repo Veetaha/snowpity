@@ -1,4 +1,5 @@
 use crate::db::TgChatQuery;
+use crate::prelude::*;
 use crate::util::DynResult;
 use crate::Error;
 use crate::{db, tg};
@@ -25,9 +26,15 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, update: ChatMemberUpdated) -> DynR
         ctx.bot
             .send_message(
                 update.chat.id,
-                "Hello, everyone, please love mares, and especially their snowpitys! 🥰",
+                "Hello, everyone, please love mares, and especially their snowpitys\\! 🥰",
             )
             .await?;
+
+        info!(
+            chat = update.chat.debug_id(),
+            from = update.from.debug_id(),
+            "Joined chat"
+        );
 
         ctx.db
             .tg_chat

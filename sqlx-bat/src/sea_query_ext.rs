@@ -3,6 +3,20 @@ use easy_ext::ext;
 use sqlx::postgres::{PgArguments, PgRow};
 use sqlx::IntoArguments;
 
+pub mod expr {
+    use sea_query::{Func, Iden, SimpleExpr};
+
+    #[derive(Iden)]
+    struct Now;
+
+    #[derive(Iden)]
+    struct Timestamp;
+
+    pub fn timestamp_now() -> SimpleExpr {
+        SimpleExpr::from(Func::cust(Now)).cast_as(Timestamp)
+    }
+}
+
 #[macro_export]
 macro_rules! simple_expr_vec {
     ($($value:expr,)* $(,)?) => {

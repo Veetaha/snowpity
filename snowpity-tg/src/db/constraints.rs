@@ -8,7 +8,7 @@ macro_rules! def_constraints {
         $(
             // The variable name will have the same casing convention as the constraint name.
             #[allow(non_upper_case_globals)]
-            pub(crate) const $ident: &str = stringify!($val);
+            pub(crate) const $ident: &str = stringify!($ident);
         )*
         const ALL_CONSTRAINTS: &[&str] = &[$($ident),*];
     }
@@ -51,7 +51,7 @@ impl Constraints {
     }
 
     async fn fetch_all(&self) -> Result<HashSet<String>> {
-        let query = sqlx::query!(
+        let query = sqlx::query_scalar!(
             r#"
             select conname
             from pg_catalog.pg_constraint
@@ -62,7 +62,6 @@ impl Constraints {
 
         query
             .fetch(&self.pool)
-            .map_ok(|record| record.conname)
             .try_collect()
             .err_into()
             .await

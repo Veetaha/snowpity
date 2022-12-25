@@ -74,7 +74,7 @@ impl<'a> TgChatQuery<'a> {
             TgChatIden::RegisteredByAction,
         ];
 
-        let values = sqlx_bat::simple_expr_vec![
+        let mut values = sqlx_bat::simple_expr_vec![
             self.chat.id.try_into_db()?,
             TgChatKind::from_tg_api(self.chat).try_into_db()?,
             self.chat.title(),
@@ -87,14 +87,26 @@ impl<'a> TgChatQuery<'a> {
         ];
 
         let mut on_conflict = OnConflict::column(TgChatIden::Id);
-        on_conflict.do_nothing();
+
+        // XXX: we can't use `do nothing`, because with this directive,
+        // `returning` won't return anything actually. That's a really
+        // weird behavior of Postgres.
+        //
+        // This workaround is very simple, though it has its own downsides.
+        // More details on stackoverflow: https://stackoverflow.com/a/42217872/9259330
+        on_conflict.update_column(TgChatIden::Id);
 
         if self.action == TgChatAction::ToggleCaptchaCommand {
             columns.push(TgChatIden::IsCaptchaEnabled);
-            on_conflict.value(
-                TgChatIden::IsCaptchaEnabled,
-                Expr::col(TgChatIden::IsCaptchaEnabled).not(),
-            );
+            values.push(true.into());
+
+            on_conflict.values([
+                (
+                    TgChatIden::IsCaptchaEnabled,
+                    Expr::col((TgChatIden::Table, TgChatIden::IsCaptchaEnabled)).not(),
+                ),
+                (TgChatIden::UpdatedAt, sqlx_bat::expr::timestamp_now()),
+            ]);
         }
 
         insert
