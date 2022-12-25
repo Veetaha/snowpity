@@ -1,3 +1,37 @@
+# 0.5.0
+
+# Added
+
+- Added derpibooru integration via telegram bot inline queries. Now media is forwarded to telegram cache chat and then to the inline queries response
+- Added `/chat_config` (owner only) displays the configuration of the telegram chat
+- Added `/toggle_captcha` (owner only) disables or enables the captcha verification in the telegram chat
+- Added logging to owner commands to keep track of non-owner users trying to use them
+- Added metrics instrumentation where possible
+- Added `metric-bat/metrics-bat-macros` crates with the missing batteries for `metrics` crates
+- Added `sqlx-bat` crate with the missing batteries for `sqlx` and `sea-query` crates
+- Added `snowpity-tg-macros` crate with the ad hoc proc macros for `snowpity-tg`
+- Added Postgres database to the stack to implement several stateful features. Now the our data volume is going to be used, so we must be very careful with it, and use migrations not to lose our state data.
+- Added span trace capturing to errors
+
+
+# Changed
+
+- Renamed the application to "Snowpity" branding
+- Renamed `/admin_help` to `owner_help`. All admin commands are now accessible only to the owner
+- Migrated from Grafana Cloud to self-hosted `grafana`, `loki` and `victoria-metrics` in `docker-compose`
+- Migrated to `seaorm` and then back to `sqlx`, so almost nothing changed (lol)
+- Migrated to Oracle Cloud and then back to Hetzner, so almost nothing changed (lol)
+- Migrated most of the automation from bash and xtask to `x.nu` (nushell)
+- Migrated to the latest and greates Rust `1.66.0`
+
+# Fixed
+
+- The bot now clears the unverified users map for the chat when it was kicked from one
+
+# Removed
+
+- Removed the `censy` crate and other code in `snowpity-tg` leftover from the attempts to implement swearwords and general censorship in the telegram chat. Now this feature is either postponed, or won't ever be implemented.
+
 # 0.4.3
 
 # Added

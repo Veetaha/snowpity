@@ -7,7 +7,7 @@ It has assorted functionality for managing our Telegram chat.
 
 If you wonder what the hell snowpity is, see [the explanation][snowpity-site].
 
-> © MareQuest and [snowpity.com][snowpity-site] are't controled by the maintainers of this telegram bot, any similarities are a coincidence!
+> © MareQuest and [snowpity.com][snowpity-site] are't controlled by the maintainers of this telegram bot, any similarities are a coincidence!
 
 # Development
 
