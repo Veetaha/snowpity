@@ -1,5 +1,5 @@
-pub(crate) mod owner;
 pub(crate) mod maintainer;
+pub(crate) mod owner;
 pub(crate) mod regular;
 use crate::prelude::*;
 use crate::tg;

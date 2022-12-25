@@ -60,10 +60,6 @@ impl Constraints {
             "#
         );
 
-        query
-            .fetch(&self.pool)
-            .try_collect()
-            .err_into()
-            .await
+        query.fetch(&self.pool).try_collect().err_into().await
     }
 }
