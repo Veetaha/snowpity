@@ -35,7 +35,7 @@ groups:
           - refId: condition
             datasourceUid: '-100'
             model:
-              conditions: [evaluator: { params: [25], type: gt }]
+              conditions: [evaluator: { params: [40], type: gt }]
               expression: metric
               type: threshold
 
