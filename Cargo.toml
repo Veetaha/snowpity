@@ -8,6 +8,8 @@ members = [
   "xtask",
 ]
 
+default-members = ["snowpity-tg"]
+
 [profile.dev]
 debug = 0
 

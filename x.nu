@@ -88,7 +88,7 @@ def "main docker build" [
 }
 
 # Start all services locally using `docker compose`
-def "main start" [
+def "main up" [
     --no-tg-bot        # Don't start the tg_bot service
     --no-observability # Don't start the pgadmin and observability services
     --fresh (-f)       # Executes `drop-data` before starting the database (run `db drop --help` for details)
@@ -205,7 +205,7 @@ def "main tf output" [] {
 # output the generated code to the working tree.
 def "main orm gen" [] {
     cd (repo)
-    main start --fresh --no-tg-bot --no-observability # --detach
+    main up --fresh --no-tg-bot --no-observability # --detach
     wait-for-db
     sea-orm-cli migrate
     sea-orm-cli generate entity --with-copy-enums --output-dir entities/src/generated
