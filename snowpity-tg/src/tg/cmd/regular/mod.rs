@@ -36,13 +36,23 @@ impl tg::cmd::Command for Cmd {
     async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result {
         match self {
             Cmd::Help => {
-                let suffix = "\
-                    \n\nYou can also write a message like this to share an image or GIF from derpibooru \
-                    (copy the following line to test): \n\
-                    \n\
-                    @SnowpityBot https://derpibooru.org/1975357";
+                let bot_username = ctx
+                    .bot
+                    .get_me()
+                    .await?
+                    .user
+                    .username
+                    .expect("BUG: bot is guaranteed have a username");
 
-                let help_text = markdown::escape(&(Cmd::descriptions().to_string() + suffix));
+                let help_text = markdown::escape(
+                    &format!("\
+                        {}\n\n\
+                        You can also write a message like this to share an image or GIF from derpibooru \
+                        (copy the following line to test): \n\
+                        \n\
+                        @{bot_username} https://derpibooru.org/1975357",
+                    Cmd::descriptions())
+                );
 
                 let animation = InputFile::url(HELP_ANIMATION_URL.parse().unwrap());
 
