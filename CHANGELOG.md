@@ -8,7 +8,7 @@
 
 ## Fixed
 
-- Now links to users prefer `t.me` URL, because links via user IDs may not work if the user
+- Now links to users prefer `t.me` URL, because links via user IDs may not work if the user restricted "sForward Messages" in their privacy settings
 - The `md_link()` now displays the full name instead of preferring user tag, because user tag is preferred in the `t.me` link, so this way the link contains more info about the user (full name and user tag)
 - Disable `/ftai` command for now, because the service is unavailable, and we don't want to throw errors at users
 
