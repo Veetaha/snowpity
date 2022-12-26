@@ -1,12 +1,15 @@
 mod ftai;
 
-use crate::prelude::*;
 use crate::tg;
 use crate::Result;
 use async_trait::async_trait;
 use ftai::FtaiCmd;
 use teloxide::prelude::*;
+use teloxide::types::InputFile;
 use teloxide::utils::command::BotCommands;
+use teloxide::utils::markdown;
+
+const HELP_ANIMATION_URL: &str = "https://user-images.githubusercontent.com/36276403/209489480-0902d60b-be64-4ecd-aa0d-6def1fcd9264.mp4";
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(
@@ -16,9 +19,16 @@ use teloxide::utils::command::BotCommands;
 pub(crate) enum Cmd {
     #[command(description = "display this text")]
     Help,
+    // #[command(description = "Generate audio via 15.ai: <character name>,<text>")]
+    // Ftai(String),
+}
 
-    #[command(description = "Generate audio via 15.ai: <character name>,<text>")]
-    Ftai(String),
+// 15 AI is very unstable, and not available now. We should come up with a way
+// to automatically keep track of its availability, and disable/enable the
+// 15.ai command accordingly to avoid unnecessarily displaying errors to users
+#[allow(dead_code)]
+fn ignore_15_ai(cmd: &str, ctx: &tg::Ctx, msg: &Message) {
+    let _ = cmd.parse::<FtaiCmd>().unwrap().handle(ctx, msg);
 }
 
 #[async_trait]
@@ -26,9 +36,26 @@ impl tg::cmd::Command for Cmd {
     async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result {
         match self {
             Cmd::Help => {
-                ctx.bot.reply_help_md_escaped::<Cmd>(msg).await?;
-            }
-            Cmd::Ftai(cmd) => cmd.parse::<FtaiCmd>()?.handle(ctx, msg).await?,
+                let suffix = "\
+                    \n\nYou can also write a message like this to share an image or GIF from derpibooru \
+                    (copy the following line to test): \n\
+                    \n\
+                    @SnowpityBot https://derpibooru.org/1975357";
+
+                let help_text = markdown::escape(&(Cmd::descriptions().to_string() + suffix));
+
+                let animation = InputFile::url(HELP_ANIMATION_URL.parse().unwrap());
+
+                ctx.bot
+                    .send_animation(msg.chat.id, animation)
+                    .reply_to_message_id(msg.id)
+                    .caption(help_text)
+                    .await?;
+            } // Cmd::Ftai(cmd) => {
+
+              //     cmd.parse::<FtaiCmd>()?.handle(ctx, msg).await?
+
+              // }
         }
         Ok(())
     }

@@ -1,6 +1,20 @@
+# Unreleased
+
+# 0.5.1
+
+## Added
+
+- The help message of the bot now displays example of the usage of inline query feature
+
+## Fixed
+
+- Now links to users prefer `t.me` URL, because links via user IDs may not work if the user restricted "sForward Messages" in their privacy settings
+- The `md_link()` now displays the full name instead of preferring user tag, because user tag is used in the `t.me` link, so this way the link contains more info about the user (full name and user tag)
+- Disable `/ftai` command for now, because the service is unavailable, and we don't want to throw errors at users
+
 # 0.5.0
 
-# Added
+## Added
 
 - Added derpibooru integration via telegram bot inline queries. Now media is forwarded to telegram cache chat and then to the inline queries response
 - Added `/chat_config` (owner only) displays the configuration of the telegram chat
@@ -14,7 +28,7 @@
 - Added span trace capturing to errors
 
 
-# Changed
+## Changed
 
 - Renamed the application to "Snowpity" branding
 - Renamed `/admin_help` to `owner_help`. All admin commands are now accessible only to the owner
@@ -24,17 +38,17 @@
 - Migrated most of the automation from bash and xtask to `x.nu` (nushell)
 - Migrated to the latest and greates Rust `1.66.0`
 
-# Fixed
+## Fixed
 
 - The bot now clears the unverified users map for the chat when it was kicked from one
 
-# Removed
+## Removed
 
 - Removed the `censy` crate and other code in `snowpity-tg` leftover from the attempts to implement swearwords and general censorship in the telegram chat. Now this feature is either postponed, or won't ever be implemented.
 
 # 0.4.3
 
-# Added
+## Added
 
 - `/sys` maintainer command displays the current diagnostic system information
 - `/list_unverified` maintainer command displays the list of users in unverified users map
@@ -43,11 +57,11 @@
   It is now possible to deploy the entire dockerhub repo / grafana stack / hetzner infrastructure
   independently for production and development end-to-end testing purposes.
 
-# Changed
+## Changed
 
 - Improved the debug representation of `Chat` and `User` objects by using their ultimate telegram links. It is now possible to just click the link in the logs to open the chat or user profile in telegram.
 
-# Fixed
+## Fixed
 
 - Fixed remaining bugs in captcha. The bot now saves the information about the user rights when they joined the chat and restrores them when captcha finishes. The bot doesn't restore the original permissions when the user's rights were changed during the captcha process by some other admin.
 
