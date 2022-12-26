@@ -25,7 +25,7 @@ pub(crate) impl User {
 
     fn md_link(&self) -> String {
         let mention_text = markdown::escape(&self.username());
-        markdown::link(self.url().as_str(), &mention_text)
+        markdown::link(self.preferably_tme_url().as_str(), &mention_text)
     }
 
     fn debug_id(&self) -> String {
