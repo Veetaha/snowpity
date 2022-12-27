@@ -76,3 +76,13 @@ fn decode_base64(input: &str) -> Result<Vec<u8>> {
         input: input.to_owned()
     }))
 }
+
+/// Ingest a given string value with SHA2 hashing algorithm and base64-encode
+/// the result. This gives up to 44 characters in length.
+///
+/// The calculation goes this: sha256 returns 256 bits. Base64 is 6 bits per
+/// character (2**6 = 64). So, 256 / 6 = 42.6666, and this rounds up to 44 due
+/// to base64 padding.
+pub(crate) fn encode_base64_sha2(val: &str) -> String {
+    base64::encode(<sha2::Sha256 as sha2::Digest>::digest(val))
+}

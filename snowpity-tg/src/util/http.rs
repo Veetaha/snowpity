@@ -91,7 +91,7 @@ impl reqwest_middleware::Middleware for InnermostObservingMiddleware {
         next: reqwest_middleware::Next<'_>,
     ) -> reqwest_middleware::Result<reqwest::Response> {
         let result = measure_request(http_request_duration_seconds, request, extensions, next)
-            .with_duration_log("Sending request")
+            .with_duration_log("Sending network request")
             .await;
 
         match &result {
@@ -202,7 +202,7 @@ pub(crate) impl RequestBuilder {
     //         tempfile::NamedTempFile::new().map_err(err_ctx!(crate::IoError::CreateTempFile))?;
 
     //     let (file, path) = file.into_parts();
-    //     let file = tokio::fs::File::from_std(file);
+    //     let mut file = tokio::fs::File::from_std(file);
 
     //     self.read_to_file_handle(&mut file).await?;
 
@@ -213,21 +213,21 @@ pub(crate) impl RequestBuilder {
     //     let mut stream = self
     //         .send()
     //         .await
-    //         .map_err(err_ctx!(HttpError::ReadResponse))?
+    //         .map_err(err_ctx!(HttpClientError::ReadResponse))?
     //         .bytes_stream();
 
     //     while let Some(chunk) = stream.next().await {
-    //         let chunk = chunk.map_err(err_ctx!(HttpError::ReadResponse))?;
+    //         let chunk = chunk.map_err(err_ctx!(HttpClientError::ReadResponse))?;
     //         file_handle
     //             .write_all(&chunk)
     //             .await
-    //             .map_err(err_ctx!(HttpError::WriteToFile))?;
+    //             .map_err(err_ctx!(HttpClientError::WriteToFile))?;
     //     }
 
     //     file_handle
     //         .flush()
     //         .await
-    //         .map_err(err_ctx!(HttpError::FlushToFile))?;
+    //         .map_err(err_ctx!(HttpClientError::FlushToFile))?;
 
     //     Ok(())
     // }

@@ -9,7 +9,7 @@ use teloxide::types::InputFile;
 use teloxide::utils::command::BotCommands;
 use teloxide::utils::markdown;
 
-const HELP_ANIMATION_URL: &str = "https://user-images.githubusercontent.com/36276403/209489480-0902d60b-be64-4ecd-aa0d-6def1fcd9264.mp4";
+const HELP_ANIMATION_URL: &str = "https://user-images.githubusercontent.com/36276403/209577979-b0ace368-4bea-4a10-a687-d3f24cbed6a2.mp4";
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(
@@ -36,13 +36,23 @@ impl tg::cmd::Command for Cmd {
     async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result {
         match self {
             Cmd::Help => {
-                let suffix = "\
-                    \n\nYou can also write a message like this to share an image or GIF from derpibooru \
-                    (copy the following line to test): \n\
-                    \n\
-                    @SnowpityBot https://derpibooru.org/1975357";
+                let bot_username = ctx
+                    .bot
+                    .get_me()
+                    .await?
+                    .user
+                    .username
+                    .expect("BUG: bot is guaranteed have a username");
 
-                let help_text = markdown::escape(&(Cmd::descriptions().to_string() + suffix));
+                let help_text = markdown::escape(
+                    &format!("\
+                        {}\n\n\
+                        You can also write a message like this to share an image or GIF from derpibooru \
+                        (copy the following line to test): \n\
+                        \n\
+                        @{bot_username} https://derpibooru.org/1975357",
+                    Cmd::descriptions())
+                );
 
                 let animation = InputFile::url(HELP_ANIMATION_URL.parse().unwrap());
 

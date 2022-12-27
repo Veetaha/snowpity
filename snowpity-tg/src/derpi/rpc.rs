@@ -35,11 +35,12 @@ pub(crate) struct GetImageResponse {
     pub(crate) image: Media,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub(crate) struct Media {
     pub(crate) id: MediaId,
     pub(crate) mime_type: MimeType,
     pub(crate) tags: Vec<String>,
+
     // pub(crate) created_at: DateTime<Utc>,
     // The number of upvotes minus the number of downvotes.
     // pub(crate) score: i64,
@@ -76,6 +77,20 @@ pub(crate) enum MimeType {
 }
 
 impl Media {
+    /// Makes sense only for gifs and webms
+    pub(crate) fn unwrap_mp4_url(&self) -> Url {
+        let mut url = self.view_url.clone();
+        let path = url.path();
+
+        let path = path
+            .strip_suffix(".gif")
+            .or_else(|| path.strip_suffix(".webm"))
+            .unwrap_or_else(|| panic!("BUG: tried to use mp4 URL for non-gif or non-webm media"));
+
+        url.set_path(&format!("{path}.mp4"));
+        url
+    }
+
     pub(crate) fn artists(&self) -> impl Iterator<Item = &str> {
         self.tags
             .iter()
@@ -99,7 +114,7 @@ pub(crate) fn artist_to_webpage_url(artist: &str) -> Url {
 
 impl MediaId {
     pub(crate) fn to_webpage_url(self) -> Url {
-        derpi([&self.to_string()])
+        derpi(["images", &self.to_string()])
     }
 }
 

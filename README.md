@@ -21,7 +21,7 @@ cargo run
 
 Make sure to define all the necessary configurations in `.env` file when doing this. Example configurations can be inferred from [`deployment/modules/hetzner/cloud_init.tf`](deployment/modules/hetzner/cloud_init.tf).
 
-It's also possible to run the bot in a container using `docker compose` just like it is going to be on the server. It requires some preliminary setup that are not expressible via a single `docker compose` command. Therefore, we have a dev CLI `x.nu`, that automates this process. We recommend adding an alias to your `.bashrc` or `.zshrc` or just `.{paste_your_shell_here}rc` file:
+It's also possible to run the bot in a container using `docker compose` just like it is going to be on the server. It requires some preliminary setup that is not expressible via a single `docker compose` command. Therefore, we have a dev CLI `x.nu`, that automates this process. We recommend adding an alias to your `.bashrc` or `.zshrc` or just `.{paste_your_shell_here}rc` file:
 
 ```bash
 alias x="$(git rev-parse --show-toplevel)/x.nu"

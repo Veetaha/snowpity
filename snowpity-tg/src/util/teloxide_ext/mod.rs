@@ -1,13 +1,7 @@
 mod requester;
 
-use duplicate::duplicate_item;
 use easy_ext::ext;
-use std::future::IntoFuture;
-use teloxide::payloads::{
-    SendAnimation, SendAnimationSetters, SendDocument, SendDocumentSetters, SendPhoto,
-    SendPhotoSetters, SendVideo, SendVideoSetters,
-};
-use teloxide::types::{Chat, Message, MessageId, UpdateKind, User};
+use teloxide::types::{Chat, MessageId, UpdateKind, User};
 use teloxide::utils::markdown;
 
 pub(crate) mod prelude {
@@ -76,27 +70,6 @@ pub(crate) impl MessageId {
     /// issue is closed in teloxide: https://github.com/teloxide/teloxide/issues/760
     fn to_tracing(&self) -> &dyn tracing::Value {
         &self.0
-    }
-}
-
-pub(crate) trait SendPayloadExt:
-    IntoFuture<Output = Result<Message, teloxide::RequestError>>
-where
-    Self::IntoFuture: Send,
-{
-    fn caption(self, caption: impl Into<String>) -> Self;
-}
-
-#[duplicate_item(
-    SendPayload     Setters;
-    [SendPhoto]     [SendPhotoSetters];
-    [SendVideo]     [SendVideoSetters];
-    [SendDocument]  [SendDocumentSetters];
-    [SendAnimation] [SendAnimationSetters];
-)]
-impl SendPayloadExt for crate::tg::Request<SendPayload> {
-    fn caption(self, caption: impl Into<String>) -> Self {
-        Setters::caption(self, caption)
     }
 }
 

@@ -5,7 +5,6 @@ use crate::prelude::*;
 use crate::tg;
 use crate::util::DynResult;
 use async_trait::async_trait;
-use display_error_chain::DisplayErrorChain;
 use futures::future::BoxFuture;
 use std::fmt;
 use std::sync::Arc;
@@ -40,9 +39,7 @@ pub(crate) fn handle<'a, C: Command>(
                         warn!("Command handler returned an error");
                     }
 
-                    let chain = DisplayErrorChain::new(&err);
-
-                    let reply_msg = markdown::code_block(&chain.to_string());
+                    let reply_msg = markdown::code_block(&err.display_chain().to_string());
 
                     let msg_result = ctx.bot.reply_chunked(&msg, reply_msg).await;
 

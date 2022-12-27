@@ -9,7 +9,7 @@ pub(crate) mod http;
 
 pub(crate) use chrono_ext::*;
 pub(crate) use std_ext::*;
-pub(crate) use teloxide_ext::*;
+// pub(crate) use teloxide_ext::*;
 pub(crate) use tokio_ext::*;
 
 // We don't care if some of the imports here are not used. They may be used

@@ -5,6 +5,8 @@ use std::process::Stdio;
 use url::Url;
 
 #[instrument]
+// Some day we will use ffmpeg
+#[allow(dead_code)]
 pub(crate) async fn convert_to_mp4(input: &Url) -> Result<tempfile::TempPath> {
     let output = tempfile::NamedTempFile::new()
         .map_err(err_ctx!(IoError::CreateTempFile))?
@@ -13,7 +15,18 @@ pub(crate) async fn convert_to_mp4(input: &Url) -> Result<tempfile::TempPath> {
     debug!(output = %output.display(), "Converting to mp4");
 
     let status = ffmpeg()
-        .args(["-i", input.as_str(), "-b:v", "2000k", "-f", "mp4", "-y"])
+        .args([
+            // Overwrite output file without interactive confirmation
+            "-y",
+            "-i",
+            input.as_str(),
+            // Set video bitrate
+            "-b:v",
+            "2000k",
+            // Force input format
+            "-f",
+            "mp4",
+        ])
         .arg(&output)
         .stdin(Stdio::null())
         .kill_on_drop(true)
