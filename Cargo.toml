@@ -14,7 +14,7 @@ default-members = ["snowpity-tg"]
 debug = 0
 
 [workspace.package]
-version = "0.6.0"
+version = "0.7.0"
 
 authors = ["Veetaha <veetaha2@gmail.com>"]
 edition = "2021"
