@@ -9,7 +9,7 @@
 ## Changed
 
 - Improved the help message. Now it includes the reference animation of how to use bot in inline mode
-- Implemented better support for GIFs by using ther soundless MP4 representation
+- Implemented better support for GIFs by using their soundless MP4 representation
 - Now we are using `/images/{id}` in the links of derpibooru, because bare id in the path seems like an API that derpibooru might deprecate and remove in the future
 - Added better error handling in inline queries. Now they send an error result if an error happens.
 

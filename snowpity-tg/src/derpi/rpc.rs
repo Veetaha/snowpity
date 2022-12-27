@@ -82,7 +82,8 @@ impl Media {
         let mut url = self.view_url.clone();
         let path = url.path();
 
-        let path = path.strip_suffix(".gif")
+        let path = path
+            .strip_suffix(".gif")
             .or_else(|| path.strip_suffix(".webm"))
             .unwrap_or_else(|| panic!("BUG: tried to use mp4 URL for non-gif or non-webm media"));
 

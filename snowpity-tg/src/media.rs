@@ -18,14 +18,14 @@ pub(crate) async fn convert_to_mp4(input: &Url) -> Result<tempfile::TempPath> {
         .args([
             // Overwrite output file without interactive confirmation
             "-y",
-
-            "-i", input.as_str(),
-
+            "-i",
+            input.as_str(),
             // Set video bitrate
-            "-b:v", "2000k",
-
+            "-b:v",
+            "2000k",
             // Force input format
-            "-f", "mp4",
+            "-f",
+            "mp4",
         ])
         .arg(&output)
         .stdin(Stdio::null())

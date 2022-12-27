@@ -133,7 +133,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     }
     .record_duration(inline_query_duration_seconds, labels)
     .or_else(|err| async {
-        // The title is very constrainted in size. We must be very succinct in it.
+        // The title is very constrained in size. We must be very succinct in it.
         let default_title = "Something went wrong 🥺";
 
         let title_prefix = match err.kind() {

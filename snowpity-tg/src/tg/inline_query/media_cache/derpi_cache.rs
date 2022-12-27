@@ -469,7 +469,7 @@ pub(crate) fn file_name(url: &Url, media: &derpi::Media) -> String {
         .filter(|s| !s.is_empty())
         .format("-");
 
-    // FIXME: this file type detection influences how telegram proceses the file.
+    // FIXME: this file type detection influences how telegram processes the file.
     // For example, if we send_video with wrong extension, then it will be registered
     // as a document instead of video, even though it will be returned as a video kind in `Message`
     let file_extension = url
