@@ -151,6 +151,7 @@ def "main deploy" [
     --plan          # Do `tf plan` instead of `tf apply`
     --yes (-y)      # Auto-approve the deployment
     --no-tf-refresh # Don't refresh the terraform state before deployment
+    --tag           # Create a git tag for the deployment
 ] {
     if not $no_build {
         # FIXME: it's this verbose due to https://github.com/nushell/nushell/issues/7260
@@ -175,6 +176,11 @@ def "main deploy" [
 
     if not $plan {
         with-retry --max-retries 20 { main ssh cloud-init log }
+    }
+
+    if $tag {
+        git tag $"v(project-version)"
+        git push --tags
     }
 }
 
