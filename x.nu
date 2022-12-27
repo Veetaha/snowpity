@@ -113,7 +113,9 @@ def "main up" [
 
     docker-compose $args
 
-    with-debug sqlx migrate run '--source' snowpity-tg/migrations
+    if $no_tg_bot {
+        with-debug sqlx migrate run '--source' snowpity-tg/migrations
+    }
 
     let args = (
         [logs '--follow']
@@ -131,7 +133,11 @@ def "main down" [
     docker-compose down '--timeout' 0 '--remove-orphans'
 
     if $drop_data {
-        with-debug docker volume rm snowpity_postgres
+        try {
+            with-debug docker volume rm snowpity_postgres
+        } catch {
+            # Ignore error if volume doesn't exist
+        }
     }
 
 }

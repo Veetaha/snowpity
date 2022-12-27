@@ -1,19 +1,21 @@
 mod derpi_cache;
 
-use crate::db::CachedMedia;
 use crate::prelude::*;
 use crate::util::{self, http};
 use crate::{db, derpi, tg, Result};
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use futures::stream::FuturesUnordered;
+use itertools::Itertools;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use std::collections::HashMap;
+use reqwest::Url;
+use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 use std::sync::Arc;
+use teloxide::prelude::*;
+use teloxide::types::{InputFile, Message};
+use teloxide::utils::markdown;
 use tokio::sync::{mpsc, oneshot};
-
-pub(crate) use derpi_cache::*;
 
 metrics_bat::gauges! {
     /// Number of in-flight requests for media cache
@@ -33,6 +35,8 @@ pub(crate) type DerpiRequest = derpi_cache::Request;
     Clone,
     Copy,
     Debug,
+    PartialEq,
+    Eq,
     IntoPrimitive,
     TryFromPrimitive,
     strum::Display,
@@ -44,11 +48,35 @@ pub(crate) enum TgFileType {
     Photo = 0,
     Document = 1,
     Video = 2,
-    Gif = 3,
-    // Mpeg4Gif = 4,
+    Mpeg4Gif = 3,
 }
 
 sqlx_bat::impl_try_into_from_db_via_std!(TgFileType, i16);
+
+impl TgFileType {
+    async fn upload(
+        self,
+        bot: &tg::Bot,
+        chat_id: ChatId,
+        input_file: InputFile,
+        caption: String,
+    ) -> Result<Message, teloxide::RequestError> {
+        match self {
+            Self::Photo => bot.send_photo(chat_id, input_file).caption(caption).await,
+            Self::Video => bot.send_video(chat_id, input_file).caption(caption).await,
+            Self::Document => {
+                bot.send_document(chat_id, input_file)
+                    .caption(caption)
+                    .await
+            }
+            Self::Mpeg4Gif => {
+                bot.send_animation(chat_id, input_file)
+                    .caption(caption)
+                    .await
+            }
+        }
+    }
+}
 
 pub(crate) struct Envelope<R> {
     request: R,
@@ -71,8 +99,41 @@ impl<P: fmt::Debug> fmt::Debug for Envelope<P> {
 
 #[derive(Clone)]
 pub(crate) struct Response {
-    pub(crate) media: derpi::Media,
-    pub(crate) cached: CachedMedia,
+    pub(crate) tg_file_id: String,
+    pub(crate) tg_file_type: TgFileType,
+    pub(crate) meta: MediaMeta,
+}
+
+#[derive(Clone)]
+pub(crate) struct MediaMeta {
+    /// A set of artists who created the media
+    pub(crate) artists: BTreeSet<Artist>,
+
+    /// Link to the web page where the media originates from
+    pub(crate) link: Url,
+
+    /// Information specific to the media hosting platform
+    pub(crate) hosting_specific: MediaHostingSpecific,
+}
+
+#[derive(Clone)]
+pub(crate) enum MediaHostingSpecific {
+    Derpibooru {
+        /// A set of tags `safe`, `suggestive`, `explicit`, etc.
+        ratings: BTreeSet<String>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct Artist {
+    /// The main nick name or real name of the artist they is known under
+    pub(crate) name: String,
+
+    /// Link to the artist's web page.
+    ///
+    /// It's either the artist's profile/home page, or a query for their art
+    /// if the web site identifies artists by tags (like derpibooru)
+    pub(crate) link: Url,
 }
 
 pub(crate) fn spawn_service(ctx: Context) -> Client {
@@ -220,6 +281,55 @@ impl Service {
 
                 slot.insert(vec![return_slot]);
             }
+        }
+    }
+}
+
+impl MediaMeta {
+    pub(crate) fn caption(&self) -> String {
+        let artists: Vec<_> = self
+            .artists
+            .iter()
+            .map(|artist| {
+                markdown::link(
+                    artist.link.as_str(),
+                    &markdown::escape(artist.name.as_str()),
+                )
+            })
+            .collect();
+
+        let artists = match artists.as_slice() {
+            [] => "".to_owned(),
+            artists => format!(" by {}", artists.join(", ")),
+        };
+
+        let MediaHostingSpecific::Derpibooru { ratings } = &self.hosting_specific;
+
+        let ratings = ratings.iter().join(", ");
+        let ratings = if matches!(ratings.as_str(), "" | "safe") {
+            "".to_owned()
+        } else {
+            format!(" \\({}\\)", markdown::escape(&ratings))
+        };
+
+        format!(
+            "*{}{artists}{ratings}*",
+            markdown::link(
+                self.link.as_str(),
+                &markdown::escape(&format!(
+                    "Original ({})",
+                    self.hosting_specific.hosting_name()
+                ))
+            ),
+        )
+    }
+}
+
+impl MediaHostingSpecific {
+    /// Name of the media service that hosts the art.
+    fn hosting_name(&self) -> &'static str {
+        match self {
+            Self::Derpibooru { .. } => "Derpibooru",
         }
     }
 }

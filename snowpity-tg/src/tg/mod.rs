@@ -19,12 +19,9 @@ use captcha::CaptchaCtx;
 use dptree::di::DependencyMap;
 use inline_query::InlineQueryService;
 use std::sync::Arc;
-use teloxide::adaptors::throttle::ThrottlingRequest;
-use teloxide::adaptors::trace::TraceRequest;
 use teloxide::adaptors::{CacheMe, DefaultParseMode, Throttle, Trace};
 use teloxide::dispatching::UpdateFilterExt;
 use teloxide::prelude::*;
-use teloxide::requests::MultipartRequest;
 use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
 
@@ -32,7 +29,6 @@ pub(crate) use config::*;
 pub(crate) use media_cache::TgFileType;
 
 pub(crate) type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
-pub(crate) type Request<T> = TraceRequest<ThrottlingRequest<MultipartRequest<T>>>;
 
 metrics_bat::labels! {
     TgUpdateLabels { kind }

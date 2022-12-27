@@ -113,6 +113,9 @@ pub(crate) enum ErrorKind {
     },
 
     #[error("Not implemented yet: {message}")]
+    // This variant is used only as a gag when we postpone the implementation
+    // for the future, therefore it's not always used.
+    #[allow(dead_code)]
     Todo { message: &'static str },
 }
 
@@ -256,8 +259,10 @@ pub(crate) enum MediaError {
     },
 
     #[error(
-        "The size of the requested file `{actual}` bytes \
-        exceeds the limit of `{max}` byttes"
+        "The size of the requested file `{}` bytes \
+        exceeds the limit of `{}` bytes",
+        humansize::format_size(*actual, humansize::BINARY),
+        humansize::format_size(*max, humansize::BINARY),
     )]
     FileTooBig { actual: u64, max: u64 },
 
@@ -290,6 +295,10 @@ impl Error {
 
     pub(crate) fn is_user_error(&self) -> bool {
         matches!(self.imp.kind, ErrorKind::User { .. })
+    }
+
+    pub(crate) fn kind(&self) -> &ErrorKind {
+        &self.imp.kind
     }
 }
 

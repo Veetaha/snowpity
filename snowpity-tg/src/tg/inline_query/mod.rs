@@ -1,17 +1,23 @@
 use crate::prelude::*;
-use crate::util::DynResult;
-use crate::{derpi, tg, Error};
+use crate::util::{encoding, DynResult};
+use crate::{derpi, tg, Error, ErrorKind, MediaError};
 use futures::prelude::*;
 use lazy_regex::regex_captures;
 use media_cache::TgFileType;
 use metrics_bat::prelude::*;
+use reqwest::Url;
 use std::future::IntoFuture;
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::{
-    ChosenInlineResult, InlineQuery, InlineQueryResultCachedDocument, InlineQueryResultCachedGif,
-    InlineQueryResultCachedPhoto, InlineQueryResultCachedVideo, ParseMode,
+    ChosenInlineResult, InlineQuery, InlineQueryResultCachedDocument,
+    InlineQueryResultCachedMpeg4Gif, InlineQueryResultCachedPhoto, InlineQueryResultCachedVideo,
+    InlineQueryResultVideo, ParseMode,
 };
+use teloxide::utils::markdown;
+
+const ERROR_VIDEO_URL: &str = "https://user-images.githubusercontent.com/36276403/209671572-9a3eada8-1bf6-4a9c-ac0e-44863f66746a.mp4";
+const ERROR_VIDEO_THUMB_URL: &str = "https://user-images.githubusercontent.com/36276403/209673286-6cc10562-a5e1-4c90-b373-8290abd41fa7.jpg";
 
 pub(crate) mod media_cache;
 
@@ -76,53 +82,112 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
             media_id,
         };
 
-        let media_cache::Response { media, cached } = inline_query
+        let response = inline_query
             .media_cache_client
             .get_tg_derpi_media(payload)
             .await?;
 
         // FIXME: ensure the caption doesn't overflow 1024 characters
-        let caption = media_cache::core_caption(&media);
+        let caption = response.meta.caption();
 
-        let file_name = media_cache::file_name(&media);
-
-        let media_id = media_id.to_string();
         let parse_mode = ParseMode::MarkdownV2;
+        let title = "Click to send";
+        let id = encoding::encode_base64_sha2(&response.tg_file_id);
 
-        let result = match cached.tg_file_type {
-            TgFileType::Photo => InlineQueryResultCachedPhoto::new(media_id, cached.tg_file_id)
+        let result = match response.tg_file_type {
+            TgFileType::Photo => InlineQueryResultCachedPhoto::new(id, response.tg_file_id)
+                .caption(caption)
+                .parse_mode(parse_mode)
+                // XXX: title is ignored for photos in when telegram clients display the results.
+                // That's really surprising, but that's how telegram works -_-
+                .title(title)
+                .into(),
+            TgFileType::Document => {
+                InlineQueryResultCachedDocument::new(id, title, response.tg_file_id)
+                    .caption(caption)
+                    .parse_mode(parse_mode)
+                    .into()
+            }
+            TgFileType::Video => InlineQueryResultCachedVideo::new(id, response.tg_file_id, title)
                 .caption(caption)
                 .parse_mode(parse_mode)
                 .into(),
-            TgFileType::Document => {
-                InlineQueryResultCachedDocument::new(media_id, file_name, cached.tg_file_id)
-                    .caption(caption)
-                    .parse_mode(parse_mode)
-                    .into()
-            }
-            TgFileType::Video => {
-                InlineQueryResultCachedVideo::new(media_id, cached.tg_file_id, file_name)
-                    .caption(caption)
-                    .parse_mode(parse_mode)
-                    .into()
-            }
-            TgFileType::Gif => InlineQueryResultCachedGif::new(media_id, cached.tg_file_id)
+            TgFileType::Mpeg4Gif => InlineQueryResultCachedMpeg4Gif::new(id, response.tg_file_id)
                 .caption(caption)
+                // XXX: title is ignored for gifs as well as for photos,
+                // see the comment on photos match arm above
+                .title(title)
                 .parse_mode(parse_mode)
                 .into(),
         };
 
-        bot.answer_inline_query(inline_query_id, [result])
+        bot.answer_inline_query(&inline_query_id, [result])
             .is_personal(false)
             .cache_time(u32::MAX)
             .into_future()
             .with_duration_log("Answering inline query")
-            .instrument(info_span!("payload", tg_file_type = %cached.tg_file_type))
+            .instrument(info_span!("payload", tg_file_type = %response.tg_file_type))
             .await?;
 
         Ok::<_, Error>(())
     }
     .record_duration(inline_query_duration_seconds, labels)
+    .or_else(|err| async {
+        // The title is very constrainted in size. We must be very succinct in it.
+        let default_title = "Something went wrong 🥺";
+
+        let title_prefix = match err.kind() {
+            ErrorKind::Media { source } => match source {
+                MediaError::FileTooBig { actual, max } => {
+                    let mem = humansize::make_format(humansize::BINARY);
+                    let actual = mem(*actual);
+                    let max = mem(*max);
+
+                    format!("Too big ({actual}, max: {max})")
+                }
+                _ => default_title.to_owned(),
+            },
+            _ => default_title.to_owned(),
+        };
+
+        let title = format!("{title_prefix}. Try another image 😅");
+
+        let caption = format!(
+            "*{}*\n\n{}",
+            markdown::escape(&title),
+            markdown::code_block(&err.display_chain().to_string())
+        );
+
+        let video_url: Url = ERROR_VIDEO_URL.parse().unwrap();
+        let video_thumb_url: Url = ERROR_VIDEO_THUMB_URL.parse().unwrap();
+
+        let result = InlineQueryResultVideo::new(
+            err.id(),
+            video_url,
+            "video/mp4".parse().unwrap(),
+            video_thumb_url,
+            title,
+        )
+        .caption(caption)
+        .parse_mode(ParseMode::MarkdownV2)
+        .into();
+
+        let result = bot
+            .answer_inline_query(&inline_query_id, [result])
+            .is_personal(true)
+            .cache_time(0)
+            .into_future()
+            .await;
+
+        if let Err(err) = result {
+            warn!(
+                err = tracing_err(&err),
+                "Failed to answer with error to inline query"
+            );
+        }
+
+        Err(err)
+    })
     .err_into()
     .await
 }

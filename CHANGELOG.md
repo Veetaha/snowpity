@@ -1,5 +1,18 @@
 # Unreleased
 
+# 0.6.0
+
+## Added
+
+- Added support for sharing videos from derpibooru
+
+## Changed
+
+- Improved the help message. Now it includes the reference animation of how to use bot in inline mode
+- Implemented better support for GIFs by using ther soundless MP4 representation
+- Now we are using `/images/{id}` in the links of derpibooru, because bare id in the path seems like an API that derpibooru might deprecate and remove in the future
+- Added better error handling in inline queries. Now they send an error result if an error happens.
+
 # 0.5.1
 
 ## Added
@@ -8,7 +21,7 @@
 
 ## Fixed
 
-- Now links to users prefer `t.me` URL, because links via user IDs may not work if the user restricted "sForward Messages" in their privacy settings
+- Now links to users prefer `t.me` URL, because links via user IDs may not work if the user restricted "Forward Messages" in their privacy settings
 - The `md_link()` now displays the full name instead of preferring user tag, because user tag is used in the `t.me` link, so this way the link contains more info about the user (full name and user tag)
 - Disable `/ftai` command for now, because the service is unavailable, and we don't want to throw errors at users
 
