@@ -246,6 +246,12 @@ def "main sqlx prepare" [] {
     with-debug cargo sqlx prepare
 }
 
+def "main test" [...args: string] {
+    cd (repo)
+    let args = ([test '--'] | append $args)
+    RUST_LOG="debug,h2=info,hyper=info" with-debug cargo $args
+}
+
 ################################################
 ############ Implementation details ############
 ################################################
@@ -289,8 +295,9 @@ def-env ssh [
     ...args: string
 ] {
     let ports = [
-        '-L' '3000:localhost:3000'
-        '-L' '5000:localhost:5000'
+        '-L' '3000:localhost:3000' # grafana
+        '-L' '5000:localhost:5000' # pgadmin
+        '-L' '8428:localhost:8428' # victria-metrics
     ]
     let args = (
         [-t (ssh-str)]

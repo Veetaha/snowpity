@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use crate::tg::{self, Bot};
-use crate::util::{self, DynResult};
-use crate::{db, err_val, Error, ErrorKind, Result};
+use crate::util::DynResult;
+use crate::{db, encoding, err, Error, ErrorKind, Result};
 use chrono::prelude::*;
 use futures::prelude::*;
 use itertools::Itertools;
@@ -82,7 +82,7 @@ pub(crate) async fn handle_callback_query(
             return Ok(());
         };
 
-        let payload: CaptchaReplyPayload = util::encoding::secure_decode(&callback_data)?;
+        let payload: CaptchaReplyPayload = encoding::secure_decode(&callback_data)?;
 
         let user_id = callback_query.from.id;
         let chat_id = captcha_msg.chat.id;
@@ -206,8 +206,8 @@ pub(crate) async fn handle_new_chat_members(
                     allowed: false,
                 };
 
-                let payload_allow = util::encoding::secure_encode(&payload_allow);
-                let payload_deny = util::encoding::secure_encode(&payload_deny);
+                let payload_allow = encoding::secure_encode(&payload_allow);
+                let payload_deny = encoding::secure_encode(&payload_deny);
 
                 let buttons = [[
                     InlineKeyboardButton::callback("Украина 😉", payload_allow),
@@ -413,7 +413,7 @@ impl UnverifiedUser {
         match <[_; 1]>::try_from(errs) {
             Err(errs) if errs.is_empty() => Ok(()),
             Ok([err]) => Err(err),
-            Err(errs) => Err(err_val!(ErrorKind::Multiple { errs })),
+            Err(errs) => Err(err!(ErrorKind::Multiple { errs })),
         }
     }
 

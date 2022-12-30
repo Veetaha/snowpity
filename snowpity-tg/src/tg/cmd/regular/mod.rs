@@ -9,6 +9,8 @@ use teloxide::types::InputFile;
 use teloxide::utils::command::BotCommands;
 use teloxide::utils::markdown;
 
+pub(crate) use ftai::FtaiCommandError;
+
 const HELP_ANIMATION_URL: &str = "https://user-images.githubusercontent.com/36276403/209577979-b0ace368-4bea-4a10-a687-d3f24cbed6a2.mp4";
 
 #[derive(BotCommands, Clone, Debug)]

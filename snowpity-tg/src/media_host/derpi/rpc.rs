@@ -1,7 +1,7 @@
 //! Declarations of the derpibooru JSON API types.
 //! Use TypeScript declarations as a reference (though they may go out of date):
 //! https://github.com/octet-stream/dinky/blob/master/lib/Dinky.d.ts
-use crate::derpi::derpi;
+use super::derpi;
 use itertools::Itertools;
 use reqwest::Url;
 use serde::Deserialize;

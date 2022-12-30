@@ -6,6 +6,7 @@ locals {
     "rustls=info",
     "sqlx=warn",
     "h2=info",
+    "teloxide_core::adaptors::throttle::worker=info",
   ]
 
   data_volume_path = "/mnt/master"

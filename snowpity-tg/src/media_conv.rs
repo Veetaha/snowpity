@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use crate::IoError;
-use crate::{err_ctx, err_val, MediaError, Result};
+use crate::{err_ctx, err, Result};
 use std::process::Stdio;
 use url::Url;
 
@@ -31,18 +31,30 @@ pub(crate) async fn convert_to_mp4(input: &Url) -> Result<tempfile::TempPath> {
         .stdin(Stdio::null())
         .kill_on_drop(true)
         .spawn()
-        .map_err(err_ctx!(MediaError::SpawnFfmpeg))?
+        .map_err(err_ctx!(MediaConvError::SpawnFfmpeg))?
         .wait()
         .await
-        .map_err(err_ctx!(MediaError::WaitForFfmpeg))?;
+        .map_err(err_ctx!(MediaConvError::WaitForFfmpeg))?;
 
     if status.success() {
         return Ok(output);
     }
 
-    Err(err_val!(MediaError::Ffmpeg { status }))
+    Err(err!(MediaConvError::Ffmpeg { status }))
 }
 
 fn ffmpeg() -> tokio::process::Command {
     tokio::process::Command::new("ffmpeg")
+}
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum MediaConvError {
+    #[error("Failed to spawn `ffmpeg` process")]
+    SpawnFfmpeg { source: std::io::Error },
+
+    #[error("Failed to wait for `ffmpeg` process")]
+    WaitForFfmpeg { source: std::io::Error },
+
+    #[error("`ffmpeg` failed with the exit code {status}")]
+    Ffmpeg { status: std::process::ExitStatus },
 }

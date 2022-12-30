@@ -1,31 +1,33 @@
-use super::{Context, Response, TgFileType};
-use crate::db::CachedMedia;
+use super::{
+    Artist, Context, FileSize, MediaCacheError, MediaHostSpecific, MediaId, MediaMeta, Response,
+    TgFileKind, TgFileMeta,
+};
+use crate::media_host::derpi;
 use crate::observability::logging::prelude::*;
 use crate::prelude::*;
-use crate::tg::inline_query::media_cache::{Artist, MediaHostingSpecific, MediaMeta};
-use crate::{derpi, err_val, MediaError, Result};
+use crate::{db, err, Result};
 use assert_matches::assert_matches;
 use futures::prelude::*;
 use itertools::Itertools;
 use metrics_bat::prelude::*;
 use reqwest::Url;
 use teloxide::prelude::*;
-use teloxide::types::{FileMeta, InputFile, MessageKind, User};
+use teloxide::types::{FileMeta, InputFile, MessageKind};
 
-const KB: u64 = 1024;
-const MB: u64 = 1024 * KB;
+pub(crate) const KB: u64 = 1024;
+pub(crate) const MB: u64 = 1024 * KB;
 
 const KB_F: f64 = KB as f64;
 const MB_F: f64 = MB as f64;
 
 metrics_bat::labels! {
     DownloadLabels {
-        derpi_mime,
-        tg_file_type,
+        media_kind,
+        tg_media_kind,
     }
     TgUploadLabels {
-        derpi_mime,
-        tg_file_type,
+        media_kind,
+        tg_media_kind,
         tg_upload_method,
     }
 }
@@ -36,24 +38,16 @@ enum TgUploadMethod {
     Downloaded(Downloaded),
 }
 
-metrics_bat::counters! {
-    /// Number of times we hit the database cache for derpibooru media
-    derpi_cache_hits_total;
-
-    /// Number of times we queried the database cache for derpibooru media
-    derpi_cache_queries_total;
-}
-
 metrics_bat::histograms! {
     /// Number of seconds it took to upload derpibooru media to Telegram.
     /// It doensn't include the time to query the media from derpibooru and db cache.
-    derpi_tg_media_upload_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
+    media_tg_upload_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 
     /// Number of seconds it took to download media from derpibooru.
-    derpi_media_download_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
+    media_download_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 
-    /// Size of media requested to be uploaded to Telegram
-    derpi_tg_media_upload_file_size_bytes = [
+    /// Size of media to be uploaded to Telegram
+    media_file_size_bytes = [
         KB_F * 4.,
         KB_F * 16.,
         KB_F * 64.,
@@ -69,84 +63,18 @@ metrics_bat::histograms! {
     ];
 }
 
-#[derive(Debug)]
-pub(crate) struct Request {
-    pub(crate) requested_by: User,
-    pub(crate) media_id: derpi::MediaId,
-}
-
-#[instrument(skip_all, fields(
-    requested_by = %payload.requested_by.debug_id(),
-    media_id = %payload.media_id,
-))]
-pub(crate) async fn cache(ctx: Context, payload: Request) -> Result<Response> {
-    // It's very likely neither of the requests will fail, so we
-    // optimistically do them concurrently
-    let (media, cached) = futures::try_join!(
-        ctx.derpi
-            .get_media(payload.media_id)
-            .instrument(info_span!("Fetching media meta from Derpibooru")),
-        ctx.db
-            .tg_media_cache
-            .get_from_derpi(payload.media_id)
-            .with_duration_log("Reading the cache from the database"),
-    )?;
-
-    derpi_cache_queries_total(vec![]).increment(1);
-
-    if let Some(cached) = cached {
-        info!("Returning media from cache");
-        derpi_cache_hits_total(vec![]).increment(1);
-
-        return Ok(make_response(media, cached));
+// TODO: pass only derpibooru media ID
+pub(crate) async fn upload(base: &Context, media: &MediaMeta) -> Result<TgFileMeta> {
+    if let FileSize::Approx(size) = media.size {
+        media_file_size_bytes(vec![]).record(size as f64);
     }
-
-    derpi_tg_media_upload_file_size_bytes(vec![]).record(media.size as f64);
-
-    let cached = TgUploadContext {
-        base: &ctx,
-        payload: &payload,
-        media: &media,
-    }
-    .upload()
-    .await?;
-
-    ctx.db.tg_media_cache.set_derpi(cached.clone()).await?;
-
-    Ok(make_response(media, cached))
-}
-
-fn make_response(media: derpi::Media, cached: CachedMedia) -> Response {
-    Response {
-        tg_file_id: cached.tg_file_id,
-        tg_file_type: cached.tg_file_type,
-        meta: media.into(),
-    }
-}
-
-impl From<derpi::Media> for MediaMeta {
-    fn from(media: derpi::Media) -> Self {
-        Self {
-            artists: media
-                .artists()
-                .map(|artist| Artist {
-                    link: derpi::artist_to_webpage_url(artist),
-                    name: artist.to_owned(),
-                })
-                .collect(),
-            link: media.id.to_webpage_url(),
-            hosting_specific: MediaHostingSpecific::Derpibooru {
-                ratings: media.rating_tags().map(ToOwned::to_owned).collect(),
-            },
-        }
-    }
+    TgUploadContext { base, media }.upload().await
 }
 
 #[derive(Clone, Copy)]
 struct TgUploadContext<'a> {
     base: &'a Context,
-    payload: &'a Request,
-    media: &'a derpi::Media,
+    media: &'a MediaMeta,
 }
 
 macro_rules! try_return_upload {
@@ -158,33 +86,36 @@ macro_rules! try_return_upload {
 }
 
 impl TgUploadContext<'_> {
-    async fn upload(&self) -> Result<CachedMedia> {
-        use derpi::MimeType::*;
+    async fn upload(&self) -> Result<TgFileMeta> {
+        use super::MediaKind::*;
 
-        match self.media.mime_type {
-            ImageJpeg | ImagePng | ImageSvgXml => self.upload_image().await,
-            ImageGif => self.upload_mpeg4_gif().await,
-            VideoWebm => self.upload_video().await,
+        match self.media.kind {
+            ImageJpg | ImagePng | ImageSvg => self.upload_image().await,
+            AnimationMp4 => self.upload_mpeg4_gif().await,
+            VideoMp4 => self.upload_video().await,
         }
     }
-    async fn upload_image(&self) -> Result<CachedMedia> {
+    async fn upload_image(&self) -> Result<TgFileMeta> {
+        let dim = &self.media.dimensions;
+
         // FIXME: resize the image if it doesn't fit into telegram's limit
-        if self.media.aspect_ratio > 20.0 || self.media.height + self.media.width > 10000 {
+        if dim.aspect_ratio() > 20.0 || dim.height + dim.width > 10000 {
             return self
-                .upload_document(MaybeDownloaded::None(self.media.view_url.clone()))
+                .upload_document(MaybeDownloaded::None(self.media.download_url.clone()))
                 .await;
         }
 
-        let url = &self.media.view_url;
-        let ctx = self.file_kind(TgFileType::Photo);
+        let url = &self.media.download_url;
+        let ctx = self.file_kind(TgFileKind::Photo);
+        let approx_max_size = self.media.size.approx_max();
 
-        if self.media.size <= 5 * MB {
+        if approx_max_size <= 5 * MB {
             try_return_upload!(ctx.direct_url(&url));
         }
 
         let max_size = 10 * MB;
 
-        let maybe_downloaded = if self.media.size > max_size {
+        let maybe_downloaded = if approx_max_size > max_size {
             MaybeDownloaded::None(url.clone())
         } else {
             let downloaded = ctx.download_media(&url).await?;
@@ -197,15 +128,15 @@ impl TgUploadContext<'_> {
         self.upload_document(maybe_downloaded).await
     }
 
-    async fn upload_mpeg4_gif(&self) -> Result<CachedMedia> {
-        self.upload_mp4(TgFileType::Mpeg4Gif).await
+    async fn upload_mpeg4_gif(&self) -> Result<TgFileMeta> {
+        self.upload_mp4(TgFileKind::Mpeg4Gif).await
     }
 
-    async fn upload_video(&self) -> Result<CachedMedia> {
-        self.upload_mp4(TgFileType::Video).await
+    async fn upload_video(&self) -> Result<TgFileMeta> {
+        self.upload_mp4(TgFileKind::Video).await
     }
 
-    async fn upload_mp4(&self, file_kind: TgFileType) -> Result<CachedMedia> {
+    async fn upload_mp4(&self, file_kind: TgFileKind) -> Result<TgFileMeta> {
         let url = self.media.unwrap_mp4_url();
 
         let ctx = self.file_kind(file_kind);
@@ -223,8 +154,8 @@ impl TgUploadContext<'_> {
         ctx.downloaded(&downloaded).upload().await
     }
 
-    async fn upload_document(&self, maybe_downloaded: MaybeDownloaded) -> Result<CachedMedia> {
-        let ctx = self.file_kind(TgFileType::Document);
+    async fn upload_document(&self, maybe_downloaded: MaybeDownloaded) -> Result<TgFileMeta> {
+        let ctx = self.file_kind(TgFileKind::Document);
 
         if self.media.size <= 20 * MB {
             if let MaybeDownloaded::None(url) = &maybe_downloaded {
@@ -242,7 +173,7 @@ impl TgUploadContext<'_> {
         ctx.downloaded(&downloaded).upload().await
     }
 
-    fn file_kind(&self, tg_file_type: TgFileType) -> TgUploadKindContext<'_> {
+    fn file_kind(&self, tg_file_type: TgFileKind) -> TgUploadKindContext<'_> {
         TgUploadKindContext {
             base: self,
             tg_file_type,
@@ -279,7 +210,7 @@ impl Downloaded {
         if self.size <= max_size {
             return Ok(());
         }
-        Err(err_val!(MediaError::FileTooBig {
+        Err(err!(MediaCacheError::FileTooBig {
             actual: self.size as u64,
             max: max_size
         }))
@@ -289,19 +220,19 @@ impl Downloaded {
 #[derive(Clone, Copy)]
 struct TgUploadKindContext<'a> {
     base: &'a TgUploadContext<'a>,
-    tg_file_type: TgFileType,
+    tg_file_type: TgFileKind,
 }
 
 impl TgUploadKindContext<'_> {
     async fn download_media(&self, download_url: &Url) -> Result<Downloaded> {
         let labels = DownloadLabels {
-            derpi_mime: <&'static str>::from(self.base.media.mime_type),
-            tg_file_type: <&'static str>::from(self.tg_file_type),
+            media_kind: <&'static str>::from(self.base.media.mime_type),
+            tg_media_kind: <&'static str>::from(self.tg_file_type),
         };
 
         let bytes = self
             .download_media_imp(download_url)
-            .record_duration(derpi_media_download_duration_seconds, labels)
+            .record_duration(media_download_duration_seconds, labels)
             .await?;
 
         Ok(Downloaded {
@@ -315,7 +246,7 @@ impl TgUploadKindContext<'_> {
         let (bytes, duration) = self
             .base
             .base
-            .http_client
+            .http
             .get(download_url.clone())
             .read_bytes()
             .with_duration_ok()
@@ -373,7 +304,7 @@ impl TgUploadMethodContext<'_> {
     }
 
     #[instrument(skip_all)]
-    async fn upload_warn_on_error(&self) -> Result<CachedMedia> {
+    async fn upload_warn_on_error(&self) -> Result<TgFileMeta> {
         self.upload_imp()
             .inspect_err(|err| self.warn_failed_upload(err))
             .instrument(self.span_for_upload())
@@ -381,11 +312,11 @@ impl TgUploadMethodContext<'_> {
     }
 
     #[instrument(skip_all)]
-    async fn upload(&self) -> Result<CachedMedia> {
+    async fn upload(&self) -> Result<TgFileMeta> {
         self.upload_imp().instrument(self.span_for_upload()).await
     }
 
-    async fn upload_imp(&self) -> Result<CachedMedia> {
+    async fn upload_imp(&self) -> Result<TgFileMeta> {
         let (url, input_file) = match &self.tg_upload_method {
             TgUploadMethod::DirectUrl(url) => (url, InputFile::url(url.clone())),
             TgUploadMethod::Downloaded(downloaded) => (&downloaded.url, downloaded.file.clone()),
@@ -406,14 +337,14 @@ impl TgUploadMethodContext<'_> {
                 self.caption(),
             )
             .with_duration_log("Send file to telegram")
-            .record_duration(derpi_tg_media_upload_duration_seconds, self.upload_labels())
+            .record_duration(media_tg_upload_duration_seconds, self.upload_labels())
             .await
     }
 
     fn upload_labels(&self) -> TgUploadLabels<&'static str, &'static str, &'static str> {
         TgUploadLabels {
-            derpi_mime: <&'static str>::from(self.base.base.media.mime_type),
-            tg_file_type: <&'static str>::from(&self.tg_upload_method),
+            media_kind: <&'static str>::from(self.base.base.media.mime_type),
+            tg_media_kind: <&'static str>::from(&self.tg_upload_method),
             tg_upload_method: <&'static str>::from(self.base.tg_file_type),
         }
     }
@@ -432,7 +363,7 @@ impl TgUploadMethodContext<'_> {
         )
     }
 
-    fn into_cached_media(&self, msg: Message) -> Result<CachedMedia> {
+    fn into_cached_media(&self, msg: Message) -> Result<TgFileMeta> {
         let (actual_file_type, file_meta) = find_file(self.base.base.media.mime_type, msg)?;
 
         if actual_file_type != self.base.tg_file_type {
@@ -443,10 +374,10 @@ impl TgUploadMethodContext<'_> {
             )
         }
 
-        Ok(CachedMedia {
+        Ok(TgFileMeta {
             derpi_id: self.base.base.media.id,
-            tg_file_id: file_meta.id,
-            tg_file_type: actual_file_type,
+            id: file_meta.id,
+            kind: actual_file_type,
         })
     }
 }
@@ -481,21 +412,21 @@ pub(crate) fn file_name(url: &Url, media: &derpi::Media) -> String {
     format!("{prefix}-{}.{}", media.id, file_extension)
 }
 
-fn find_file(expected: derpi::MimeType, msg: Message) -> Result<(TgFileType, FileMeta)> {
+fn find_file(expected: derpi::MimeType, msg: Message) -> Result<(TgFileKind, FileMeta)> {
     use teloxide::types::MediaKind::*;
     let common = assert_matches!(msg.kind, MessageKind::Common(common) => common);
 
     Ok(match common.media_kind {
-        Document(media) => (TgFileType::Document, media.document.file),
+        Document(media) => (TgFileKind::Document, media.document.file),
         Photo(media) => (
-            TgFileType::Photo,
+            TgFileKind::Photo,
             media.photo.into_iter().next().unwrap().file,
         ),
-        Video(media) => (TgFileType::Video, media.video.file),
-        Animation(media) => (TgFileType::Mpeg4Gif, media.animation.file),
+        Video(media) => (TgFileKind::Video, media.video.file),
+        Animation(media) => (TgFileKind::Mpeg4Gif, media.animation.file),
         media @ (Audio(_) | Contact(_) | Game(_) | Venue(_) | Location(_) | Poll(_)
         | Sticker(_) | Text(_) | VideoNote(_) | Voice(_) | Migration(_)) => {
-            return Err(err_val!(MediaError::UnexpectedMediaKind {
+            return Err(err!(MediaCacheError::UnexpectedMediaKind {
                 media,
                 expected
             }))

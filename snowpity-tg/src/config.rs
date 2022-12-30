@@ -1,10 +1,11 @@
-use crate::{db, derpi, tg};
+use crate::media_host;
+use crate::{db, tg};
 use serde::de::DeserializeOwned;
 
 pub struct Config {
     pub(crate) tg: tg::Config,
     pub(crate) db: db::Config,
-    pub(crate) derpi: derpi::Config,
+    pub(crate) media: media_host::Config,
 }
 
 impl Config {
@@ -12,7 +13,7 @@ impl Config {
         Self {
             tg: from_env_or_panic("TG_BOT_"),
             db: from_env_or_panic("DATABASE_"),
-            derpi: from_env_or_panic("DERPI_"),
+            media: media_host::Config::load_or_panic(),
         }
     }
 }

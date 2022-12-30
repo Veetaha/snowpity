@@ -1,8 +1,8 @@
 //! Symbols related to communicating with the 15.ai API
 
+use crate::http;
 use crate::prelude::*;
-use crate::util::{self, http};
-use crate::{err_ctx, err_val, FtAiError, Result};
+use crate::{err_ctx, err, Result};
 
 /// Limit of the text length that can be passed to 15.ai for voice generation
 pub(crate) const MAX_TEXT_LENGTH: usize = 200;
@@ -35,8 +35,8 @@ pub(crate) mod rpc {
     }
 }
 
-util::def_url_base!(ftai_api, "https://api.15.ai/app");
-util::def_url_base!(ftai_cdn, "https://cdn.15.ai");
+http::def_url_base!(ftai_api, "https://api.15.ai/app");
+http::def_url_base!(ftai_cdn, "https://cdn.15.ai");
 
 pub(crate) struct FtaiService {
     http_client: http::Client,
@@ -67,7 +67,7 @@ impl FtaiService {
             .wav_names
             .into_iter()
             .next()
-            .ok_or_else(|| err_val!(FtAiError::MissingWavFile))?;
+            .ok_or_else(|| err!(FtAiError::MissingWavFile))?;
 
         let url = ftai_cdn(["audio", &wav_file]);
 
@@ -76,15 +76,15 @@ impl FtaiService {
         let audio = self.http_client.get(url).read_bytes().await?;
 
         let mut reader = wav_io::reader::Reader::from_vec(audio.to_vec())
-            .map_err(|message| err_val!(FtAiError::CreateWavReader { message }))?;
+            .map_err(|message| err!(FtAiError::CreateWavReader { message }))?;
 
         let header = reader
             .read_header()
-            .map_err(|message| err_val!(FtAiError::ReadWavHeader { message }))?;
+            .map_err(|message| err!(FtAiError::ReadWavHeader { message }))?;
 
         let data = reader
             .get_samples_f32()
-            .map_err(|message| err_val!(FtAiError::ReadWavSamples { message }))?;
+            .map_err(|message| err!(FtAiError::ReadWavSamples { message }))?;
 
         // This seems to give the best quality. The original samle rate
         // of 15.ai is 44_100.
@@ -107,4 +107,27 @@ impl FtaiService {
 #[derive(Debug)]
 pub(crate) struct Ogg {
     pub(crate) data: bytes::Bytes,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum FtAiError {
+    #[error("15.ai returned zero WAV files in the response")]
+    MissingWavFile,
+
+    #[error(
+        "Failed to create a WAV reader, that is probably a bug, it must be infallible: {message}"
+    )]
+    CreateWavReader { message: &'static str },
+
+    #[error("Failed to read WAV header returned by 15.ai: {message}")]
+    ReadWavHeader { message: &'static str },
+
+    #[error("Failed to read WAV samples returned by 15.ai: {message}")]
+    ReadWavSamples { message: &'static str },
+
+    #[error("Failed to encode the resampled WAV to OGG")]
+    EncodeWavToOpus { source: ogg_opus::Error },
+
+    #[error("Invalid input. Please check the name of the character on 15.ai website, or check your input for typos.")]
+    Service { source: Box<crate::Error> },
 }

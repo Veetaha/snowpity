@@ -1,9 +1,10 @@
+use super::{media_cache, MediaCacheError, TgFileKind};
+use crate::media_host::derpi;
 use crate::prelude::*;
-use crate::util::{encoding, DynResult};
-use crate::{derpi, tg, Error, ErrorKind, MediaError};
+use crate::util::DynResult;
+use crate::{encoding, tg, Error, ErrorKind};
 use futures::prelude::*;
 use lazy_regex::regex_captures;
-use media_cache::TgFileType;
 use metrics_bat::prelude::*;
 use reqwest::Url;
 use std::future::IntoFuture;
@@ -18,8 +19,6 @@ use teloxide::utils::markdown;
 
 const ERROR_VIDEO_URL: &str = "https://user-images.githubusercontent.com/36276403/209671572-9a3eada8-1bf6-4a9c-ac0e-44863f66746a.mp4";
 const ERROR_VIDEO_THUMB_URL: &str = "https://user-images.githubusercontent.com/36276403/209673286-6cc10562-a5e1-4c90-b373-8290abd41fa7.jpg";
-
-pub(crate) mod media_cache;
 
 metrics_bat::labels! {
     InlineQueryTotalLabels { user }
@@ -54,7 +53,7 @@ impl InlineQueryService {
     }
 }
 
-#[instrument(skip_all, fields(query = %query.query))]
+#[instrument(skip_all, fields(query = %query.query, from = %query.from.debug_id()))]
 pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     let tg::Ctx {
         bot, inline_query, ..
@@ -64,8 +63,11 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 
     let Some((media_host, media_id)) = parse_query(&query.query) else {
         inline_queries_skipped_total(vec![]).increment(1);
+        info!("Skipping inline query");
         return Ok(());
     };
+
+    info!("Processing inline query");
 
     inline_queries_total(InlineQueryTotalLabels {
         user: query.from.debug_id(),
@@ -79,7 +81,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     async {
         let payload = media_cache::DerpiRequest {
             requested_by: query.from,
-            media_id,
+            request_id,
         };
 
         let response = inline_query
@@ -95,24 +97,24 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
         let id = encoding::encode_base64_sha2(&response.tg_file_id);
 
         let result = match response.tg_file_type {
-            TgFileType::Photo => InlineQueryResultCachedPhoto::new(id, response.tg_file_id)
+            TgFileKind::Photo => InlineQueryResultCachedPhoto::new(id, response.tg_file_id)
                 .caption(caption)
                 .parse_mode(parse_mode)
                 // XXX: title is ignored for photos in when telegram clients display the results.
                 // That's really surprising, but that's how telegram works -_-
                 .title(title)
                 .into(),
-            TgFileType::Document => {
+            TgFileKind::Document => {
                 InlineQueryResultCachedDocument::new(id, title, response.tg_file_id)
                     .caption(caption)
                     .parse_mode(parse_mode)
                     .into()
             }
-            TgFileType::Video => InlineQueryResultCachedVideo::new(id, response.tg_file_id, title)
+            TgFileKind::Video => InlineQueryResultCachedVideo::new(id, response.tg_file_id, title)
                 .caption(caption)
                 .parse_mode(parse_mode)
                 .into(),
-            TgFileType::Mpeg4Gif => InlineQueryResultCachedMpeg4Gif::new(id, response.tg_file_id)
+            TgFileKind::Mpeg4Gif => InlineQueryResultCachedMpeg4Gif::new(id, response.tg_file_id)
                 .caption(caption)
                 // XXX: title is ignored for gifs as well as for photos,
                 // see the comment on photos match arm above
@@ -137,8 +139,8 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
         let default_title = "Something went wrong 🥺";
 
         let title_prefix = match err.kind() {
-            ErrorKind::Media { source } => match source {
-                MediaError::FileTooBig { actual, max } => {
+            ErrorKind::MediaCache { source } => match source {
+                MediaCacheError::FileTooBig { actual, max } => {
                     let mem = humansize::make_format(humansize::BINARY);
                     let actual = mem(*actual);
                     let max = mem(*max);
@@ -197,10 +199,17 @@ fn parse_query(str: &str) -> Option<(&str, derpi::MediaId)> {
     let (_, host, id) = None
         .or_else(|| regex_captures!("(derpibooru.org(?:/images)?)/(\\d+)", str))
         .or_else(|| regex_captures!("(derpicdn.net/img)/\\d+/\\d+/\\d+/(\\d+)", str))
-        .or_else(|| regex_captures!("(derpicdn.net/img/view)/\\d+/\\d+/\\d+/(\\d+)", str))?;
+        .or_else(|| {
+            regex_captures!(
+                "(derpicdn.net/img/(?:view|download))/\\d+/\\d+/\\d+/(\\d+)",
+                str
+            )
+        })?;
     Some((host, id.parse().ok()?))
 }
 
+/// XXX: This handler must be enabled manually via `/setinlinefeedback` command in
+/// Telegram BotFather, otherwise `ChosenInlineResult` updates will not be sent.
 pub(crate) async fn handle_chosen_inline_result(result: ChosenInlineResult) -> DynResult {
     let media_host = parse_query(&result.query)
         .map(|(host, _id)| host)
@@ -251,6 +260,10 @@ mod tests {
         test(
             "https://derpicdn.net/img/view/2022/12/17/3008328.jpg",
             expect!["derpicdn.net/img/view:3008328"],
+        );
+        test(
+            "https://derpicdn.net/img/download/2022/12/28/3015836__safe_artist-colon-shadowreindeer_foo.jpg",
+            expect!["derpicdn.net/img/download:3015836"]
         );
     }
 }

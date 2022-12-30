@@ -5,16 +5,13 @@ mod captcha;
 mod cmd;
 mod config;
 mod inline_query;
+mod media_cache;
 mod message_from_channel;
 
-use crate::db;
-use crate::derpi::{self, DerpiService};
 use crate::ftai::FtaiService;
 use crate::prelude::*;
 use crate::sysinfo::SysInfoService;
-use crate::tg::inline_query::media_cache;
-use crate::util::{self, encoding};
-use crate::Result;
+use crate::{db, encoding, http, media_host, Result};
 use captcha::CaptchaCtx;
 use dptree::di::DependencyMap;
 use inline_query::InlineQueryService;
@@ -25,8 +22,9 @@ use teloxide::prelude::*;
 use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
 
+pub(crate) use cmd::{DescribeCommandError, FtaiCommandError};
 pub(crate) use config::*;
-pub(crate) use media_cache::TgFileType;
+pub(crate) use media_cache::{MediaCacheError, TgFileKind, TgFileMeta};
 
 pub(crate) type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
 
@@ -52,26 +50,32 @@ pub(crate) struct Ctx {
     inline_query: InlineQueryService,
 }
 
-pub(crate) async fn run_bot(tg_cfg: Config, derpi_cfg: derpi::Config, db: db::Repo) -> Result {
+pub(crate) struct RunBotOptions {
+    pub(crate) tg_cfg: Config,
+    pub(crate) db: db::Repo,
+    pub(crate) media_cfg: media_host::Config,
+}
+
+pub(crate) async fn run_bot(opts: RunBotOptions) -> Result {
     let mut di = DependencyMap::new();
 
-    let http = util::http::create_client();
+    let http = http::create_client();
 
-    let bot: Bot = teloxide::Bot::new(tg_cfg.token.clone())
+    let bot: Bot = teloxide::Bot::new(opts.tg_cfg.token.clone())
         .throttle(Default::default())
         .parse_mode(ParseMode::MarkdownV2)
         .cache_me()
         .trace(teloxide::adaptors::trace::Settings::all());
 
     let ftai = FtaiService::new(http.clone());
-    let derpi = Arc::new(DerpiService::new(derpi_cfg, http.clone()));
-    let tg_cfg = Arc::new(tg_cfg);
-    let db = Arc::new(db);
+    let media = Arc::new(media_host::Client::new(opts.media_cfg, http.clone()));
+    let tg_cfg = Arc::new(opts.tg_cfg);
+    let db = Arc::new(opts.db);
 
     let ctx = media_cache::Context {
-        http_client: http,
+        http,
         bot: bot.clone(),
-        derpi,
+        media,
         cfg: tg_cfg.clone(),
         db: db.clone(),
     };

@@ -37,12 +37,13 @@ darling               = "0.14"
 derive_more           = "0.99"
 devx-cmd              = "0.5"
 display-error-chain   = "=0.1.1"
-dotenv                = "0.15"
+dotenvy               = "0.15"
 dptree                = "0.3"
 duplicate             = "0.4"
 easy-ext              = "1.0"
 envy                  = "0.4"
 expect-test           = "1.4"
+from_variants         = "1.0"
 fs-err                = "2.7"
 futures               = "0.3"
 governor              = "0.5"
@@ -87,6 +88,7 @@ serde_with                  = { version = "2.0", features = ["json"] }
 sqlx                        = { version = "0.6", features = ["runtime-tokio-rustls", "postgres", "macros", "chrono", "offline"] }
 strum                       = { version = "0.24", features = ["derive"] }
 teloxide                    = { version = "0.11", features = ["rustls"], default-features = false }
+test-log                    = { version = "0.2", features = ["trace"], default-features = false }
 timeago                     = { version = "0.4", features = ["chrono"] }
 tracing-error               = { version = "0.2", default-features = false }
 tracing-loki                = { version = "0.2", features = ["rustls", "compat-0-2-1"], default-features = false }

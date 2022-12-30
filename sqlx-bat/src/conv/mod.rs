@@ -11,7 +11,6 @@ pub trait DbRepresentable: fmt::Debug + Sized + Send + Sync + 'static {
 }
 
 /// A type that can't be losslessly converted to database repr.
-/// Mostly convenient only for mapping the error type to crate's [`DbError`].
 pub trait TryIntoDb: DbRepresentable {
     fn try_into_db(self) -> Result<Self::DbRepr>;
 }
