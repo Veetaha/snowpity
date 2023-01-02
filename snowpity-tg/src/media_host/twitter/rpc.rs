@@ -53,7 +53,6 @@ sqlx_bat::impl_try_into_db_via_newtype!(MediaKey(String));
 pub(crate) struct Tweet {
     pub(crate) id: TweetId,
     // pub(crate) text: String,
-
     #[serde(default)]
     pub(crate) possibly_sensitive: bool,
 }
