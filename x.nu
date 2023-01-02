@@ -177,11 +177,11 @@ def "main deploy" [
     if not $plan {
         with-retry --max-retries 20 { main ssh cloud-init log }
     }
+}
 
-    if $tag {
-        git tag $"v(project-version)"
-        git push --tags
-    }
+def "tag" [] {
+    git tag $"v(project-version)"
+    git push --tags
 }
 
 # Destroy the application's stack. By default destroys only the server instance,

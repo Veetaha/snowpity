@@ -69,6 +69,8 @@ locals {
     PG_DATA          = local.pg_data
     DATA_VOLUME_PATH = local.data_volume_path
 
+    TWITTER_BEARER_TOKEN = var.twitter_bearer_token
+
     TG_BOT_ALERTS_CHAT      = var.tg_bot_alerts_chat
     TG_BOT_IMAGE_NAME       = var.tg_bot_image_name
     TG_BOT_IMAGE_TAG        = var.tg_bot_image_tag

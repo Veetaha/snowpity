@@ -71,3 +71,9 @@ variable "allowed_ssh_ips" {
   type      = list(string)
   sensitive = true
 }
+
+variable "twitter_bearer_token" {
+  nullable  = false
+  sensitive = true
+  type      = string
+}

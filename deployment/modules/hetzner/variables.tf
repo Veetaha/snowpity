@@ -58,3 +58,9 @@ variable "docker_password" {
   sensitive = true
   type      = string
 }
+
+variable "twitter_bearer_token" {
+  nullable  = false
+  sensitive = true
+  type      = string
+}
