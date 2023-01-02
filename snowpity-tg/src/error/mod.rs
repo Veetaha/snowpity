@@ -64,7 +64,10 @@ pub(crate) enum ErrorKind {
     },
 
     #[error(transparent)]
-    Db { source: crate::db::DbError },
+    Db {
+        #[from]
+        source: crate::db::DbError,
+    },
 
     #[error(transparent)]
     Deserialize {
@@ -114,12 +117,6 @@ pub(crate) enum ErrorKind {
         message: String,
         source: Option<Box<DynError>>,
     },
-}
-
-impl<T: Into<crate::db::DbError>> From<T> for ErrorKind {
-    fn from(err: T) -> Self {
-        Self::Db { source: err.into() }
-    }
 }
 
 impl From<std::io::Error> for ErrorKind {

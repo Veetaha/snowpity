@@ -212,18 +212,6 @@ def "main tf output" [] {
     tf-output | to json | jq
 }
 
-# Generate the entities Rust code from the database schema. This will stop any
-# local running containers, drop the database, re-create, migrate it and
-# output the generated code to the working tree.
-def "main orm gen" [] {
-    cd (repo)
-    main up --fresh --no-tg-bot --no-observability # --detach
-    wait-for-db
-    sea-orm-cli migrate
-    sea-orm-cli generate entity --with-copy-enums --output-dir entities/src/generated
-    main down --drop-data
-}
-
 # Fetch the image metadata from derpibooru
 def "main derpi image" [id:int] {
     fetch $"https://derpibooru.org/api/v1/json/images/($id)" | get image | flatten representations | get 0

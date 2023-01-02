@@ -7,6 +7,7 @@ use futures::prelude::*;
 use futures::stream::FuturesUnordered;
 use std::collections::HashMap;
 use std::fmt;
+use std::ops::ControlFlow;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 
@@ -55,7 +56,7 @@ pub(crate) struct Request {
 
 #[derive(Clone)]
 pub(crate) struct Response {
-    items: Vec<ResponseItem>,
+    pub(crate) items: Vec<ResponseItem>,
 }
 
 #[derive(Clone)]
@@ -73,8 +74,8 @@ impl ResponseItem {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum RequestId {
+#[derive(Debug, Clone, PartialEq, Eq, Hash, from_variants::FromVariants)]
+pub(crate) enum RequestId {
     Derpibooru(derpi::MediaId),
     Twitter(twitter::TweetId),
 }
@@ -124,7 +125,7 @@ impl Client {
     /// It's totally fine to call this method concurrently and with the same
     /// `media_id` repeatedly, but there is a backpressure mechanism so that
     /// the future won't resolve until the service's capacity is available.
-    pub(crate) async fn get_tg_derpi_media(&self, request: Request) -> Result<Response> {
+    pub(crate) async fn get_media(&self, request: Request) -> Result<Response> {
         let (request, recv) = Envelope::new(request);
         self.send
             .as_ref()
@@ -159,31 +160,45 @@ impl Service {
     #[instrument(skip(self))]
     async fn run_loop(mut self) {
         loop {
-            let total_in_flight = self.total_in_flight();
-            media_cache_requests_in_flight_total(vec![]).set(total_in_flight as f64);
+            let result = std::panic::AssertUnwindSafe(self.loop_turn())
+                .catch_unwind()
+                .await;
 
-            tokio::select! {
-                // This `if` condition implements a simple backpressure mechanism
-                // to prevent receiving new requests when the number of in-flight
-                // requests is too high.
-                request = self.requests.recv(), if total_in_flight <= MAX_IN_FLIGHT => {
-                    let Some(request) = request else {
-                        info!("Channel closed, exiting...");
-                        return;
-                    };
-                    self.process_request(request);
-                }
-                Some((media_id, response)) = self.in_flight_futs.next() => {
-                    self.dispatch_response(media_id, response);
-                }
+            match result {
+                Ok(ControlFlow::Break(())) => break,
+                Ok(ControlFlow::Continue(())) => {}
+                Err(_) => error!("BUG: media cache service panicked, but will continue to run"),
             }
         }
+    }
+
+    async fn loop_turn(&mut self) -> ControlFlow<()> {
+        let total_in_flight = self.total_in_flight();
+        media_cache_requests_in_flight_total(vec![]).set(total_in_flight as f64);
+
+        tokio::select! {
+            // This `if` condition implements a simple backpressure mechanism
+            // to prevent receiving new requests when the number of in-flight
+            // requests is too high.
+            request = self.requests.recv(), if total_in_flight <= MAX_IN_FLIGHT => {
+                let Some(request) = request else {
+                    info!("Exiting media cache service (channel closed)...");
+                    return ControlFlow::Break(());
+                };
+                self.process_request(request);
+            }
+            Some((media_id, response)) = self.in_flight_futs.next() => {
+                self.dispatch_response(media_id, response);
+            }
+        }
+
+        ControlFlow::Continue(())
     }
 
     fn total_in_flight(&self) -> usize {
         self.return_slots
             .values()
-            .map(|res| res.len())
+            .map(|senders| senders.len())
             .sum::<usize>()
     }
 
@@ -208,15 +223,15 @@ impl Service {
             return_slot,
         } = request;
 
-        let request_id = request.id;
-
         use std::collections::hash_map::Entry::*;
-        match self.return_slots.entry(request_id.clone()) {
+        match self.return_slots.entry(request.id.clone()) {
             Occupied(slot) => {
                 assert_ne!(slot.get().len(), 0);
                 slot.into_mut().push(return_slot);
             }
             Vacant(slot) => {
+                let request_id = request.id.clone();
+
                 let fut = self
                     .ctx
                     .clone()
@@ -249,7 +264,7 @@ impl Context {
 
         media_cache_requests_total(vec![]).increment(1);
 
-        if items.len() == cached_media.len() {
+        if !items.is_empty() && items.len() == cached_media.len() {
             info!(items = items.len(), "Media cache hit");
             media_cache_hits_total(vec![]).increment(1);
             return Ok(Response { items });
@@ -264,7 +279,14 @@ impl Context {
 
         let items = stream::iter(media_meta)
             .map(|meta| async {
-                let tg_file = tg_upload::upload(&self, &meta).await?;
+                let tg_file = tg_upload::upload(&self, &meta, &request.requested_by).await?;
+
+                if let Err(err) = self.set_cache(&meta, &tg_file).await {
+                    warn!(
+                        err = tracing_err(&err),
+                        "Failed to save cache info in the database"
+                    );
+                }
 
                 Ok::<_, crate::Error>(ResponseItem::new(tg_file, meta))
             })
@@ -296,13 +318,19 @@ impl Context {
         }
     }
 
+    /// Save the information about the file uploaded to Telegram in the database.
     async fn set_cache(&self, media: &MediaMeta, tg_file: &TgFileMeta) -> Result {
-        match media.id {
+        let tg_file = tg_file.clone();
+        match &media.id {
             MediaId::Derpibooru(media_id) => {
-                self.db.tg_media_cache.derpi.set(media_id, tg_file).await
+                self.db.tg_media_cache.derpi.set(*media_id, tg_file).await
             }
             MediaId::Twitter(tweet_id, media_key) => {
-                self.db.tg_media_cache.twitter.set(tweet_id, media_key, tg_file).await
+                self.db
+                    .tg_media_cache
+                    .twitter
+                    .set(*tweet_id, media_key.clone(), tg_file)
+                    .await
             }
         }
     }

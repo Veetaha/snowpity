@@ -2,7 +2,7 @@
 
 use crate::http;
 use crate::prelude::*;
-use crate::{err_ctx, err, Result};
+use crate::{err, err_ctx, Result};
 
 /// Limit of the text length that can be passed to 15.ai for voice generation
 pub(crate) const MAX_TEXT_LENGTH: usize = 200;

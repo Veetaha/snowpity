@@ -19,3 +19,15 @@ pub(crate) enum DbError {
         source: sqlx_bat::Error,
     },
 }
+
+impl From<sqlx::Error> for crate::ErrorKind {
+    fn from(err: sqlx::Error) -> Self {
+        Self::Db { source: err.into() }
+    }
+}
+
+impl From<sqlx_bat::Error> for crate::ErrorKind {
+    fn from(err: sqlx_bat::Error) -> Self {
+        Self::Db { source: err.into() }
+    }
+}

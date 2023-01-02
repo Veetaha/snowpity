@@ -26,9 +26,8 @@ impl Client {
     pub(crate) async fn get_tweet(&self, id: TweetId) -> Result<GetTweetResponse> {
         let query = [
             ("expansions", "attachments.media_keys,author_id"),
-            ("media.fields", "height,type,url,width,variants"),
-            ("tweet.fields", "id,text,possibly_sensitive"),
-            ("user.fields", "id,name"),
+            ("media.fields", "height,url,width,variants"),
+            ("tweet.fields", "possibly_sensitive"),
         ];
 
         let mut response = self
@@ -55,9 +54,9 @@ impl Client {
 
 #[derive(Debug)]
 pub(crate) struct GetTweetResponse {
-    author: User,
-    tweet: Tweet,
-    media: Vec<Media>,
+    pub(crate) author: User,
+    pub(crate) tweet: Tweet,
+    pub(crate) media: Vec<Media>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -71,6 +70,9 @@ pub(crate) enum TwitterError {
 
     #[error("Several errors occured: {raw_errors:#?}")]
     ServiceMany { raw_errors: Vec<Error> },
+
+    #[error("The media is missing MP4 format (media_key: {})", media.media_key)]
+    MissingMp4Variant { media: Media },
 }
 
 #[cfg(test)]
@@ -86,7 +88,7 @@ mod tests {
         let client = Client::new(cfg, http::create_client());
 
         let tweet = client
-            .get_tweet(TweetId(1608111355395211269))
+            .get_tweet(TweetId(1609634286050623492))
             .await
             .unwrap();
 

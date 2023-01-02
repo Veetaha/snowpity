@@ -11,7 +11,17 @@ http::def_url_base!(derpi, "https://derpibooru.org");
 
 #[derive(Clone, Deserialize)]
 pub struct Config {
-    api_key: String,
+    // Derpibooru doesn't require an API key for read-only requests.
+    // The rate limiting is also the same for both anonymous and authenticated requests,
+    // therefore we don't really need an API key
+    //
+    // This was confirmed by the Derpibooru staff in discord:
+    // https://discord.com/channels/430829008402251796/438029140659142657/1059492359122989146
+    //
+    // This config struct exists here, just in case some day we do need to use an API key,
+    // or want any other config options.
+    //
+    // api_key: String,
 }
 
 pub(crate) struct Client {
@@ -32,7 +42,6 @@ impl Client {
         Ok(self
             .http
             .get(derpi_api(["images", &media_id.to_string()]))
-            .query(&[("key", self.cfg.api_key.as_str())])
             .read_json::<GetImageResponse>()
             .await?
             .image)

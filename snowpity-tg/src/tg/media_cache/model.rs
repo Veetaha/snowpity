@@ -1,5 +1,5 @@
 use crate::media_host::{derpi, twitter};
-use crate::{media_host, tg};
+use crate::tg;
 use itertools::Itertools;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use reqwest::Url;
@@ -8,9 +8,18 @@ use teloxide::prelude::*;
 use teloxide::types::{ChatId, InputFile, Message};
 use teloxide::utils::markdown;
 
-#[derive(Clone, Copy)]
+pub(crate) const KB: u64 = 1024;
+pub(crate) const MB: u64 = 1024 * KB;
+
+pub(crate) const MAX_DIRECT_URL_PHOTO_SIZE: u64 = 5 * MB;
+pub(crate) const MAX_PHOTO_SIZE: u64 = 10 * MB;
+
+pub(crate) const MAX_DIRECT_URL_FILE_SIZE: u64 = 20 * MB;
+pub(crate) const MAX_FILE_SIZE: u64 = 50 * MB;
+
+#[derive(Debug, Clone, Copy, strum::IntoStaticStr, strum::Display)]
 pub(crate) enum MediaKind {
-    ImageJpg,
+    ImageJpeg,
     ImagePng,
     ImageSvg,
     VideoMp4,
@@ -26,6 +35,7 @@ pub(crate) enum MediaKind {
     Debug,
     PartialEq,
     Eq,
+    Hash,
     IntoPrimitive,
     TryFromPrimitive,
     strum::Display,
@@ -76,6 +86,7 @@ pub(crate) struct TgFileMeta {
 #[derive(Clone, PartialEq, Eq, Hash, Debug, from_variants::FromVariants)]
 pub(crate) enum MediaId {
     Derpibooru(derpi::MediaId),
+    #[from_variants(skip)]
     Twitter(twitter::TweetId, twitter::MediaKey),
 }
 
@@ -87,11 +98,12 @@ pub(crate) struct CachedMedia {
 
 #[derive(Clone)]
 pub(crate) struct MediaDimensions {
-    pub(crate) width: u32,
-    pub(crate) height: u32,
+    pub(crate) width: u64,
+    pub(crate) height: u64,
 }
 
-#[derive(Clone)]
+/// The sizes are measured in bytes
+#[derive(Clone, Debug)]
 pub(crate) enum FileSize {
     /// The size of the file is known approximately. The margin for error is
     /// low, so we can optimistically consider it as an exact size. We still
@@ -106,6 +118,11 @@ pub(crate) enum FileSize {
     /// It's better to have a known upper bound info than nothing at all,
     /// if exact size isn't specified in the API response.
     Max(u64),
+
+    /// The exact maximum size of the file is not know, but it's optimistic
+    /// estimate is heuristicially assumed to be this. This value is not a
+    /// reliable source of information, but it's better than nothing.
+    ApproxMax(u64),
 }
 
 #[derive(Clone)]
@@ -160,17 +177,69 @@ pub(crate) struct Artist {
     ///
     /// It's either the artist's profile/home page, or a query for their art
     /// if the web site identifies artists by tags (like derpibooru)
-    pub(crate) link: Url,
+    pub(crate) web_url: Url,
 }
 
 impl MediaMeta {
+    /// Short name of the file (not more than 255 characters) for the media
+    pub(crate) fn tg_file_name(&self) -> String {
+        fn sanitize(tag: &str) -> impl std::fmt::Display + '_ {
+            tag.chars()
+                .flat_map(char::to_lowercase)
+                .map(|char| {
+                    if char.is_whitespace() {
+                        return '-';
+                    } else if char.is_alphanumeric() {
+                        return char;
+                    }
+                    '_'
+                })
+                .format("")
+        }
+
+        fn join(parts: &mut dyn Iterator<Item = &str>) -> String {
+            let joined = parts.map(sanitize).join("+");
+            if joined.chars().count() <= 100 {
+                return joined;
+            }
+            joined.chars().take(97).chain(['.', '.', '.']).collect()
+        }
+
+        let ratings = join(&mut self.nsfw_ratings().into_iter());
+        let artists = join(&mut self.artists.iter().map(|artist| artist.name.as_str()));
+
+        let media_host = self.host_specific.hosting_name().to_lowercase();
+
+        let prefix = [&media_host, ratings.as_str(), artists.as_str()]
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .format("-");
+
+        // FIXME: this file type detection influences how telegram processes the file.
+        // For example, if we send_video with wrong extension, then it will be registered
+        // as a document instead of video, even though it will be returned as a video kind in `Message`
+        let file_extension = self
+            .download_url
+            .path()
+            .rsplit('.')
+            .next()
+            .unwrap_or_else(|| self.kind.file_extension());
+
+        format!(
+            "{prefix}-{}.{}",
+            self.id.display_in_file_name(),
+            file_extension
+        )
+    }
+
     pub(crate) fn caption(&self) -> String {
+        // FIXME: ensure the caption doesn't overflow 1024 characters
         let artists: Vec<_> = self
             .artists
             .iter()
             .map(|artist| {
                 markdown::link(
-                    artist.link.as_str(),
+                    artist.web_url.as_str(),
                     &markdown::escape(artist.name.as_str()),
                 )
             })
@@ -178,25 +247,40 @@ impl MediaMeta {
 
         let artists = match artists.as_slice() {
             [] => "".to_owned(),
-            artists => format!(" by {}", artists.join(", ")),
+            _ => format!(" by {}", artists.iter().format(", ")),
         };
 
-        let MediaHostSpecific::Derpibooru { ratings } = &self.host_specific;
-
-        let ratings = ratings.iter().join(", ");
-        let ratings = if matches!(ratings.as_str(), "" | "safe") {
-            "".to_owned()
-        } else {
-            format!(" \\({}\\)", markdown::escape(&ratings))
+        let nsfw_ratings = self.nsfw_ratings();
+        let nsfw_ratings = match nsfw_ratings.as_slice() {
+            [] => "".to_owned(),
+            _ => format!(" ({})", nsfw_ratings.iter().format(", ")),
         };
+        let nsfw_ratings = markdown::escape(&nsfw_ratings);
 
         format!(
-            "*{}{artists}{ratings}*",
+            "*{}{artists}{nsfw_ratings}*",
             markdown::link(
                 self.web_url.as_str(),
                 &markdown::escape(&format!("Source ({})", self.host_specific.hosting_name()))
             ),
         )
+    }
+
+    fn nsfw_ratings(&self) -> Vec<&str> {
+        match &self.host_specific {
+            MediaHostSpecific::Derpibooru { ratings } => ratings
+                .iter()
+                .filter(|tag| *tag != "safe")
+                .map(String::as_str)
+                .collect(),
+            MediaHostSpecific::Twitter { possibly_sensitive } => {
+                if *possibly_sensitive {
+                    vec!["nsfw"]
+                } else {
+                    vec![]
+                }
+            }
+        }
     }
 }
 
@@ -220,7 +304,30 @@ impl FileSize {
     /// Approximate maximum size of the file in bytes
     pub(crate) fn approx_max(&self) -> u64 {
         match self {
-            Self::Approx(size) | Self::Max(size) => *size,
+            Self::Approx(bytes) | Self::Max(bytes) | Self::ApproxMax(bytes) => *bytes,
+        }
+    }
+}
+
+impl MediaKind {
+    fn file_extension(&self) -> &'static str {
+        match self {
+            MediaKind::ImageJpeg => "jpg",
+            MediaKind::ImagePng => "png",
+            MediaKind::ImageSvg => "svg",
+            MediaKind::VideoMp4 | MediaKind::AnimationMp4 => "mp4",
+        }
+    }
+}
+
+impl MediaId {
+    /// Displays the media ID without the media hosting platform identification
+    fn display_in_file_name(&self) -> String {
+        match self {
+            Self::Derpibooru(media_id) => media_id.to_string(),
+            Self::Twitter(tweet_id, media_key) => {
+                format!("{tweet_id}-{media_key}")
+            }
         }
     }
 }

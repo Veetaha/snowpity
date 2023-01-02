@@ -79,9 +79,6 @@ tg_bot_token = {
     dev  = "..."
 }
 
-derpi_filter  = "100073"
-derpi_api_key = "AAaa99AAaa99AAaa99AA"
-
 docker_username = "username"
 docker_password = "password"
 

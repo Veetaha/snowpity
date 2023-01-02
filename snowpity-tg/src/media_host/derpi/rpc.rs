@@ -53,26 +53,21 @@ pub(crate) struct Media {
     pub(crate) aspect_ratio: f64,
 }
 
-#[derive(strum::Display, strum::IntoStaticStr, Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MimeType {
     #[serde(rename = "image/gif")]
-    #[strum(to_string = "image/gif")]
     ImageGif,
 
     #[serde(rename = "image/jpeg")]
-    #[strum(to_string = "image/jpeg")]
     ImageJpeg,
 
     #[serde(rename = "image/png")]
-    #[strum(to_string = "image/png")]
     ImagePng,
 
     #[serde(rename = "image/svg+xml")]
-    #[strum(to_string = "image/svg+xml")]
     ImageSvgXml,
 
     #[serde(rename = "video/webm")]
-    #[strum(to_string = "video/webm")]
     VideoWebm,
 }
 
@@ -116,20 +111,6 @@ impl MediaId {
     pub(crate) fn to_webpage_url(self) -> Url {
         derpi(["images", &self.to_string()])
     }
-}
-
-pub(crate) fn sanitize_tag(tag: &str) -> impl fmt::Display + '_ {
-    tag.chars()
-        .flat_map(char::to_lowercase)
-        .map(|char| {
-            if char.is_whitespace() {
-                return '-';
-            } else if char.is_alphanumeric() {
-                return char;
-            }
-            '_'
-        })
-        .format("")
 }
 
 impl MimeType {

@@ -38,6 +38,6 @@ macro_rules! fatal {
     };
 }
 
-pub(crate) use err_ctx;
 pub(crate) use err;
+pub(crate) use err_ctx;
 pub(crate) use fatal;

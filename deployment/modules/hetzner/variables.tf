@@ -58,14 +58,3 @@ variable "docker_password" {
   sensitive = true
   type      = string
 }
-
-variable "derpi_api_key" {
-  nullable  = false
-  sensitive = true
-  type      = string
-}
-
-variable "derpi_filter" {
-  nullable = false
-  type     = string
-}

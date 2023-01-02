@@ -25,9 +25,6 @@ module "hetzner" {
   docker_username = var.docker_username
   docker_password = var.docker_password
 
-  derpi_api_key = var.derpi_api_key
-  derpi_filter  = var.derpi_filter
-
   allowed_ssh_ips = var.allowed_ssh_ips
 }
 

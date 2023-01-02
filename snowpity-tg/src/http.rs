@@ -280,3 +280,25 @@ pub(crate) enum HttpClientError {
     // #[error("Failed to flush bytes to a file")]
     // FlushToFile { source: std::io::Error },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test_log::test(tokio::test)]
+    async fn manual_sandbox() {
+        let url = "https://derpicdn.net/img/view/2018/10/19/1860230.mp4";
+
+        let http = create_client();
+        let response = http.head(url)
+            .send()
+            .await
+            .unwrap();
+
+        // dbg!(response.chunk().await);
+
+        // dbg!(response.());
+
+        dbg!(response.content_length());
+    }
+}

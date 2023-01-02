@@ -16,11 +16,11 @@ impl TgDerpiMediaCacheRepo {
     #[metered_db]
     pub(crate) async fn set(&self, derpi_id: derpi::MediaId, tg_file: TgFileMeta) -> Result {
         sqlx::query!(
-            "insert into tg_media_cache (derpi_id, tg_file_id, tg_file_type)
+            "insert into tg_derpi_media_cache (derpi_id, tg_file_id, tg_file_kind)
             values ($1, $2, $3)",
-            media.derpi_id.try_into_db()?,
-            media.tg_file.id,
-            media.tg_file.kind.try_into_db()?,
+            derpi_id.try_into_db()?,
+            tg_file.id,
+            tg_file.kind.try_into_db()?,
         )
         .execute(&self.db)
         .await?;
@@ -29,12 +29,9 @@ impl TgDerpiMediaCacheRepo {
     }
 
     #[metered_db]
-    pub(crate) async fn get(
-        &self,
-        derpi_id: derpi::MediaId,
-    ) -> Result<Option<TgFileMeta>> {
+    pub(crate) async fn get(&self, derpi_id: derpi::MediaId) -> Result<Option<TgFileMeta>> {
         sqlx::query!(
-            "select tg_file_id, tg_file_type from tg_media_cache
+            "select tg_file_id, tg_file_kind from tg_derpi_media_cache
             where derpi_id = $1",
             derpi_id.try_into_db()?,
         )
@@ -43,7 +40,7 @@ impl TgDerpiMediaCacheRepo {
         .map(|record| {
             Ok(TgFileMeta {
                 id: record.tg_file_id,
-                kind: record.tg_file_type.try_into_app()?,
+                kind: record.tg_file_kind.try_into_app()?,
             })
         })
         .transpose()

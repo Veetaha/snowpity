@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use crate::IoError;
-use crate::{err_ctx, err, Result};
+use crate::{err, err_ctx, Result};
 use std::process::Stdio;
 use url::Url;
 

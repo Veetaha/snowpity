@@ -1,9 +1,9 @@
-use super::{media_cache, MediaCacheError, TgFileKind};
-use crate::media_host::derpi;
+use super::media_cache::{self, TgFileKind};
 use crate::prelude::*;
 use crate::util::DynResult;
 use crate::{encoding, tg, Error, ErrorKind};
 use futures::prelude::*;
+use itertools::Itertools;
 use lazy_regex::regex_captures;
 use metrics_bat::prelude::*;
 use reqwest::Url;
@@ -11,7 +11,7 @@ use std::future::IntoFuture;
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::{
-    ChosenInlineResult, InlineQuery, InlineQueryResultCachedDocument,
+    ChosenInlineResult, InlineQuery, InlineQueryResult, InlineQueryResultCachedDocument,
     InlineQueryResultCachedMpeg4Gif, InlineQueryResultCachedPhoto, InlineQueryResultCachedVideo,
     InlineQueryResultVideo, ParseMode,
 };
@@ -67,7 +67,12 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
         return Ok(());
     };
 
-    info!("Processing inline query");
+    let comments = query
+        .query
+        .lines()
+        .skip(1)
+        .skip_while(|line| line.is_empty())
+        .join("\n");
 
     inline_queries_total(InlineQueryTotalLabels {
         user: query.from.debug_id(),
@@ -79,85 +84,64 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     };
 
     async {
-        let payload = media_cache::DerpiRequest {
+        let request = media_cache::Request {
             requested_by: query.from,
-            request_id,
+            id: media_id.into(),
         };
 
-        let response = inline_query
-            .media_cache_client
-            .get_tg_derpi_media(payload)
-            .await?;
+        let response = inline_query.media_cache_client.get_media(request).await?;
 
-        // FIXME: ensure the caption doesn't overflow 1024 characters
-        let caption = response.meta.caption();
+        let tg_file_types = response
+            .items
+            .iter()
+            .map(|response| response.tg_file.kind)
+            .unique()
+            .join(", ");
 
-        let parse_mode = ParseMode::MarkdownV2;
-        let title = "Click to send";
-        let id = encoding::encode_base64_sha2(&response.tg_file_id);
+        let total_responses = response.items.len();
 
-        let result = match response.tg_file_type {
-            TgFileKind::Photo => InlineQueryResultCachedPhoto::new(id, response.tg_file_id)
-                .caption(caption)
-                .parse_mode(parse_mode)
-                // XXX: title is ignored for photos in when telegram clients display the results.
-                // That's really surprising, but that's how telegram works -_-
-                .title(title)
-                .into(),
-            TgFileKind::Document => {
-                InlineQueryResultCachedDocument::new(id, title, response.tg_file_id)
-                    .caption(caption)
-                    .parse_mode(parse_mode)
-                    .into()
-            }
-            TgFileKind::Video => InlineQueryResultCachedVideo::new(id, response.tg_file_id, title)
-                .caption(caption)
-                .parse_mode(parse_mode)
-                .into(),
-            TgFileKind::Mpeg4Gif => InlineQueryResultCachedMpeg4Gif::new(id, response.tg_file_id)
-                .caption(caption)
-                // XXX: title is ignored for gifs as well as for photos,
-                // see the comment on photos match arm above
-                .title(title)
-                .parse_mode(parse_mode)
-                .into(),
-        };
+        let results = response
+            .items
+            .into_iter()
+            .map(|response| media_response_item_to_inline_query_result(&comments, response));
 
-        bot.answer_inline_query(&inline_query_id, [result])
+        bot.answer_inline_query(&inline_query_id, results)
             .is_personal(false)
             .cache_time(u32::MAX)
             .into_future()
             .with_duration_log("Answering inline query")
-            .instrument(info_span!("payload", tg_file_type = %response.tg_file_type))
+            .instrument(info_span!("payload", %tg_file_types, total_responses))
             .await?;
 
         Ok::<_, Error>(())
     }
+    .with_duration_log("Processed inline query")
     .record_duration(inline_query_duration_seconds, labels)
     .or_else(|err| async {
         // The title is very constrained in size. We must be very succinct in it.
         let default_title = "Something went wrong 🥺";
+        let title_suffix = ". Try another link 😅";
 
-        let title_prefix = match err.kind() {
-            ErrorKind::MediaCache { source } => match source {
-                MediaCacheError::FileTooBig { actual, max } => {
-                    let mem = humansize::make_format(humansize::BINARY);
-                    let actual = mem(*actual);
-                    let max = mem(*max);
-
-                    format!("Too big ({actual}, max: {max})")
-                }
-                _ => default_title.to_owned(),
-            },
-            _ => default_title.to_owned(),
+        let (title, full_err) = match err.kind() {
+            ErrorKind::MediaCache { source } => (source.to_string(), "".to_owned()),
+            _ => (
+                default_title.to_owned(),
+                format!(
+                    "\n\n{}",
+                    markdown::code_block(&err.display_chain().to_string())
+                ),
+            ),
         };
 
-        let title = format!("{title_prefix}. Try another image 😅");
+        let title = title + title_suffix;
+
+        let link = query.query.trim();
 
         let caption = format!(
-            "*{}*\n\n{}",
+            "*{}*\n\nLink: {}{}",
             markdown::escape(&title),
-            markdown::code_block(&err.display_chain().to_string())
+            markdown::escape(link),
+            full_err
         );
 
         let video_url: Url = ERROR_VIDEO_URL.parse().unwrap();
@@ -194,18 +178,77 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     .await
 }
 
-fn parse_query(str: &str) -> Option<(&str, derpi::MediaId)> {
+fn media_response_item_to_inline_query_result(
+    comments: &str,
+    response: media_cache::ResponseItem,
+) -> InlineQueryResult {
+    let mut caption = response.media_meta.caption();
+    if !comments.is_empty() {
+        caption = format!("{caption}\n\n{}", markdown::escape(&comments));
+    }
+
+    let parse_mode = ParseMode::MarkdownV2;
+    let title = "Click to send";
+    let id = encoding::encode_base64_sha2(&response.tg_file.id);
+
+    match response.tg_file.kind {
+        TgFileKind::Photo => InlineQueryResultCachedPhoto::new(id, response.tg_file.id)
+            .caption(caption)
+            .parse_mode(parse_mode)
+            // XXX: title is ignored for photos in when telegram clients display the results.
+            // That's really surprising, but that's how telegram works -_-
+            .title(title)
+            .into(),
+        TgFileKind::Document => {
+            InlineQueryResultCachedDocument::new(id, title, response.tg_file.id)
+                .caption(caption)
+                .parse_mode(parse_mode)
+                .into()
+        }
+        TgFileKind::Video => InlineQueryResultCachedVideo::new(id, response.tg_file.id, title)
+            .caption(caption)
+            .title(title)
+            .parse_mode(parse_mode)
+            .into(),
+        TgFileKind::Mpeg4Gif => {
+            InlineQueryResultCachedMpeg4Gif::new(id, response.tg_file.id)
+                .caption(caption)
+                // XXX: title is ignored for gifs as well as for photos,
+                // see the comment on photos match arm above
+                .title(title)
+                .parse_mode(parse_mode)
+                .into()
+        }
+    }
+}
+
+fn parse_query(str: &str) -> Option<(&str, media_cache::RequestId)> {
+    macro_rules! parse_with_regexes {
+        ($str:ident, $($regex:literal)*) => (None$(.or_else(|| regex_captures!($regex, $str)))*)
+    }
+
     let str = str.trim();
-    let (_, host, id) = None
-        .or_else(|| regex_captures!("(derpibooru.org(?:/images)?)/(\\d+)", str))
-        .or_else(|| regex_captures!("(derpicdn.net/img)/\\d+/\\d+/\\d+/(\\d+)", str))
-        .or_else(|| {
-            regex_captures!(
-                "(derpicdn.net/img/(?:view|download))/\\d+/\\d+/\\d+/(\\d+)",
-                str
-            )
-        })?;
-    Some((host, id.parse().ok()?))
+
+    let result = parse_with_regexes!(
+        str,
+        r"(derpibooru.org(?:/images)?)/(\d+)"
+        r"(derpicdn.net/img)/\d+/\d+/\d+/(\d+)"
+        r"(derpicdn.net/img/(?:view|download))/\d+/\d+/\d+/(\d+)"
+    );
+
+    if let Some((_, host, id)) = result {
+        return Some((host, media_cache::RequestId::Derpibooru(id.parse().ok()?)));
+    }
+
+    // The regex was inspired by the one in the booru/scraper repository:
+    // https://github.com/booru/scraper/blob/095771b28521b49ae67e30db2764406a68b74395/src/scraper/twitter.rs#L16
+    let result = parse_with_regexes!(str, r"((?:mobile\.)?twitter.com)/[A-Za-z\d_]+/status/(\d+)");
+
+    if let Some((_, host, id)) = result {
+        return Some((host, media_cache::RequestId::Twitter(id.parse().ok()?)));
+    }
+
+    None
 }
 
 /// XXX: This handler must be enabled manually via `/setinlinefeedback` command in
@@ -230,7 +273,7 @@ mod tests {
     #[track_caller]
     fn assert_parse_query(query: &str, expected: Expect) {
         let actual = if let Some((media_host, id)) = parse_query(query) {
-            format!("{media_host}:{id}")
+            format!("{media_host}:{id:?}")
         } else {
             "None".to_owned()
         };
@@ -238,32 +281,53 @@ mod tests {
     }
 
     #[test]
-    fn query_parsing() {
+    fn query_parsing_fail() {
         use assert_parse_query as test;
+
         test("123", expect!["None"]);
         test("furbooru.org/images/123/", expect!["None"]);
+    }
 
-        test("derpibooru.org/123/", expect!["derpibooru.org:123"]);
-        test("derpibooru.org/123", expect!["derpibooru.org:123"]);
+    #[test]
+    fn derpibooru_query_parsing() {
+        use assert_parse_query as test;
+
+        test(
+            "derpibooru.org/123/",
+            expect!["derpibooru.org:Derpibooru(MediaId(123))"],
+        );
+        test(
+            "derpibooru.org/123",
+            expect!["derpibooru.org:Derpibooru(MediaId(123))"],
+        );
         test(
             "derpibooru.org/images/123",
-            expect!["derpibooru.org/images:123"],
+            expect!["derpibooru.org/images:Derpibooru(MediaId(123))"],
         );
         test(
             "derpibooru.org/images/123/",
-            expect!["derpibooru.org/images:123"],
+            expect!["derpibooru.org/images:Derpibooru(MediaId(123))"],
         );
         test(
             "https://derpicdn.net/img/2022/12/17/3008328/large.jpg",
-            expect!["derpicdn.net/img:3008328"],
+            expect!["derpicdn.net/img:Derpibooru(MediaId(3008328))"],
         );
         test(
             "https://derpicdn.net/img/view/2022/12/17/3008328.jpg",
-            expect!["derpicdn.net/img/view:3008328"],
+            expect!["derpicdn.net/img/view:Derpibooru(MediaId(3008328))"],
         );
         test(
             "https://derpicdn.net/img/download/2022/12/28/3015836__safe_artist-colon-shadowreindeer_foo.jpg",
-            expect!["derpicdn.net/img/download:3015836"]
+            expect!["derpicdn.net/img/download:Derpibooru(MediaId(3015836))"]
         );
+    }
+
+    #[test]
+    fn twitter_query_parsing() {
+        use assert_parse_query as test;
+        test(
+            "https://twitter.com/NORDING34/status/1607191066318454791",
+            expect!["twitter.com:Twitter(TweetId(1607191066318454791))"],
+        )
     }
 }

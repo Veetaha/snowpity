@@ -79,9 +79,6 @@ locals {
     TG_BOT_LOG_LABELS = jsonencode({
       instance = local.hostname
     })
-
-    DERPI_API_KEY = var.derpi_api_key
-    DERPI_FILTER  = var.derpi_filter
   }
 }
 
