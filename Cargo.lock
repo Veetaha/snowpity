@@ -515,12 +515,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c97b9233581d84b8e1e689cdd3a47b6f69770084fc246e86a7f78b0d9c1d4a5"
 
 [[package]]
-name = "dotenv"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
-
-[[package]]
 name = "dotenvy"
 version = "0.15.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -646,6 +640,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9c384f161156f5260c24a097c56119f9be8c798586aecc13afbcbe7b7e26bf8"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "from_variants"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cf36180ca6f3c021e91b194e16b670ef5cbdd0cea48354ff6f5f83e3c2d1629"
+dependencies = [
+ "from_variants_impl",
+]
+
+[[package]]
+name = "from_variants_impl"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13abfd95d43eabb051a8d4b408ef92dfe6d8d4aa17651e5786d5c761e5e6e7ad"
+dependencies = [
+ "darling 0.13.4",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1258,7 +1273,7 @@ dependencies = [
 
 [[package]]
 name = "metrics-bat"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "easy-ext",
  "inventory",
@@ -1271,7 +1286,7 @@ dependencies = [
 
 [[package]]
 name = "metrics-bat-macros"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "darling 0.14.2",
  "proc-macro2",
@@ -2247,7 +2262,7 @@ checksum = "5e9f0ab6ef7eb7353d9119c170a436d1bf248eea575ac42d19d12f4e34130831"
 
 [[package]]
 name = "snowpity-tg"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "assert_matches",
  "async-trait",
@@ -2256,12 +2271,13 @@ dependencies = [
  "chrono",
  "derive_more",
  "display-error-chain",
- "dotenv",
+ "dotenvy",
  "dptree",
  "duplicate",
  "easy-ext",
  "envy",
  "expect-test",
+ "from_variants",
  "fs-err",
  "futures",
  "humansize",
@@ -2292,6 +2308,7 @@ dependencies = [
  "task-local-extensions",
  "teloxide",
  "tempfile",
+ "test-log",
  "thiserror",
  "timeago",
  "tokio",
@@ -2306,7 +2323,7 @@ dependencies = [
 
 [[package]]
 name = "snowpity-tg-macros"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "darling 0.14.2",
  "proc-macro2",
@@ -2353,7 +2370,7 @@ dependencies = [
 
 [[package]]
 name = "sqlx-bat"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "easy-ext",
  "sea-query",
@@ -2631,6 +2648,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bab24d30b911b2376f3a13cc2cd443142f0c81dda04c118693e35b3835757755"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "test-log"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38f0c854faeb68a048f0f2dc410c5ddae3bf83854ef0e4977d58306a5edef50e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -3277,7 +3305,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "clap",

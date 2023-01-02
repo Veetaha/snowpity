@@ -151,6 +151,7 @@ def "main deploy" [
     --plan          # Do `tf plan` instead of `tf apply`
     --yes (-y)      # Auto-approve the deployment
     --no-tf-refresh # Don't refresh the terraform state before deployment
+    --tag           # Create a git tag for the deployment
 ] {
     if not $no_build {
         # FIXME: it's this verbose due to https://github.com/nushell/nushell/issues/7260
@@ -176,6 +177,11 @@ def "main deploy" [
     if not $plan {
         with-retry --max-retries 20 { main ssh cloud-init log }
     }
+}
+
+def "tag" [] {
+    git tag $"v(project-version)"
+    git push --tags
 }
 
 # Destroy the application's stack. By default destroys only the server instance,
@@ -206,18 +212,6 @@ def "main tf output" [] {
     tf-output | to json | jq
 }
 
-# Generate the entities Rust code from the database schema. This will stop any
-# local running containers, drop the database, re-create, migrate it and
-# output the generated code to the working tree.
-def "main orm gen" [] {
-    cd (repo)
-    main up --fresh --no-tg-bot --no-observability # --detach
-    wait-for-db
-    sea-orm-cli migrate
-    sea-orm-cli generate entity --with-copy-enums --output-dir entities/src/generated
-    main down --drop-data
-}
-
 # Fetch the image metadata from derpibooru
 def "main derpi image" [id:int] {
     fetch $"https://derpibooru.org/api/v1/json/images/($id)" | get image | flatten representations | get 0
@@ -238,6 +232,12 @@ def "main tg chat-id" [
 def "main sqlx prepare" [] {
     cd $"(repo)/snowpity-tg"
     with-debug cargo sqlx prepare
+}
+
+def "main test" [...args: string] {
+    cd (repo)
+    let args = ([test '--'] | append $args)
+    RUST_LOG="debug,h2=info,hyper=info" with-debug cargo $args
 }
 
 ################################################
@@ -283,8 +283,9 @@ def-env ssh [
     ...args: string
 ] {
     let ports = [
-        '-L' '3000:localhost:3000'
-        '-L' '5000:localhost:5000'
+        '-L' '3000:localhost:3000' # grafana
+        '-L' '5000:localhost:5000' # pgadmin
+        '-L' '8428:localhost:8428' # victria-metrics
     ]
     let args = (
         [-t (ssh-str)]

@@ -1,16 +1,14 @@
 mod config;
-
 mod constraints;
+mod error;
 
 mod tg_chat;
 mod tg_media_cache;
 
-use crate::{err_ctx, DbError, Result};
+use crate::{err_ctx, Result};
 use sqlx::prelude::*;
 
-pub(crate) use config::*;
-pub(crate) use tg_chat::*;
-pub(crate) use tg_media_cache::*;
+pub(crate) use {config::*, error::*, tg_chat::*, tg_media_cache::*};
 
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 

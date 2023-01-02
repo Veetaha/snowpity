@@ -15,11 +15,12 @@ bytes                       = { workspace = true }
 chrono                      = { workspace = true, features = ["serde"] }
 derive_more                 = { workspace = true }
 display-error-chain         = { workspace = true }
-dotenv                      = { workspace = true }
+dotenvy                     = { workspace = true }
 dptree                      = { workspace = true }
 duplicate                   = { workspace = true }
 easy-ext                    = { workspace = true }
 envy                        = { workspace = true }
+from_variants               = { workspace = true }
 fs-err                      = { workspace = true, features = ["tokio"] }
 futures                     = { workspace = true }
 humansize                   = { workspace = true }
@@ -63,6 +64,7 @@ sqlx-bat           = { workspace = true }
 
 [dev-dependencies]
 expect-test = { workspace = true }
+test-log    = { workspace = true }
 
 [build-dependencies]
 vergen = { workspace = true }

@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{err_ctx, err_val, HttpClientError, Result};
+use crate::{err, err_ctx, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
 use easy_ext::ext;
@@ -9,6 +9,18 @@ use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::time::{Duration, Instant};
+
+macro_rules! def_url_base {
+    ($vis:vis $ident:ident, $url:literal) => {
+        $vis fn $ident<T: AsRef<str>>(segments: impl IntoIterator<Item = T>) -> ::url::Url {
+            let mut url: ::url::Url = $url.parse().unwrap();
+            url.path_segments_mut().unwrap().extend(segments);
+            url
+        }
+    };
+}
+
+pub(crate) use def_url_base;
 
 metrics_bat::labels! {
     HttpRequestLabels { version, method, host }
@@ -90,18 +102,30 @@ impl reqwest_middleware::Middleware for InnermostObservingMiddleware {
         extensions: &mut task_local_extensions::Extensions,
         next: reqwest_middleware::Next<'_>,
     ) -> reqwest_middleware::Result<reqwest::Response> {
-        let result = measure_request(http_request_duration_seconds, request, extensions, next)
-            .with_duration_log("Sending network request")
-            .await;
+        let (result, duration) =
+            measure_request(http_request_duration_seconds, request, extensions, next)
+                .with_duration()
+                .await;
+
+        let duration = tracing_duration(duration);
 
         match &result {
             Ok(response) => {
+                let status = response.status();
+
                 if let Err(err) = response.error_for_status_ref() {
-                    error!(err = tracing_err(&err), "Request failed (error status)");
+                    warn!(
+                        err = tracing_err(&err),
+                        duration,
+                        %status,
+                        "Network request failed (error status)"
+                    );
+                } else {
+                    info!(duration, %status, "Network request succeeded");
                 }
             }
             Err(err) => {
-                error!(err = tracing_err(err), "Request failed");
+                error!(duration, err = tracing_err(err), "Network request failed");
             }
         };
 
@@ -161,14 +185,14 @@ pub(crate) impl RequestBuilder {
 
         serde_json::from_slice(&bytes).map_err(|err| {
             match std::str::from_utf8(&bytes) {
-                Ok(response_body) => warn!(response_body, "Bad JSON response"),
+                Ok(response_body) => warn!(%response_body, "Bad JSON response"),
                 Err(utf8_decode_err) => warn!(
                     response_body = ?bytes,
                     ?utf8_decode_err,
                     "Bad JSON response"
                 ),
             };
-            err_val!(HttpClientError::UnexpectedResponseJsonShape { source: err })
+            err!(HttpClientError::UnexpectedResponseJsonShape { source: err })
         })
     }
 
@@ -186,7 +210,7 @@ pub(crate) impl RequestBuilder {
                 Err(err) => format!("Could not collect the error response body text: {}", err),
             };
 
-            return Err(err_val!(HttpClientError::BadResponseStatusCode {
+            return Err(err!(HttpClientError::BadResponseStatusCode {
                 status,
                 body
             }));
@@ -231,4 +255,47 @@ pub(crate) impl RequestBuilder {
 
     //     Ok(())
     // }
+}
+
+/// Errors at the layer of the HTTP API
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum HttpClientError {
+    #[error("Failed to send an http request")]
+    SendRequest { source: reqwest_middleware::Error },
+
+    #[error("Failed to read http response")]
+    ReadResponse { source: reqwest_middleware::Error },
+
+    #[error("HTTP request has failed (http status code: {status}):\n{body}")]
+    BadResponseStatusCode {
+        status: reqwest::StatusCode,
+        body: String,
+    },
+
+    #[error("Received an unexpected response JSON object")]
+    UnexpectedResponseJsonShape { source: serde_json::Error },
+    // #[error("Failed to write bytes to a file")]
+    // WriteToFile { source: std::io::Error },
+
+    // #[error("Failed to flush bytes to a file")]
+    // FlushToFile { source: std::io::Error },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test_log::test(tokio::test)]
+    async fn manual_sandbox() {
+        let url = "https://derpicdn.net/img/view/2018/10/19/1860230.mp4";
+
+        let http = create_client();
+        let response = http.head(url).send().await.unwrap();
+
+        // dbg!(response.chunk().await);
+
+        // dbg!(response.());
+
+        dbg!(response.content_length());
+    }
 }

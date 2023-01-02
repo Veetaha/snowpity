@@ -19,14 +19,13 @@ module "hetzner" {
   tg_bot_media_cache_chat = local.tg_bot_media_cache_chat
   tg_bot_token            = local.tg_bot_token
 
+  twitter_bearer_token = var.twitter_bearer_token
+
   pg_password      = var.pg_password
   pgadmin_password = var.pgadmin_password
 
   docker_username = var.docker_username
   docker_password = var.docker_password
-
-  derpi_api_key = var.derpi_api_key
-  derpi_filter  = var.derpi_filter
 
   allowed_ssh_ips = var.allowed_ssh_ips
 }

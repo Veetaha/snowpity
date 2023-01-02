@@ -59,13 +59,8 @@ variable "docker_password" {
   type      = string
 }
 
-variable "derpi_api_key" {
+variable "twitter_bearer_token" {
   nullable  = false
   sensitive = true
   type      = string
-}
-
-variable "derpi_filter" {
-  nullable = false
-  type     = string
 }

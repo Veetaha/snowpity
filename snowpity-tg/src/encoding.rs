@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{err_ctx, DeserializeError, Result};
+use crate::{err_ctx, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::any::type_name;
@@ -85,4 +85,31 @@ fn decode_base64(input: &str) -> Result<Vec<u8>> {
 /// to base64 padding.
 pub(crate) fn encode_base64_sha2(val: &str) -> String {
     base64::encode(<sha2::Sha256 as sha2::Digest>::digest(val))
+}
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum DeserializeError {
+    #[error("Failed to parse JSON as `{target_ty}`, input surrounded by backticks:\n```\n{input:?}\n```")]
+    Json {
+        target_ty: &'static str,
+        input: String,
+        source: serde_json::Error,
+    },
+
+    #[error(
+        "Failed to decode the input as base64, input surrounded by backticks:\n```\n{input:?}\n```"
+    )]
+    Base64 {
+        input: String,
+        source: base64::DecodeError,
+    },
+
+    #[error(
+        "The input is not a valid UTF8 sequence, input in base64: {}",
+        base64::encode(input)
+    )]
+    Utf8 {
+        input: Vec<u8>,
+        source: std::str::Utf8Error,
+    },
 }

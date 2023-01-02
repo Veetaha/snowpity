@@ -1,7 +1,5 @@
 use crate::prelude::*;
-use crate::util::encoding;
-use crate::Result;
-use crate::{err_val, tg, UserError};
+use crate::{encoding, err, tg, Result};
 use async_trait::async_trait;
 use futures::prelude::*;
 use itertools::Itertools;
@@ -95,7 +93,7 @@ impl tg::cmd::Command for Cmd {
             Cmd::Describe => {
                 let reply = msg
                     .reply_to_message()
-                    .ok_or_else(|| err_val!(UserError::NoReplyMessageInDescribe))?;
+                    .ok_or_else(|| err!(DescribeCommandError::NoReplyMessageInDescribe))?;
 
                 let sender = if let Some(sender) = reply.from() {
                     Some(ctx.bot.get_chat_member(msg.chat.id, sender.id).await?.kind)
@@ -174,4 +172,10 @@ impl tg::cmd::Command for Cmd {
 
 pub(crate) fn filter(ctx: Arc<tg::Ctx>, msg: Message) -> bool {
     matches!(msg.from(), Some(sender) if sender.id == ctx.cfg.maintainer)
+}
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum DescribeCommandError {
+    #[error("No reply message in describe command")]
+    NoReplyMessageInDescribe,
 }

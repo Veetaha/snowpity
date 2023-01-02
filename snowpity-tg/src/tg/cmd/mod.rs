@@ -1,6 +1,7 @@
 pub(crate) mod maintainer;
 pub(crate) mod owner;
 pub(crate) mod regular;
+
 use crate::prelude::*;
 use crate::tg;
 use crate::util::DynResult;
@@ -10,6 +11,9 @@ use std::fmt;
 use std::sync::Arc;
 use teloxide::types::{Message, User};
 use teloxide::utils::markdown;
+
+pub(crate) use maintainer::DescribeCommandError;
+pub(crate) use regular::FtaiCommandError;
 
 #[async_trait]
 pub(crate) trait Command: fmt::Debug + Send + Sync + 'static {

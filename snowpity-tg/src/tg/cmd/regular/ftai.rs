@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{err_val, tg, Error, Result, UserError};
+use crate::{err, tg, Error, Result};
 use std::str::FromStr;
 use teloxide::prelude::*;
 use teloxide::types::{InputFile, Message};
@@ -17,13 +17,13 @@ impl FromStr for FtaiCmd {
     fn from_str(input: &str) -> Result<Self> {
         let (character, text) = input
             .split_once(',')
-            .ok_or_else(|| err_val!(UserError::FtaiInvalidFormat))?;
+            .ok_or_else(|| err!(FtaiCommandError::InvalidFormat))?;
 
         let character = character.trim();
         let text = text.trim();
 
         if text.len() > crate::ftai::MAX_TEXT_LENGTH {
-            return Err(err_val!(UserError::FtaiTextTooLong {
+            return Err(err!(FtaiCommandError::TextTooLong {
                 actual_len: text.len()
             }));
         }
@@ -31,7 +31,7 @@ impl FromStr for FtaiCmd {
         let text = text.to_owned();
 
         if !text.contains('{') && !text.contains('}') && text.chars().any(char::is_numeric) {
-            return Err(err_val!(UserError::FtaiTextContainsNumber));
+            return Err(err!(FtaiCommandError::TextContainsNumber));
         }
 
         Ok(FtaiCmd {
@@ -68,4 +68,19 @@ impl FtaiCmd {
 
         Ok(())
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum FtaiCommandError {
+    #[error("The text for 15.ai must not contain digits except for ARPAbet notation")]
+    TextContainsNumber,
+
+    #[error(
+        "The text for 15.ai must have less than {} symbols. The length of your text is {actual_len}",
+        crate::ftai::MAX_TEXT_LENGTH
+    )]
+    TextTooLong { actual_len: usize },
+
+    #[error("The command for 15.ai must have the character name, a comma (,) and the text: <character name>,<text>")]
+    InvalidFormat,
 }

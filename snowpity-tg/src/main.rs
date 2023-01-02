@@ -6,7 +6,7 @@ use tracing::{error, info, warn};
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    if dotenv::dotenv().is_err() {
+    if dotenvy::dotenv().is_err() {
         eprintln!("Dotenv config was not found, ignoring this...")
     }
 

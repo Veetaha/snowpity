@@ -37,7 +37,10 @@ pub struct SqlxQuery {
 
 #[ext(SqlxBinderExt)]
 pub impl<T: sea_query_binder::SqlxBinder> T {
-    fn into_sqlx<'a>(&self) -> SqlxQuery {
+    // This is intentional. Ideally we should take `self` by value, but,
+    // because of the limitations of [`sqlx`], we must take it by reference.
+    #[allow(clippy::wrong_self_convention)]
+    fn into_sqlx(&self) -> SqlxQuery {
         let (sql, args) = self.build_sqlx(sea_query::PostgresQueryBuilder);
         SqlxQuery {
             sql,

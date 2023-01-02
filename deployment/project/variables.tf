@@ -66,19 +66,14 @@ variable "hcloud_token" {
   })
 }
 
-variable "derpi_api_key" {
-  nullable  = false
-  sensitive = true
-  type      = string
-}
-
-variable "derpi_filter" {
-  nullable = false
-  type     = string
-}
-
 variable "allowed_ssh_ips" {
   nullable  = false
   type      = list(string)
   sensitive = true
+}
+
+variable "twitter_bearer_token" {
+  nullable  = false
+  sensitive = true
+  type      = string
 }

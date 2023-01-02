@@ -1,4 +1,6 @@
-use crate::util::{encoding, prelude::*};
+use crate::display::{human_duration, human_size};
+use crate::encoding;
+use crate::prelude::*;
 use chrono::prelude::*;
 use parking_lot::Mutex as SyncMutex;
 use serde::Serialize;
@@ -28,7 +30,6 @@ impl SysInfoService {
         inf.refresh_specifics(Self::refresh_kind());
 
         let inf = inf;
-        let mem = humansize::make_format(humansize::DECIMAL);
         let percent = |x: &dyn fmt::Display| format!("{x:.1}%");
 
         let load_average = inf.load_average();
@@ -50,20 +51,20 @@ impl SysInfoService {
             .timestamp(inf.boot_time().try_into().unwrap_or_default(), 0)
             .to_human_readable();
 
-        let uptime = crate::util::human_duration(Duration::from_secs(inf.uptime()));
+        let uptime = human_duration(Duration::from_secs(inf.uptime()));
 
         let ram = Ram {
-            available: mem(inf.available_memory()),
+            available: human_size(inf.available_memory()),
             base: Mem {
-                used: mem(inf.used_memory()),
-                free: mem(inf.free_memory()),
-                total: mem(inf.total_memory()),
+                used: human_size(inf.used_memory()),
+                free: human_size(inf.free_memory()),
+                total: human_size(inf.total_memory()),
             },
         };
         let swap = Mem {
-            used: mem(inf.used_swap()),
-            free: mem(inf.free_swap()),
-            total: mem(inf.total_swap()),
+            used: human_size(inf.used_swap()),
+            free: human_size(inf.free_swap()),
+            total: human_size(inf.total_swap()),
         };
 
         let info = SysInfo {

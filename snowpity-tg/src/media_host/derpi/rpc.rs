@@ -1,11 +1,9 @@
 //! Declarations of the derpibooru JSON API types.
 //! Use TypeScript declarations as a reference (though they may go out of date):
 //! https://github.com/octet-stream/dinky/blob/master/lib/Dinky.d.ts
-use crate::derpi::derpi;
-use itertools::Itertools;
+use super::derpi;
 use reqwest::Url;
 use serde::Deserialize;
-use std::fmt;
 
 const RATING_TAGS: &[&str] = &[
     "safe",
@@ -24,11 +22,6 @@ const RATING_TAGS: &[&str] = &[
 pub struct MediaId(u64);
 
 sqlx_bat::impl_try_into_db_via_newtype!(MediaId(u64));
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct SearchImagesResponse {
-    pub(crate) images: Vec<Media>,
-}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct GetImageResponse {
@@ -50,29 +43,23 @@ pub(crate) struct Media {
     // Dimensions of the media
     pub(crate) width: u64,
     pub(crate) height: u64,
-    pub(crate) aspect_ratio: f64,
 }
 
-#[derive(strum::Display, strum::IntoStaticStr, Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MimeType {
     #[serde(rename = "image/gif")]
-    #[strum(to_string = "image/gif")]
     ImageGif,
 
     #[serde(rename = "image/jpeg")]
-    #[strum(to_string = "image/jpeg")]
     ImageJpeg,
 
     #[serde(rename = "image/png")]
-    #[strum(to_string = "image/png")]
     ImagePng,
 
     #[serde(rename = "image/svg+xml")]
-    #[strum(to_string = "image/svg+xml")]
     ImageSvgXml,
 
     #[serde(rename = "video/webm")]
-    #[strum(to_string = "video/webm")]
     VideoWebm,
 }
 
@@ -115,32 +102,5 @@ pub(crate) fn artist_to_webpage_url(artist: &str) -> Url {
 impl MediaId {
     pub(crate) fn to_webpage_url(self) -> Url {
         derpi(["images", &self.to_string()])
-    }
-}
-
-pub(crate) fn sanitize_tag(tag: &str) -> impl fmt::Display + '_ {
-    tag.chars()
-        .flat_map(char::to_lowercase)
-        .map(|char| {
-            if char.is_whitespace() {
-                return '-';
-            } else if char.is_alphanumeric() {
-                return char;
-            }
-            '_'
-        })
-        .format("")
-}
-
-impl MimeType {
-    pub(crate) fn file_extension(self) -> &'static str {
-        use MimeType::*;
-        match self {
-            ImageGif => "gif",
-            ImageJpeg => "jpg",
-            ImagePng => "png",
-            ImageSvgXml => "svg",
-            VideoWebm => "webm",
-        }
     }
 }
