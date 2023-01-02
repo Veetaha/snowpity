@@ -61,7 +61,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 
     let inline_query_id = query.id;
 
-    let Some((media_host, media_id)) = parse_query(&query.query) else {
+    let Some((media_host, request_id)) = parse_query(&query.query) else {
         inline_queries_skipped_total(vec![]).increment(1);
         info!("Skipping inline query");
         return Ok(());
@@ -86,7 +86,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     async {
         let request = media_cache::Request {
             requested_by: query.from,
-            id: media_id.into(),
+            id: request_id,
         };
 
         let response = inline_query.media_cache_client.get_media(request).await?;
@@ -184,7 +184,7 @@ fn media_response_item_to_inline_query_result(
 ) -> InlineQueryResult {
     let mut caption = response.media_meta.caption();
     if !comments.is_empty() {
-        caption = format!("{caption}\n\n{}", markdown::escape(&comments));
+        caption = format!("{caption}\n\n{}", markdown::escape(comments));
     }
 
     let parse_mode = ParseMode::MarkdownV2;
@@ -195,7 +195,7 @@ fn media_response_item_to_inline_query_result(
         TgFileKind::Photo => InlineQueryResultCachedPhoto::new(id, response.tg_file.id)
             .caption(caption)
             .parse_mode(parse_mode)
-            // XXX: title is ignored for photos in when telegram clients display the results.
+            // XXX: title is ignored for photos in in results preview popup.
             // That's really surprising, but that's how telegram works -_-
             .title(title)
             .into(),

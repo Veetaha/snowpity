@@ -52,7 +52,7 @@ sqlx_bat::impl_try_into_db_via_newtype!(MediaKey(String));
 #[derive(Debug, Deserialize)]
 pub(crate) struct Tweet {
     pub(crate) id: TweetId,
-    pub(crate) text: String,
+    // pub(crate) text: String,
 
     #[serde(default)]
     pub(crate) possibly_sensitive: bool,
@@ -93,16 +93,8 @@ pub(crate) struct MediaVariant {
     pub(crate) bit_rate: Option<u64>,
 }
 
-#[serde_as]
-#[derive(
-    derive_more::Display, derive_more::FromStr, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize,
-)]
-#[serde(transparent)]
-pub(crate) struct UserId(#[serde_as(as = "DisplayFromStr")] pub(super) u64);
-
 #[derive(Debug, Deserialize, Clone)]
 pub(crate) struct User {
-    pub(crate) id: UserId,
     pub(crate) name: String,
     pub(crate) username: String,
 }
@@ -180,7 +172,7 @@ impl Media {
             .iter()
             .filter_map(|variant| {
                 let bitrate = variant.bit_rate?;
-                (variant.content_type == "video/mp4").then(|| (bitrate, &variant.url))
+                (variant.content_type == "video/mp4").then_some((bitrate, &variant.url))
             })
             .max_by_key(|(bitrate, _)| *bitrate)
             .ok_or_else(|| {

@@ -24,7 +24,7 @@ use teloxide::utils::command::BotCommands;
 
 pub(crate) use cmd::{DescribeCommandError, FtaiCommandError};
 pub(crate) use config::*;
-pub(crate) use media_cache::{MediaCacheError, TgFileKind, TgFileMeta};
+pub(crate) use media_cache::{MediaCacheError, TgFileMeta};
 
 pub(crate) type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
 

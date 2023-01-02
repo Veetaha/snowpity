@@ -211,7 +211,7 @@ impl Downloaded {
             return Ok(());
         }
         Err(err!(MediaCacheError::FileTooBig {
-            actual: self.size as u64,
+            actual: self.size,
             max: max_size
         }))
     }
@@ -256,7 +256,7 @@ impl TgUploadKindContext<'_> {
             "Downloaded file"
         );
 
-        return Ok(bytes);
+        Ok(bytes)
     }
 
     fn method(&self, tg_upload_method: TgUploadMethod) -> TgUploadMethodContext<'_> {
@@ -320,7 +320,7 @@ impl TgUploadMethodContext<'_> {
 
         let input_file = input_file.file_name(self.media.tg_file_name());
 
-        self.into_cached_media(self.upload_file(input_file).await?)
+        self.make_cached_media(self.upload_file(input_file).await?)
     }
 
     async fn upload_file(&self, input_file: InputFile) -> Result<Message, teloxide::RequestError> {
@@ -346,7 +346,7 @@ impl TgUploadMethodContext<'_> {
     }
 
     fn caption(&self) -> String {
-        let core_caption = MediaMeta::from(self.media.clone()).caption();
+        let core_caption = self.media.caption();
         let requested_by = self.requested_by.md_link();
         let via_method = match &self.tg_upload_method {
             TgUploadMethod::DirectUrl => "direct URL",
@@ -359,7 +359,7 @@ impl TgUploadMethodContext<'_> {
         )
     }
 
-    fn into_cached_media(&self, msg: Message) -> Result<TgFileMeta> {
+    fn make_cached_media(&self, msg: Message) -> Result<TgFileMeta> {
         let (actual_file_kind, file_meta) = self.find_file(msg)?;
 
         if actual_file_kind != self.tg_file_type {

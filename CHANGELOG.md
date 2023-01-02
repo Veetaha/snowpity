@@ -1,5 +1,30 @@
 # Unreleased
 
+# 0.7.0
+
+## Added
+
+- Added support for sharing media from Twitter 🎉
+- Added an ability to write custom comments under the posted media.
+  The comments are the text that follows the link and a new line
+
+### Internal
+
+- Added `--tag` option for deployment to automatically push git tags after the build
+- Added victoria metrics to forwarded SSH ports. Turns out it's difficult to remember
+  to list all necessary ports for forwarding in SSH 😅 (SSH is used only for administration)
+
+## Changed
+
+- Improved error handling. Now errors are define on-per module basis instead of
+  a single big app-wide error module.
+
+## Removed
+
+### Internal
+
+- Derpibooru API key was not used, and in fact it is not needed at all for readonly operations. Also removed unnecessary `derpi_filter` config, which wasn't used.
+
 # 0.6.0
 
 ## Added

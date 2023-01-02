@@ -1,12 +1,11 @@
 use crate::prelude::*;
-use crate::{err, fatal, http, Result};
+use crate::{fatal, http, Result};
 use serde::Deserialize;
 
 pub(crate) mod rpc;
 pub(crate) use rpc::*;
 
 http::def_url_base!(twitter_api, "https://api.twitter.com/2");
-// http::def_url_base!(derpi, "https://derpibooru.org");
 
 #[derive(Clone, Deserialize)]
 pub struct Config {

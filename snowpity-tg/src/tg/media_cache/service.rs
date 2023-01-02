@@ -305,15 +305,15 @@ impl Context {
         match request.id {
             RequestId::Derpibooru(media_id) => {
                 let (media_meta, cached_media) = futures::try_join!(
-                    imp::derpi::get_media_meta(&self, media_id),
-                    imp::derpi::get_cached_media(&self, media_id),
+                    imp::derpi::get_media_meta(self, media_id),
+                    imp::derpi::get_cached_media(self, media_id),
                 )?;
 
                 Ok((vec![media_meta], Vec::from_iter(cached_media)))
             }
             RequestId::Twitter(tweet_id) => futures::try_join!(
-                imp::twitter::get_media_meta(&self, tweet_id),
-                imp::twitter::get_cached_media(&self, tweet_id),
+                imp::twitter::get_media_meta(self, tweet_id),
+                imp::twitter::get_cached_media(self, tweet_id),
             ),
         }
     }
