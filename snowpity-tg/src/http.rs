@@ -121,7 +121,7 @@ impl reqwest_middleware::Middleware for InnermostObservingMiddleware {
                         "Network request failed (error status)"
                     );
                 } else {
-                    info!(duration, %status, "Network request succeded");
+                    info!(duration, %status, "Network request succeeded");
                 }
             }
             Err(err) => {
@@ -290,10 +290,7 @@ mod tests {
         let url = "https://derpicdn.net/img/view/2018/10/19/1860230.mp4";
 
         let http = create_client();
-        let response = http.head(url)
-            .send()
-            .await
-            .unwrap();
+        let response = http.head(url).send().await.unwrap();
 
         // dbg!(response.chunk().await);
 

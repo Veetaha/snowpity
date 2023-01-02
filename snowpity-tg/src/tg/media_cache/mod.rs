@@ -7,6 +7,6 @@ mod tg_upload;
 use imp::*;
 
 pub(crate) use error::*;
+pub(crate) use imp::twitter::TwitterMediaCacheError;
 pub(crate) use model::*;
 pub(crate) use service::*;
-pub(crate) use imp::twitter::TwitterMediaCacheError;

@@ -68,7 +68,7 @@ pub(crate) enum TwitterError {
     )]
     Service { raw: Error },
 
-    #[error("Several errors occured: {raw_errors:#?}")]
+    #[error("Several errors occurred: {raw_errors:#?}")]
     ServiceMany { raw_errors: Vec<Error> },
 
     #[error("The media is missing MP4 format (media_key: {})", media.media_key)]

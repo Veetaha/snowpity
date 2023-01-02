@@ -146,7 +146,7 @@ pub(crate) struct MediaMeta {
     /// of [`MediaHostSpecific`]
     pub(crate) id: MediaId,
 
-    /// Describes wether this is an image, video, or an animation
+    /// Describes whether this is an image, video, or an animation
     pub(crate) kind: MediaKind,
 
     /// The exact dimensions of the media

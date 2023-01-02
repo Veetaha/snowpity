@@ -1,5 +1,5 @@
 /// The error messages here will be displayed directly to the user in
-/// the inline query results, so keep them extermely short!
+/// the inline query results, so keep them extremely short!
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum MediaCacheError {
     #[error("Unexpected media kind for mime type {expected:?}: {actual:#?}")]
@@ -16,5 +16,5 @@ pub(crate) enum MediaCacheError {
     FileTooBig { actual: u64, max: u64 },
 
     #[error(transparent)]
-    Twitter(super::twitter::TwitterMediaCacheError)
+    Twitter(super::twitter::TwitterMediaCacheError),
 }
