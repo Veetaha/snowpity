@@ -1,12 +1,13 @@
 use crate::prelude::*;
 use crate::{err_ctx, Result};
+use base64::prelude::*;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::any::type_name;
 
 pub(crate) fn secure_encode(data: &(impl Serialize + ?Sized)) -> String {
     // TODO: to make this secure we have to use a private key when encoding
-    base64::encode(to_json_string(data))
+    BASE64_STANDARD.encode(to_json_string(data))
 
     // TODO: encode the query callback data
     // fn encode_token() -> String {
@@ -72,9 +73,11 @@ where
 }
 
 fn decode_base64(input: &str) -> Result<Vec<u8>> {
-    base64::decode(input).map_err(err_ctx!(DeserializeError::Base64 {
-        input: input.to_owned()
-    }))
+    BASE64_STANDARD
+        .decode(input)
+        .map_err(err_ctx!(DeserializeError::Base64 {
+            input: input.to_owned()
+        }))
 }
 
 /// Ingest a given string value with SHA2 hashing algorithm and base64-encode
@@ -84,7 +87,7 @@ fn decode_base64(input: &str) -> Result<Vec<u8>> {
 /// character (2**6 = 64). So, 256 / 6 = 42.6666, and this rounds up to 44 due
 /// to base64 padding.
 pub(crate) fn encode_base64_sha2(val: &str) -> String {
-    base64::encode(<sha2::Sha256 as sha2::Digest>::digest(val))
+    BASE64_STANDARD.encode(<sha2::Sha256 as sha2::Digest>::digest(val))
 }
 
 #[derive(Debug, thiserror::Error)]

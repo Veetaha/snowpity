@@ -67,7 +67,7 @@ pub(crate) fn handle<'a, C: Command>(
 
 /// Special case for the `/start` command in PM with the bot.
 ///
-/// We don't want this comamnd to appear in the help message, so we handle
+/// We don't want this command to appear in the help message, so we handle
 /// it separately
 #[derive(BotCommands, Clone, Debug)]
 #[command(rename_rule = "snake_case")]

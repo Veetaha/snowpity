@@ -17,11 +17,9 @@ derive_more                 = { workspace = true }
 display-error-chain         = { workspace = true }
 dotenvy                     = { workspace = true }
 dptree                      = { workspace = true }
-duplicate                   = { workspace = true }
 easy-ext                    = { workspace = true }
 envy                        = { workspace = true }
 from_variants               = { workspace = true }
-fs-err                      = { workspace = true, features = ["tokio"] }
 futures                     = { workspace = true }
 humansize                   = { workspace = true }
 itertools                   = { workspace = true }

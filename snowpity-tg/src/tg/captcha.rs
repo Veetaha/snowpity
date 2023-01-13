@@ -474,7 +474,7 @@ impl UnverifiedUser {
 
                 let until_date = match original_restricted.until_date {
                     UntilDate::Date(date) => date,
-                    UntilDate::Forever => Utc.timestamp(0, 0),
+                    UntilDate::Forever => chrono::Utc.timestamp_opt(0, 0).unwrap(),
                 };
 
                 bot.restrict_chat_member(chat_id, user_id, perms)

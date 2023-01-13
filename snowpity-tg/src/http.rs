@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::util::prelude::*;
 use crate::{err, err_ctx, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -207,7 +208,10 @@ pub(crate) impl RequestBuilder {
         if status.is_client_error() || status.is_server_error() {
             let body = match res.text().await {
                 Ok(it) => it,
-                Err(err) => format!("Could not collect the error response body text: {}", err),
+                Err(err) => format!(
+                    "Could not collect the error response body text: {}",
+                    err.display_chain()
+                ),
             };
 
             return Err(err!(HttpClientError::BadResponseStatusCode {
@@ -286,6 +290,7 @@ mod tests {
     use super::*;
 
     #[test_log::test(tokio::test)]
+    #[ignore]
     async fn manual_sandbox() {
         let url = "https://derpicdn.net/img/view/2018/10/19/1860230.mp4";
 

@@ -172,7 +172,7 @@ impl fmt::Display for Error {
         write!(f, "Error (id: {}): {}", self.imp.id, self.imp.kind)?;
 
         if let Some(backtrace) = &self.imp.backtrace {
-            write!(f, "\n{:?}", backtrace)?;
+            write!(f, "\n{backtrace:?}")?;
         }
 
         Ok(())

@@ -156,7 +156,7 @@ impl tg::cmd::Command for Cmd {
 
                 let metadata = meta.iter().format_with("\n", |(name, val), f| {
                     let name = name.to_lowercase();
-                    let kv = format!("{name:<0$} = {val}", max_name_len);
+                    let kv = format!("{name:<max_name_len$} = {val}");
                     f(&markdown::escape(&kv))
                 });
 

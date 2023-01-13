@@ -79,6 +79,7 @@ mod tests {
     use super::*;
 
     #[test_log::test(tokio::test)]
+    #[ignore]
     async fn manual_sandbox() {
         dotenvy::dotenv().ok();
 
