@@ -1,0 +1,104 @@
+# Docs: https://embarkstudios.github.io/cargo-deny/checks/index.html
+
+# We want to run `cargo deny` only for platforms we use and support
+targets = [{ triple = "x86_64-unknown-linux-gnu" }]
+
+[advisories]
+notice        = "deny"
+unmaintained  = "deny"
+unsound       = "deny"
+vulnerability = "deny"
+yanked        = "deny"
+
+ignore = [
+  # I really look for the day the entire Rust ecosystem will get rid of
+  # the old time crate version, when `chrono` disable the `oldtime` feature
+  # by default 🥲.
+  #
+  # Potential segfault in the time crate (0.1.43)
+  "RUSTSEC-2020-0071",
+]
+
+[bans]
+# This lint issues false-positives for `{ path = "foo/bar" }` dependencies
+# FIXME: make it "deny" once this bug is fixed:
+# https://github.com/EmbarkStudios/cargo-deny/issues/241
+wildcards = "allow"
+
+multiple-versions = "deny"
+skip = [
+  # There were a bunch of breaking changes in `base64`. Now a lot of crates
+  # in the ecosystem depend on the older version
+  { name = "base64", version = "=0.13.1" },
+
+  # `from_variants` and `serde_with` depend on older version of `darling`
+  { name = "darling", version = "=0.13.4" },
+  { name = "darling_core", version = "=0.13.4" },
+  { name = "darling_macro", version = "=0.13.4" },
+
+  # The ecosystem migration with `itertools` breaking changes seems to never end
+  { name = "itertools", version = "=0.9.0" },
+
+  # Comes deeply from `futures-intrusive`
+  { name = "parking_lot", version = "=0.11.2" },
+  { name = "parking_lot_core", version = "=0.8.6" },
+
+  # Comes from `teloxide`, hopefully new updates will upgrade this dependency
+  { name = "serde_with_macros", version = "=1.5.2" },
+
+  # Having `oldtime` feature by default in chrono is a huge mistake, because
+  # people don't read docs and don't disable it explicitly 🥲
+  { name = "time", version = "=0.1.43" },
+]
+skip-tree = []
+
+deny = []
+
+[sources]
+# FIXME: remove this once https://github.com/teloxide/teloxide/pull/764 is merged and available
+allow-git        = ["https://github.com/Veetaha/teloxide"]
+unknown-git      = "deny"
+unknown-registry = "warn"
+
+[licenses]
+copyleft   = "deny"
+unlicensed = "deny"
+
+# run `cargo deny list` to see which crates use which license
+allow = [
+  "MIT",
+  "BSD-3-Clause",
+  "0BSD",
+  "Unlicense",
+  "Apache-2.0",
+  "Zlib",
+  "ISC",
+  "OpenSSL",
+  # Best license ever 😂
+  "WTFPL",
+  "MPL-2.0",
+  "Unicode-DFS-2016",
+]
+allow-osi-fsf-free = "neither"
+default = "deny"
+deny = []
+
+# We want really high confidence when inferring licenses from text
+confidence-threshold = 0.92
+
+[[licenses.clarify]]
+name    = "ring"
+version = "0.16.15"
+# Copied this expression from the comment of Jake-Shadle (maintainer of cargo-deny)
+# https://github.com/EmbarkStudios/cargo-deny/issues/110#issuecomment-576173641
+# The issue under ring repo:
+# https://github.com/briansmith/ring/issues/902
+expression    = "ISC AND MIT AND OpenSSL"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+
+[[licenses.clarify]]
+# This PR intended to fix low-confidence score: https://github.com/briansmith/webpki/pull/128
+# however, it is not entirely covered by ISC, but let's say it's permissive 🤯
+expression    = "ISC"
+license-files = [{ path = "LICENSE", hash = 0x001c7e6c }]
+name          = "webpki"

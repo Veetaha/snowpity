@@ -48,7 +48,8 @@ impl SysInfoService {
         };
 
         let boot_time = Utc
-            .timestamp(inf.boot_time().try_into().unwrap_or_default(), 0)
+            .timestamp_opt(inf.boot_time().try_into().unwrap_or_default(), 0)
+            .unwrap()
             .to_human_readable();
 
         let uptime = human_duration(Duration::from_secs(inf.uptime()));

@@ -1,0 +1,90 @@
+name: ci
+on:
+  pull_request:
+
+env:
+  RUSTUP_MAX_RETRIES: 50
+  CARGO_NET_RETRY: 50
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: full
+
+  # We don't need debug symbols on CI
+  RUSTFLAGS: --deny warnings -Cdebuginfo=0
+  RUSTDOCFLAGS: --deny warnings
+
+concurrency:
+  cancel-in-progress: true
+  group: "ci-${{ github.workflow }}-${{ github.ref }}"
+
+jobs:
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      # Pin the exact version, otherwise sudden typos' dictionary updates will make CI unstable
+      - uses: crate-ci/typos@v1.13.6
+
+  cargo-deny-check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+
+    # Prevent sudden announcement of a new advisory from failing ci:
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check ${{ matrix.checks }}
+
+  rust-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - run: echo rust_version=$(cat rust-toolchain) >> $GITHUB_ENV
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.rust_version }}
+          components: rustfmt, clippy
+
+      - run: cargo fmt --all -- --check
+      - run: cargo doc --workspace --no-deps
+      - run: cargo clippy --workspace --all-targets --all-features
+
+  rust-test:
+    runs-on: ubuntu-latest
+
+    # We don't want unstable jobs to fail our cicd
+    continue-on-error: ${{ matrix.toolchain == 'beta' || matrix.toolchain == 'nightly' }}
+
+    strategy:
+      matrix:
+        toolchain: [stable, beta, nightly]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - if: ${{ matrix.toolchain == 'stable' }}
+        run: echo rust_version=$(cat rust-toolchain) >> $GITHUB_ENV
+
+      - if: ${{ matrix.toolchain != 'stable' }}
+        run: echo 'rust_version=${{ matrix.toolchain }}' >> $GITHUB_ENV
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.rust_version }}
+
+      # We don't pass `--all-targets` flag, because it actually disables doc tests...
+      # The issue in `cargo` repository: https://github.com/rust-lang/cargo/issues/6669
+      #
+      # Run the build (--no-run) in a separate step to keep track of tests build time
+      # and run time separately easier.
+      - run: cargo test --workspace --all-features --no-run
+      - run: cargo test --workspace --all-features
