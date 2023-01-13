@@ -178,7 +178,7 @@ def "main deploy" [
     }
 }
 
-def "tag" [] {
+def "main tag" [] {
     git tag $"v(project-version)"
     git push --tags
 }
