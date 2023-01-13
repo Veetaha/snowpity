@@ -1,6 +1,8 @@
 name: ci
 on:
   pull_request:
+  push:
+    branches: [master]
 
 env:
   RUSTUP_MAX_RETRIES: 50
@@ -69,7 +71,6 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v1
         with:
           command: check ${{ matrix.checks }}
-
 
   # Lightweight check for unused dependencies that uses simple regex search
   rust-unused-dependencies:
