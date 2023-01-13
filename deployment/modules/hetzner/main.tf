@@ -69,8 +69,8 @@ resource "null_resource" "teardown" {
     # to reference symbols other than `self` variable in the provisioner block.
     #
     # Issue in terraform: https://github.com/hashicorp/terraform/issues/23679
-    server_ip       = hcloud_server.master.ipv4_address
-    server_os_user  = local.server_os_user
+    server_ip      = hcloud_server.master.ipv4_address
+    server_os_user = local.server_os_user
   }
 
   provisioner "remote-exec" {

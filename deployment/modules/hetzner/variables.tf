@@ -30,8 +30,8 @@ variable "tg_bot_token" {
 }
 
 variable "allowed_ssh_ips" {
-  nullable = false
-  type     = list(string)
+  nullable  = false
+  type      = list(string)
   sensitive = true
 }
 
