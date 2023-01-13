@@ -94,14 +94,14 @@ jobs:
 
 
       - if: ${{ matrix.toolchain == 'stable' }}
-        run: echo rust_version=$(cat rust-toolchain) >> $GITHUB_ENV
+        run: echo RUSTUP_TOOLCHAIN=$(cat rust-toolchain) >> $GITHUB_ENV
 
       - if: ${{ matrix.toolchain != 'stable' }}
-        run: echo 'rust_version=${{ matrix.toolchain }}' >> $GITHUB_ENV
+        run: echo 'RUSTUP_TOOLCHAIN=${{ matrix.toolchain }}' >> $GITHUB_ENV
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.rust_version }}
+          toolchain: ${{ env.RUSTUP_TOOLCHAIN }}
           components: rustfmt, clippy
 
       - run: cargo fmt --all -- --check
@@ -122,14 +122,14 @@ jobs:
       - uses: actions/checkout@v3
 
       - if: ${{ matrix.toolchain == 'stable' }}
-        run: echo rust_version=$(cat rust-toolchain) >> $GITHUB_ENV
+        run: echo RUSTUP_TOOLCHAIN=$(cat rust-toolchain) >> $GITHUB_ENV
 
       - if: ${{ matrix.toolchain != 'stable' }}
-        run: echo 'rust_version=${{ matrix.toolchain }}' >> $GITHUB_ENV
+        run: echo 'RUSTUP_TOOLCHAIN=${{ matrix.toolchain }}' >> $GITHUB_ENV
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.rust_version }}
+          toolchain: ${{ env.RUSTUP_TOOLCHAIN }}
 
       # We don't pass `--all-targets` flag, because it actually disables doc tests...
       # The issue in `cargo` repository: https://github.com/rust-lang/cargo/issues/6669
