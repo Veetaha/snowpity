@@ -98,9 +98,17 @@ Note that some credentials differ by the terraform workspace. If the default ter
 
 ## Deployment routine
 
-After all the necessary credentials are configured, you will be able to run the following command to deploy the entire stack with the Dockerhub repo and Hetzner Cloud server.
+After all the necessary credentials are configured, you will be able to deploy the entire stack with the Dockerhub repo and Hetzner Cloud server.
 
-Note, however, there currently is a chickend-and-egg problem, so the deployment won't succeed from the first try, because first the dockerhub repo must be deployed, then artifacts uploaded and only after that can we deploy the Hetzner server.
+Note, however, there currently is a chicken-and-egg problem, so the deployment won't succeed from the first try because first the Dockerhub repo must be deployed, then artifacts uploaded and only after that can we deploy the Hetzner server. To do the deployment for the first time run this:
+
+```bash
+cd deployment/project
+terraform init
+terraform apply -target=module.dockerhub
+```
+
+Once this is done you don't need to repeat the steps higher again. You may run the following command to build the app and deploy the stack to Hetzner.
 
 ```bash
 x deploy
