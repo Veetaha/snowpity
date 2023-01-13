@@ -29,7 +29,7 @@ pub(crate) enum Cmd {
 // 15.ai command accordingly to avoid unnecessarily displaying errors to users
 #[allow(dead_code)]
 fn ignore_15_ai(cmd: &str, ctx: &tg::Ctx, msg: &Message) {
-    let _ = cmd.parse::<FtaiCmd>().unwrap().handle(ctx, msg);
+    drop(cmd.parse::<FtaiCmd>().unwrap().handle(ctx, msg));
 }
 
 #[async_trait]

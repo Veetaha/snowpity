@@ -9,6 +9,7 @@ use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::time::{Duration, Instant};
+use crate::util::prelude::*;
 
 macro_rules! def_url_base {
     ($vis:vis $ident:ident, $url:literal) => {
@@ -207,7 +208,7 @@ pub(crate) impl RequestBuilder {
         if status.is_client_error() || status.is_server_error() {
             let body = match res.text().await {
                 Ok(it) => it,
-                Err(err) => format!("Could not collect the error response body text: {}", err),
+                Err(err) => format!("Could not collect the error response body text: {}", err.display_chain()),
             };
 
             return Err(err!(HttpClientError::BadResponseStatusCode {

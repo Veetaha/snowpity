@@ -2,7 +2,7 @@ use std::fmt;
 use std::time::Duration;
 
 #[must_use]
-pub fn tracing_err<'a, E: std::error::Error + 'static>(err: &'a E) -> impl tracing::Value + 'a {
+pub fn tracing_err<E: std::error::Error + 'static>(err: &E) -> impl tracing::Value + '_ {
     err as &dyn std::error::Error
 }
 
