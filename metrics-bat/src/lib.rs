@@ -237,11 +237,19 @@ metric_macros! {
 #[doc(hidden)]
 pub mod imp {
     pub mod proc_macros {
+        use std::future::Future;
+
         pub use crate::timing::FutureExt;
         pub use metrics;
 
         pub fn type_name_of_val<T: ?Sized>(_: &T) -> &'static str {
             std::any::type_name::<T>()
+        }
+
+        /// Provides a type hint for the compiler to infer the output type of the
+        /// async block.
+        pub const fn future_type_hint<T, Fut: Future<Output = T>>(fut: Fut) -> Fut {
+            fut
         }
     }
 

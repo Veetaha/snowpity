@@ -14,10 +14,10 @@ use teloxide::utils::markdown;
 #[derive(BotCommands, Clone, Debug)]
 #[command(
     rename_rule = "snake_case",
-    description = "The following commands are available for the bot maintainer:"
+    description = "Commands for bot maintainer only:"
 )]
 pub(crate) enum Cmd {
-    #[command(description = "display this text")]
+    #[command(description = "show the guide")]
     MaintainerHelp,
 
     #[command(description = "display version info")]

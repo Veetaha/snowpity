@@ -11,10 +11,10 @@ use tracing::field;
 #[derive(BotCommands, Clone, Debug)]
 #[command(
     rename_rule = "snake_case",
-    description = "The following commands are available to the chat owner:"
+    description = "Commands for chat owner only:"
 )]
 pub(crate) enum Cmd {
-    #[command(description = "display this text")]
+    #[command(description = "show the guide")]
     OwnerHelp,
 
     #[command(description = "\

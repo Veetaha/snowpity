@@ -54,9 +54,15 @@ pub(crate) fn generate(opts: syn::AttributeArgs, mut func: syn::ItemFn) -> Resul
         None => quote!(vec![#span_label]),
     };
 
+    let ret_ty = match &func.sig.output {
+        syn::ReturnType::Default => unreachable!("We support only result-returning functions"),
+        syn::ReturnType::Type(_, ty) => ty,
+    };
+
     func.block = syn::parse_quote!({
         let __labels = #labels;
-        #imp::FutureExt::record_duration(async move #fn_block, #metric, __labels).await
+        let fut = #imp::future_type_hint::<#ret_ty, _>(async move #fn_block);
+        #imp::FutureExt::record_duration(fut, #metric, __labels).await
     });
 
     Ok(quote!(#func))

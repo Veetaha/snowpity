@@ -119,7 +119,7 @@ pub(crate) async fn run_bot(opts: RunBotOptions) -> Result {
         )
         .branch(
             Update::filter_message()
-                .chain(dptree::filter_map(message_from_channel::filter))
+                .filter_map(message_from_channel::filter_map)
                 .endpoint(message_from_channel::handle),
         )
         .branch(
@@ -130,14 +130,20 @@ pub(crate) async fn run_bot(opts: RunBotOptions) -> Result {
         .branch(
             Update::filter_message()
                 .filter_command::<cmd::owner::Cmd>()
-                .chain(dptree::filter_async(cmd::owner::filter))
+                .filter_async(cmd::owner::filter)
                 .endpoint(cmd::handle::<cmd::owner::Cmd>()),
         )
         .branch(
             Update::filter_message()
                 .filter_command::<cmd::maintainer::Cmd>()
-                .chain(dptree::filter(cmd::maintainer::filter))
+                .filter(cmd::maintainer::filter)
                 .endpoint(cmd::handle::<cmd::maintainer::Cmd>()),
+        )
+        .branch(
+            Update::filter_message()
+                .filter_command::<cmd::StartCommand>()
+                .filter(cmd::filter_pm_with_bot)
+                .endpoint(cmd::handle::<cmd::StartCommand>()),
         )
         .branch(Update::filter_callback_query().endpoint(captcha::handle_callback_query))
         .branch(Update::filter_inline_query().endpoint(inline_query::handle))

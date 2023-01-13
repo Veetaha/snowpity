@@ -14,7 +14,7 @@ default-members = ["snowpity-tg"]
 debug = 0
 
 [workspace.package]
-version = "0.7.0"
+version = "0.7.1"
 
 authors = ["Veetaha <veetaha2@gmail.com>"]
 edition = "2021"
@@ -26,7 +26,6 @@ publish = false
 teloxide-core = { git = "https://github.com/Veetaha/teloxide", branch = "feat/add-missing-restricted-fields" }
 
 [workspace.dependencies]
-again                 = "0.1"
 anyhow                = "1.0"
 assert_matches        = "1.5"
 async-recursion       = "1.0"

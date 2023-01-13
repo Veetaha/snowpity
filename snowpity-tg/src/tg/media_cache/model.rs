@@ -151,7 +151,6 @@ pub(crate) struct MediaMeta {
 
     /// The exact dimensions of the media
     pub(crate) dimensions: MediaDimensions,
-
     /// Information specific to the media hosting platform
     pub(crate) host_specific: MediaHostSpecific,
 }
