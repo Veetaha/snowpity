@@ -16,10 +16,7 @@ const EXAMPLE_DERPIBOORU_MEDIA_URL: &str = "https://derpibooru.org/1975357";
 const EXAMPLE_TWITTER_MEDIA_URL: &str = "https://twitter.com/Sethisto/status/1558884492190035968";
 
 #[derive(BotCommands, Clone, Debug)]
-#[command(
-    rename_rule = "snake_case",
-    description = "Commands:"
-)]
+#[command(rename_rule = "snake_case", description = "Commands:")]
 pub(crate) enum Cmd {
     #[command(description = "show the guide")]
     Help,
@@ -68,7 +65,9 @@ impl tg::cmd::Command for Cmd {
 
                 let buttons = examples.map(|(url, media_host)| {
                     let text = format!("See {media_host} example");
-                    [InlineKeyboardButton::switch_inline_query_current_chat(text, url)]
+                    [InlineKeyboardButton::switch_inline_query_current_chat(
+                        text, url,
+                    )]
                 });
 
                 ctx.bot

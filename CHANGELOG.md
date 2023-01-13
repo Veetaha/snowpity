@@ -1,5 +1,17 @@
 # Unreleased
 
+# 0.7.1
+
+## Added
+
+- Added examples of bot inline mode usage in help message inline keyboard buttons
+- Added `/start` command that does the same as `/help`
+- Added a `Help` button to the inline query results if no URL was parsed, that redirects the user to the PM chat with the bot and displays the help message
+
+## Changed
+
+- Improved the `/help` message. Made it more succcinct
+
 # 0.7.0
 
 ## Added
