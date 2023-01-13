@@ -1,6 +1,6 @@
 use super::super::{
-    service::Context, Artist, CachedMedia, FileSize, MediaDimensions, MediaHostSpecific, MediaId,
-    MediaKind, MediaMeta, MAX_DIRECT_URL_FILE_SIZE, MB,
+    service::Context, Artist, CachedMedia, FileSize, MediaHostSpecific, MediaId,
+    MediaKind, MediaMeta, MAX_DIRECT_URL_FILE_SIZE, MB, MediaDimensions,
 };
 use crate::media_host::twitter::{self, GetTweetResponse, TweetId};
 use crate::observability::logging::prelude::*;
@@ -25,7 +25,7 @@ pub(crate) async fn get_media_meta(ctx: &Context, tweet_id: TweetId) -> Result<V
             Ok(MediaMeta {
                 artists: <_>::from_iter([author.clone().into()]),
                 web_url: author.tweet_url(tweet.id),
-                download_url: media.best_quality_url()?,
+                download_url: media.best_tg_url()?,
                 size: match media.kind {
                     // The size limits were taken from here:
                     // https://developer.twitter.com/en/docs/twitter-api/v1/media/upload-media/uploading-media/media-best-practices
@@ -39,8 +39,11 @@ pub(crate) async fn get_media_meta(ctx: &Context, tweet_id: TweetId) -> Result<V
                 },
                 id: MediaId::Twitter(tweet.id, media.media_key),
                 kind: (&media.kind).into(),
-                // XXX: the dimensions are not always correct.
-                dimensions: MediaDimensions {
+                 // XXX: the dimensions are not always correct. They are for `orig`
+                 // representation, but we use `large` one. However this is a
+                 // good enough hint for aspect ratio checks in telegram uploads.
+                 // Either way orig's largest resolution 4096x4096 fits into the tg limits.
+                 dimensions: MediaDimensions {
                     width: media.width,
                     height: media.height,
                 },

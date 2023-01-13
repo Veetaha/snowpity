@@ -148,15 +148,20 @@ impl User {
 }
 
 impl Media {
-    /// URL of the media in the best quality format. At the time of this writing it is:
+    /// URL of the media that best suits Telegram.
     ///
-    /// - For images, the `orig` format, which is at most 4096x4096 pixels
-    /// - For videos and gifs it is the `video/mp4` format with the highest bitrate
+    /// The images will fit into `4096x4096` bounding box.
+    /// This doesn't however guarantee the images will have top-notch quality (see [wiki]).
     ///
-    /// Media URL formatting is described in twitter [API v1.1 docs]
+    /// For videos and gifs the format is `video/mp4` with the highest bitrate.
+    ///
+    /// Media URL formatting is described in twitter [API v1.1 docs].
+    /// See also this [community thread] that refers to the same docs.
     ///
     /// [API v1.1 docs]: https://developer.twitter.com/en/docs/twitter-api/v1/data-dictionary/object-model/entities#photo_format
-    pub(crate) fn best_quality_url(&self) -> Result<Url> {
+    /// [wiki]: https://github.com/Veetaha/snowpity/wiki/Telegram-images-compression
+    /// [community thread]: https://twittercommunity.com/t/retrieving-full-size-images-media-fields-url-points-to-resized-version/160494/2
+    pub(crate) fn best_tg_url(&self) -> Result<Url> {
         let non_static = match &self.kind {
             MediaKind::Photo(photo) => {
                 let mut url = photo.url.clone();

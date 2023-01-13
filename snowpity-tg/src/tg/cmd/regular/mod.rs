@@ -5,21 +5,23 @@ use crate::Result;
 use async_trait::async_trait;
 use ftai::FtaiCmd;
 use teloxide::prelude::*;
-use teloxide::types::InputFile;
+use teloxide::types::{InlineKeyboardButton, InputFile, ReplyMarkup};
 use teloxide::utils::command::BotCommands;
 use teloxide::utils::markdown;
 
 pub(crate) use ftai::FtaiCommandError;
 
 const HELP_ANIMATION_URL: &str = "https://user-images.githubusercontent.com/36276403/209577979-b0ace368-4bea-4a10-a687-d3f24cbed6a2.mp4";
+const EXAMPLE_DERPIBOORU_MEDIA_URL: &str = "https://derpibooru.org/1975357";
+const EXAMPLE_TWITTER_MEDIA_URL: &str = "https://twitter.com/Sethisto/status/1558884492190035968";
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(
     rename_rule = "snake_case",
-    description = "The following commands are available:"
+    description = "Commands:"
 )]
 pub(crate) enum Cmd {
-    #[command(description = "display this text")]
+    #[command(description = "show the guide")]
     Help,
     // #[command(description = "Generate audio via 15.ai: <character name>,<text>")]
     // Ftai(String),
@@ -46,22 +48,34 @@ impl tg::cmd::Command for Cmd {
                     .username
                     .expect("BUG: bot is guaranteed have a username");
 
-                let help_text = markdown::escape(
-                    &format!("\
-                        {}\n\n\
-                        You can also write a message like this to share an image or GIF from derpibooru \
-                        (copy the following line to test): \n\
-                        \n\
-                        @{bot_username} https://derpibooru.org/1975357",
-                    Cmd::descriptions())
-                );
+                let commands = Cmd::descriptions();
+
+                let header = markdown::escape(&format!(
+                    "{commands}\n\n\
+                    Write this to share images/GIFs/videos by link:",
+                ));
+
+                let example_usage = markdown::code_inline(&format!("@{bot_username} {{link}}"));
+
+                let help_text = format!("{header}\n\n{example_usage}");
 
                 let animation = InputFile::url(HELP_ANIMATION_URL.parse().unwrap());
+
+                let examples = [
+                    (EXAMPLE_DERPIBOORU_MEDIA_URL, "Derpibooru"),
+                    (EXAMPLE_TWITTER_MEDIA_URL, "Twitter"),
+                ];
+
+                let buttons = examples.map(|(url, media_host)| {
+                    let text = format!("See {media_host} example");
+                    [InlineKeyboardButton::switch_inline_query_current_chat(text, url)]
+                });
 
                 ctx.bot
                     .send_animation(msg.chat.id, animation)
                     .reply_to_message_id(msg.id)
                     .caption(help_text)
+                    .reply_markup(ReplyMarkup::inline_kb(buttons))
                     .await?;
             } // Cmd::Ftai(cmd) => {
 

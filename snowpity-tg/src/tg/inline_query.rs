@@ -20,6 +20,8 @@ use teloxide::utils::markdown;
 const ERROR_VIDEO_URL: &str = "https://user-images.githubusercontent.com/36276403/209671572-9a3eada8-1bf6-4a9c-ac0e-44863f66746a.mp4";
 const ERROR_VIDEO_THUMB_URL: &str = "https://user-images.githubusercontent.com/36276403/209673286-6cc10562-a5e1-4c90-b373-8290abd41fa7.jpg";
 
+const CACHE_TIME_SECS: u32 = 0;
+
 metrics_bat::labels! {
     InlineQueryTotalLabels { user }
     InlineQueryLabels { media_host }
@@ -63,7 +65,16 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 
     let Some((media_host, request_id)) = parse_query(&query.query) else {
         inline_queries_skipped_total(vec![]).increment(1);
+
         info!("Skipping inline query");
+
+        bot
+            .answer_inline_query(inline_query_id, [])
+            .switch_pm_text("Help")
+            .switch_pm_parameter("help")
+            .cache_time(CACHE_TIME_SECS)
+            .await?;
+
         return Ok(());
     };
 
@@ -105,9 +116,9 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
             .into_iter()
             .map(|response| media_response_item_to_inline_query_result(&comments, response));
 
-        bot.answer_inline_query(&inline_query_id, results)
+        bot.answer_inline_query(&inline_query_id, results.clone())
             .is_personal(false)
-            .cache_time(u32::MAX)
+            .cache_time(CACHE_TIME_SECS)
             .into_future()
             .with_duration_log("Answering inline query")
             .instrument(info_span!("payload", %tg_file_types, total_responses))
@@ -160,7 +171,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 
         let result = bot
             .answer_inline_query(&inline_query_id, [result])
-            .is_personal(true)
+            .is_personal(false)
             .cache_time(0)
             .into_future()
             .await;

@@ -7,7 +7,7 @@ use std::future::IntoFuture;
 use teloxide::prelude::*;
 use teloxide::types::{Chat, Message};
 
-pub(crate) fn filter(msg: Message) -> Option<Chat> {
+pub(crate) fn filter_map(msg: Message) -> Option<Chat> {
     msg.sender_chat().cloned().filter(|sender_chat| {
         // Ignore messages that were send on behalf of the chat where the bot is
         // Ignore automatic forwards for chats linked to a channel

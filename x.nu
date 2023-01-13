@@ -151,7 +151,6 @@ def "main deploy" [
     --plan          # Do `tf plan` instead of `tf apply`
     --yes (-y)      # Auto-approve the deployment
     --no-tf-refresh # Don't refresh the terraform state before deployment
-    --tag           # Create a git tag for the deployment
 ] {
     if not $no_build {
         # FIXME: it's this verbose due to https://github.com/nushell/nushell/issues/7260
