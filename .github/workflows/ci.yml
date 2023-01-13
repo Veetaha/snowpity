@@ -34,7 +34,7 @@ jobs:
         working-directory: deployment/project
 
       # HACK: our terraform project assummes there is an ssh key at this path
-      - run: touch ~/.ssh/id_rsa.pub
+      - run: mkdir -p ~/.ssh && touch ~/.ssh/id_rsa.pub
 
       - run: terraform validate
         working-directory: deployment/project
