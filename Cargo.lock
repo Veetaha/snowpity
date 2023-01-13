@@ -519,16 +519,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "duplicate"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0a4be4cd710e92098de6ad258e6e7c24af11c29c5142f3c6f2a545652480ff8"
-dependencies = [
- "heck",
- "proc-macro-error",
-]
-
-[[package]]
 name = "easy-ext"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -678,9 +668,6 @@ name = "fs-err"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0845fa252299212f0389d64ba26f34fa32cfe41588355f21ed507c59a0f64541"
-dependencies = [
- "tokio",
-]
 
 [[package]]
 name = "futures"
@@ -2314,12 +2301,10 @@ dependencies = [
  "display-error-chain",
  "dotenvy",
  "dptree",
- "duplicate",
  "easy-ext",
  "envy",
  "expect-test",
  "from_variants",
- "fs-err",
  "futures",
  "humansize",
  "itertools 0.10.5",

@@ -18,6 +18,31 @@ concurrency:
   group: "ci-${{ github.workflow }}-${{ github.ref }}"
 
 jobs:
+  terraform-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: false
+          # Make sure to keep it in sync with the version requirement in tf project
+          teraform_version: ">=1.3"
+
+      - run: terraform fmt -check -recursive
+
+      - run: terraform init -lockfile=readonly
+        working-directory: deployment/project
+
+      - run: terraform validate
+        working-directory: deployment/project
+
+  taplo-fmt-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: ./scripts/download/taplo.sh
+      - run: ./taplo fmt --check
+
   typos:
     runs-on: ubuntu-latest
     steps:
@@ -41,6 +66,15 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v1
         with:
           command: check ${{ matrix.checks }}
+
+
+  # Lightweight check for unused dependencies that uses simple regex search
+  rust-unused-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: ./scripts/download/cargo-machete.sh
+      - run: ./cargo-machete
 
   rust-lint:
     runs-on: ubuntu-latest
