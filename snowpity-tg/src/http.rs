@@ -285,7 +285,9 @@ pub(crate) enum HttpClientError {
 mod tests {
     use super::*;
 
+
     #[test_log::test(tokio::test)]
+    #[ignore]
     async fn manual_sandbox() {
         let url = "https://derpicdn.net/img/view/2018/10/19/1860230.mp4";
 
