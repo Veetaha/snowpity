@@ -50,8 +50,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      # Pin the exact version, otherwise sudden typos' dictionary updates will make CI unstable
-      - uses: crate-ci/typos@v1.13.6
+      - run: ./scripts/download/typos.sh
+      - run: ./typos
 
   cargo-deny-check:
     runs-on: ubuntu-latest
