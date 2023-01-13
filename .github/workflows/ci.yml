@@ -82,10 +82,23 @@ jobs:
   rust-lint:
     runs-on: ubuntu-latest
 
+    # We don't want unstable jobs to fail our cicd
+    continue-on-error: ${{ matrix.toolchain == 'beta' || matrix.toolchain == 'nightly' }}
+
+    strategy:
+      matrix:
+        toolchain: [stable, beta, nightly]
+
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo rust_version=$(cat rust-toolchain) >> $GITHUB_ENV
+
+      - if: ${{ matrix.toolchain == 'stable' }}
+        run: echo rust_version=$(cat rust-toolchain) >> $GITHUB_ENV
+
+      - if: ${{ matrix.toolchain != 'stable' }}
+        run: echo 'rust_version=${{ matrix.toolchain }}' >> $GITHUB_ENV
+
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.rust_version }}
