@@ -2,7 +2,7 @@ use super::super::{
     service::Context, Artist, CachedMedia, FileSize, MediaDimensions, MediaHostSpecific, MediaId,
     MediaKind, MediaMeta, MAX_DIRECT_URL_FILE_SIZE, MB,
 };
-use crate::media_host::twitter::{self, GetTweetResponse, TweetId};
+use crate::posting::twitter::{self, GetTweetResponse, TweetId};
 use crate::observability::logging::prelude::*;
 use crate::tg::MediaCacheError;
 use crate::Result;

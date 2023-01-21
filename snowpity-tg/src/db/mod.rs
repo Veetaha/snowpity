@@ -3,22 +3,20 @@ mod constraints;
 mod error;
 
 mod tg_chat;
-mod tg_media_cache;
 
 use crate::{err_ctx, Result};
 use sqlx::prelude::*;
 
-pub(crate) use {config::*, error::*, tg_chat::*, tg_media_cache::*};
+pub(crate) use {config::*, error::*, tg_chat::*};
 
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 
 metrics_bat::histograms! {
     /// Database query duration in seconds
-    db_query_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
+    pub(crate) db_query_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 }
 
 pub(crate) struct Repo {
-    pub(crate) tg_media_cache: TgMediaCacheRepo,
     pub(crate) tg_chat: TgChatRepo,
 }
 
@@ -45,7 +43,6 @@ pub(crate) async fn init(config: Config) -> Result<Repo> {
     constraints::validate(db.clone()).await;
 
     Ok(Repo {
-        tg_media_cache: TgMediaCacheRepo::new(db.clone()),
         tg_chat: TgChatRepo::new(db),
     })
 }

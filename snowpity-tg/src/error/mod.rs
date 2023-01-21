@@ -88,7 +88,7 @@ pub(crate) enum ErrorKind {
     #[error(transparent)]
     Twitter {
         #[from]
-        source: crate::media_host::twitter::TwitterError,
+        source: crate::posting::twitter::TwitterError,
     },
 
     #[error(transparent)]

@@ -1,5 +1,5 @@
 use super::{imp, tg_upload, CachedMedia, MediaId, MediaMeta, TgFileMeta};
-use crate::media_host::{self, derpi, twitter};
+use crate::posting::{self, derpi, twitter};
 use crate::prelude::*;
 use crate::{db, http, tg, util, Result};
 use futures::future::BoxFuture;
@@ -102,7 +102,7 @@ pub(crate) struct Client {
 #[derive(Clone)]
 pub(crate) struct Context {
     pub(crate) bot: tg::Bot,
-    pub(crate) media: Arc<media_host::Client>,
+    pub(crate) media: Arc<posting::Services>,
     pub(crate) cfg: Arc<tg::Config>,
     pub(crate) db: Arc<db::Repo>,
     pub(crate) http: http::Client,

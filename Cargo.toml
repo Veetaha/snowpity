@@ -21,10 +21,6 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 publish = false
 
-[patch.crates-io]
-# FIXME: remove this once https://github.com/teloxide/teloxide/pull/764 is merged and available
-teloxide-core = { git = "https://github.com/Veetaha/teloxide", branch = "feat/add-missing-restricted-fields" }
-
 [workspace.dependencies]
 anyhow                = "1.0"
 assert_matches        = "1.5"
@@ -86,7 +82,7 @@ serde                       = { version = "1.0", features = ["derive"] }
 serde_with                  = { version = "2.0", features = ["json"] }
 sqlx                        = { version = "0.6", features = ["runtime-tokio-rustls", "postgres", "macros", "chrono", "offline"] }
 strum                       = { version = "0.24", features = ["derive"] }
-teloxide                    = { version = "0.11", features = ["rustls"], default-features = false }
+teloxide                    = { version = "0.12", features = ["rustls"], default-features = false }
 test-log                    = { version = "0.2", features = ["trace"], default-features = false }
 timeago                     = { version = "0.4", features = ["chrono"] }
 tracing-error               = { version = "0.2", default-features = false }

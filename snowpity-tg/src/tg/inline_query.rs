@@ -233,34 +233,6 @@ fn media_response_item_to_inline_query_result(
     }
 }
 
-fn parse_query(str: &str) -> Option<(&str, media_cache::RequestId)> {
-    macro_rules! parse_with_regexes {
-        ($str:ident, $($regex:literal)*) => (None$(.or_else(|| regex_captures!($regex, $str)))*)
-    }
-
-    let str = str.trim();
-
-    let result = parse_with_regexes!(
-        str,
-        r"(derpibooru.org(?:/images)?)/(\d+)"
-        r"(derpicdn.net/img)/\d+/\d+/\d+/(\d+)"
-        r"(derpicdn.net/img/(?:view|download))/\d+/\d+/\d+/(\d+)"
-    );
-
-    if let Some((_, host, id)) = result {
-        return Some((host, media_cache::RequestId::Derpibooru(id.parse().ok()?)));
-    }
-
-    // The regex was inspired by the one in the booru/scraper repository:
-    // https://github.com/booru/scraper/blob/095771b28521b49ae67e30db2764406a68b74395/src/scraper/twitter.rs#L16
-    let result = parse_with_regexes!(str, r"((?:mobile\.)?twitter.com)/[A-Za-z\d_]+/status/(\d+)");
-
-    if let Some((_, host, id)) = result {
-        return Some((host, media_cache::RequestId::Twitter(id.parse().ok()?)));
-    }
-
-    None
-}
 
 /// XXX: This handler must be enabled manually via `/setinlinefeedback` command in
 /// Telegram BotFather, otherwise `ChosenInlineResult` updates will not be sent.
@@ -274,71 +246,4 @@ pub(crate) async fn handle_chosen_inline_result(result: ChosenInlineResult) -> D
     })
     .increment(1);
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use expect_test::{expect, Expect};
-
-    #[track_caller]
-    fn assert_parse_query(query: &str, expected: Expect) {
-        let actual = if let Some((media_host, id)) = parse_query(query) {
-            format!("{media_host}:{id:?}")
-        } else {
-            "None".to_owned()
-        };
-        expected.assert_eq(&actual);
-    }
-
-    #[test]
-    fn query_parsing_fail() {
-        use assert_parse_query as test;
-
-        test("123", expect!["None"]);
-        test("furbooru.org/images/123/", expect!["None"]);
-    }
-
-    #[test]
-    fn derpibooru_query_parsing() {
-        use assert_parse_query as test;
-
-        test(
-            "derpibooru.org/123/",
-            expect!["derpibooru.org:Derpibooru(MediaId(123))"],
-        );
-        test(
-            "derpibooru.org/123",
-            expect!["derpibooru.org:Derpibooru(MediaId(123))"],
-        );
-        test(
-            "derpibooru.org/images/123",
-            expect!["derpibooru.org/images:Derpibooru(MediaId(123))"],
-        );
-        test(
-            "derpibooru.org/images/123/",
-            expect!["derpibooru.org/images:Derpibooru(MediaId(123))"],
-        );
-        test(
-            "https://derpicdn.net/img/2022/12/17/3008328/large.jpg",
-            expect!["derpicdn.net/img:Derpibooru(MediaId(3008328))"],
-        );
-        test(
-            "https://derpicdn.net/img/view/2022/12/17/3008328.jpg",
-            expect!["derpicdn.net/img/view:Derpibooru(MediaId(3008328))"],
-        );
-        test(
-            "https://derpicdn.net/img/download/2022/12/28/3015836__safe_artist-colon-shadowreindeer_foo.jpg",
-            expect!["derpicdn.net/img/download:Derpibooru(MediaId(3015836))"]
-        );
-    }
-
-    #[test]
-    fn twitter_query_parsing() {
-        use assert_parse_query as test;
-        test(
-            "https://twitter.com/NORDING34/status/1607191066318454791",
-            expect!["twitter.com:Twitter(TweetId(1607191066318454791))"],
-        )
-    }
 }

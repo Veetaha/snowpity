@@ -1,4 +1,4 @@
-use crate::media_host::twitter::{self, TweetId};
+use crate::sites::twitter::{self, TweetId};
 use crate::prelude::*;
 use crate::tg::TgFileMeta;
 use crate::Result;

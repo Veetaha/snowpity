@@ -11,7 +11,7 @@ mod message_from_channel;
 use crate::ftai::FtaiService;
 use crate::prelude::*;
 use crate::sysinfo::SysInfoService;
-use crate::{db, encoding, http, media_host, Result};
+use crate::{db, encoding, http, posting, Result};
 use captcha::CaptchaCtx;
 use dptree::di::DependencyMap;
 use inline_query::InlineQueryService;
@@ -53,7 +53,7 @@ pub(crate) struct Ctx {
 pub(crate) struct RunBotOptions {
     pub(crate) tg_cfg: Config,
     pub(crate) db: db::Repo,
-    pub(crate) media_cfg: media_host::Config,
+    pub(crate) media_cfg: posting::Config,
 }
 
 pub(crate) async fn run_bot(opts: RunBotOptions) -> Result {
@@ -68,7 +68,7 @@ pub(crate) async fn run_bot(opts: RunBotOptions) -> Result {
         .trace(teloxide::adaptors::trace::Settings::all());
 
     let ftai = FtaiService::new(http.clone());
-    let media = Arc::new(media_host::Client::new(opts.media_cfg, http.clone()));
+    let media = Arc::new(posting::Services::new(opts.media_cfg, http.clone()));
     let tg_cfg = Arc::new(opts.tg_cfg);
     let db = Arc::new(opts.db);
 

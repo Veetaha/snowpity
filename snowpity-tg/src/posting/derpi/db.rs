@@ -1,14 +1,13 @@
-use crate::media_host::derpi;
+use crate::posting::{derpi, TgFileMeta};
 use crate::prelude::*;
-use crate::tg::TgFileMeta;
 use crate::Result;
 use sqlx_bat::prelude::*;
 
-pub(crate) struct TgDerpiMediaCacheRepo {
+pub(crate) struct MediaCacheRepo {
     db: sqlx::PgPool,
 }
 
-impl TgDerpiMediaCacheRepo {
+impl MediaCacheRepo {
     pub(crate) fn new(db: sqlx::PgPool) -> Self {
         Self { db }
     }

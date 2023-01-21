@@ -1,3 +1,4 @@
+
 use crate::prelude::*;
 use crate::{fatal, http, Result};
 use serde::Deserialize;
@@ -6,11 +7,6 @@ pub(crate) mod rpc;
 pub(crate) use rpc::*;
 
 http::def_url_base!(twitter_api, "https://api.twitter.com/2");
-
-#[derive(Clone, Deserialize)]
-pub struct Config {
-    bearer_token: String,
-}
 
 pub(crate) struct Client {
     http: http::Client,
