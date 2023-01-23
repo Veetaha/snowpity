@@ -40,7 +40,7 @@ pub(super) struct GetTweetIncludes {
     derive_more::Display, derive_more::FromStr, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize,
 )]
 #[serde(transparent)]
-pub(crate) struct TweetId(#[serde_as(as = "DisplayFromStr")] pub(super) u64);
+pub(crate) struct TweetId(#[serde_as(as = "DisplayFromStr")] u64);
 
 sqlx_bat::impl_try_into_db_via_newtype!(TweetId(u64));
 
@@ -185,5 +185,12 @@ impl Media {
                 })
             })
             .map(|(_, url)| url.clone())
+    }
+}
+
+impl TweetId {
+    #[cfg(test)]
+    pub(crate) fn from_raw(raw: u64) -> Self {
+        Self(raw)
     }
 }

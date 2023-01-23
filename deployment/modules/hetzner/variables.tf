@@ -3,7 +3,7 @@ variable "tg_bot_alerts_chat" {
   type     = string
 }
 
-variable "tg_bot_media_cache_chat" {
+variable "tg_bot_blob_cache_chat" {
   nullable = false
   type     = string
 }

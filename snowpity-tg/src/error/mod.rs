@@ -80,9 +80,15 @@ pub(crate) enum ErrorKind {
     Multiple { errs: Vec<Error> },
 
     #[error(transparent)]
-    MediaCache {
+    InlineQuery {
         #[from]
-        source: crate::tg::MediaCacheError,
+        source: crate::tg::InlineQueryError,
+    },
+
+    #[error(transparent)]
+    Posting {
+        #[from]
+        source: crate::posting::PostingError,
     },
 
     #[error(transparent)]
@@ -146,7 +152,9 @@ impl Error {
     /// These are most likely caused by humanz sending wrong input.
     pub(crate) fn is_user_error(&self) -> bool {
         match &self.imp.kind {
-            ErrorKind::FtaiCommand { .. } | ErrorKind::DescribeCommand { .. } => true,
+            ErrorKind::FtaiCommand { .. }
+            | ErrorKind::DescribeCommand { .. }
+            | ErrorKind::InlineQuery { .. } => true,
             ErrorKind::Multiple { errs } => errs.iter().all(Self::is_user_error),
             ErrorKind::HttpClient { .. }
             | ErrorKind::Twitter { .. }
@@ -154,7 +162,7 @@ impl Error {
             | ErrorKind::Tg { .. }
             | ErrorKind::Db { .. }
             | ErrorKind::Deserialize { .. }
-            | ErrorKind::MediaCache { .. }
+            | ErrorKind::Posting { .. }
             | ErrorKind::MediaConv { .. }
             | ErrorKind::Io { .. }
             | ErrorKind::Todo { .. }

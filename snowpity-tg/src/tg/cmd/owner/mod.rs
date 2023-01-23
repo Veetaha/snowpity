@@ -76,7 +76,7 @@ impl tg::cmd::Command for Cmd {
 
                 let tg_chat_ctx = tg_chat_ctx(db::TgChatAction::ToggleCaptchaCommand);
 
-                let is_captcha_enabled = ctx.db.tg_chat.get_or_update_captcha(tg_chat_ctx).await?;
+                let is_captcha_enabled = ctx.tg_chats.get_or_update_captcha(tg_chat_ctx).await?;
                 let enabled = if is_captcha_enabled {
                     "enabled"
                 } else {
@@ -90,7 +90,7 @@ impl tg::cmd::Command for Cmd {
             Cmd::ChatConfig => {
                 let tg_chat_ctx = tg_chat_ctx(db::TgChatAction::ChatConfigCommand);
 
-                let chat = ctx.db.tg_chat.get_chat(tg_chat_ctx).await?;
+                let chat = ctx.tg_chats.get_chat(tg_chat_ctx).await?;
 
                 ctx.bot
                     .send_message(msg.chat.id, display_chat(chat))

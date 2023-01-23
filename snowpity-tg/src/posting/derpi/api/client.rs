@@ -1,13 +1,11 @@
-use super::Config;
 use crate::http;
+use crate::posting::derpi::api::model::*;
+use crate::posting::derpi::Config;
 use crate::prelude::*;
 use crate::Result;
 
-pub(crate) mod rpc;
-pub(crate) use rpc::*;
-
-http::def_url_base!(derpi_api, "https://derpibooru.org/api/v1/json");
-http::def_url_base!(derpi, "https://derpibooru.org");
+http::def_url_base!(pub(crate) derpi_api, "https://derpibooru.org/api/v1/json");
+http::def_url_base!(pub(crate) derpi, "https://derpibooru.org");
 
 pub(crate) struct Client {
     http: http::Client,

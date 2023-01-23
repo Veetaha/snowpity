@@ -1,7 +1,9 @@
-use super::{imp, tg_upload, CachedMedia, MediaId, MediaMeta, TgFileMeta};
-use crate::posting::{self, derpi, twitter};
+use crate::posting::platform::prelude::*;
+use crate::posting::tg_upload;
+use crate::posting::RequestId;
 use crate::prelude::*;
-use crate::{db, http, tg, util, Result};
+use crate::{http, posting};
+use crate::{tg, util, Result};
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use futures::stream::FuturesUnordered;
@@ -17,21 +19,27 @@ const MAX_IN_FLIGHT: usize = 40;
 const UNEXPECTED_SERVICE_SHUTDOWN: &str = "BUG: Service exited unexpectedly";
 
 metrics_bat::gauges! {
-    /// Number of in-flight requests for media cache
-    media_cache_requests_in_flight_total;
+    /// Number of in-flight requests for blobs cache
+    blob_cache_requests_in_flight_total;
 }
 
 metrics_bat::counters! {
-    /// Number of times we hit the database cache for derpibooru media
-    media_cache_hits_total;
+    /// Number of times we hit the database cache for blobs
+    blob_cache_hits_total;
 
-    /// Number of times we queried the database cache for derpibooru media
-    media_cache_requests_total;
+    /// Number of times we queried the database cache for blobs
+    blob_cache_requests_total;
+}
+
+#[derive(Debug)]
+pub(crate) struct CachePostRequest {
+    pub(crate) requested_by: teloxide::types::User,
+    pub(crate) id: RequestId,
 }
 
 pub(crate) struct Envelope {
-    request: Request,
-    return_slot: oneshot::Sender<Result<Response>>,
+    request: CachePostRequest,
+    return_slot: oneshot::Sender<Result<CachedPost>>,
 }
 
 impl fmt::Debug for Envelope {
@@ -46,38 +54,6 @@ impl fmt::Debug for Envelope {
             .field("return_slot", &util::type_name_of_val(return_slot))
             .finish()
     }
-}
-
-#[derive(Debug)]
-pub(crate) struct Request {
-    pub(crate) requested_by: teloxide::types::User,
-    pub(crate) id: RequestId,
-}
-
-#[derive(Clone)]
-pub(crate) struct Response {
-    pub(crate) items: Vec<ResponseItem>,
-}
-
-#[derive(Clone)]
-pub(crate) struct ResponseItem {
-    pub(crate) tg_file: TgFileMeta,
-    pub(crate) media_meta: MediaMeta,
-}
-
-impl ResponseItem {
-    fn new(tg_file: TgFileMeta, media_meta: MediaMeta) -> Self {
-        Self {
-            tg_file,
-            media_meta,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, from_variants::FromVariants)]
-pub(crate) enum RequestId {
-    Derpibooru(derpi::MediaId),
-    Twitter(twitter::TweetId),
 }
 
 pub(crate) fn spawn_service(ctx: Context) -> Client {
@@ -101,31 +77,31 @@ pub(crate) struct Client {
 
 #[derive(Clone)]
 pub(crate) struct Context {
-    pub(crate) bot: tg::Bot,
-    pub(crate) media: Arc<posting::Services>,
-    pub(crate) cfg: Arc<tg::Config>,
-    pub(crate) db: Arc<db::Repo>,
-    pub(crate) http: http::Client,
+    pub(super) bot: tg::Bot,
+    pub(super) config: Arc<tg::Config>,
+    pub(super) http: http::Client,
+    pub(super) platforms: Arc<posting::AllPlatforms>,
 }
 
 struct Service {
     ctx: Context,
 
-    in_flight_futs: FuturesUnordered<BoxFuture<'static, (RequestId, Result<Response>)>>,
-    return_slots: HashMap<RequestId, Vec<oneshot::Sender<Result<Response>>>>,
+    in_flight_futs: FuturesUnordered<BoxFuture<'static, (RequestId, Result<CachedPost>)>>,
+    return_slots: HashMap<RequestId, Vec<oneshot::Sender<Result<CachedPost>>>>,
     requests: mpsc::Receiver<Envelope>,
 }
 
 impl Client {
-    /// Returns the telegram file id for the given Derpibooru media id.
-    /// It maintains a cache of media, that was already requested, using
+    /// Resolves a post with the telegram file ids for all blobs attached to the post.
+    ///
+    /// It maintains a cache of blobs, that were already requested, using
     /// a database, and saving the files in a dedicated telegram channel,
-    /// if the media is requested for the first time.
+    /// if the blob is seen for the first time.
     ///
     /// It's totally fine to call this method concurrently and with the same
-    /// `media_id` repeatedly, but there is a backpressure mechanism so that
+    /// `request_id` repeatedly, but there is a backpressure mechanism so that
     /// the future won't resolve until the service's capacity is available.
-    pub(crate) async fn get_media(&self, request: Request) -> Result<Response> {
+    pub(crate) async fn cache_post(&self, request: CachePostRequest) -> Result<CachedPost> {
         let (request, recv) = Envelope::new(request);
         self.send
             .as_ref()
@@ -146,7 +122,7 @@ impl Drop for Client {
 }
 
 impl Envelope {
-    fn new(request: Request) -> (Self, impl Future<Output = Result<Response>>) {
+    fn new(request: CachePostRequest) -> (Self, impl Future<Output = Result<CachedPost>>) {
         let (send, recv) = oneshot::channel();
         let me = Self {
             request,
@@ -174,7 +150,7 @@ impl Service {
 
     async fn loop_turn(&mut self) -> ControlFlow<()> {
         let total_in_flight = self.total_in_flight();
-        media_cache_requests_in_flight_total(vec![]).set(total_in_flight as f64);
+        blob_cache_requests_in_flight_total(vec![]).set(total_in_flight as f64);
 
         tokio::select! {
             // This `if` condition implements a simple backpressure mechanism
@@ -203,7 +179,7 @@ impl Service {
     }
 
     #[instrument(skip(self, response))]
-    fn dispatch_response(&mut self, request_id: RequestId, response: Result<Response>) {
+    fn dispatch_response(&mut self, request_id: RequestId, response: Result<CachedPost>) {
         let slots = self
             .return_slots
             .remove(&request_id)
@@ -247,91 +223,89 @@ impl Service {
 }
 
 impl Context {
+    pub(crate) fn new(
+        bot: tg::Bot,
+        config: Arc<tg::Config>,
+        params: posting::platform::PlatformParams<posting::all_platforms::Config>,
+    ) -> Self {
+        Self {
+            bot,
+            config,
+            http: params.http.clone(),
+            platforms: Arc::new(posting::AllPlatforms::new(params)),
+        }
+    }
+
+    /// Combines both getting the post meta, and getting the cached blobs.
+    ///
+    /// Getting the post meta from the posting platform will dominate
+    /// the time spent in this function, so reaching out to the
+    /// cache almost doesn't influence the latency of the request.
     #[instrument(skip_all, fields(
         requested_by = %request.requested_by.debug_id(),
         request_id = ?request.id,
     ))]
-    async fn process_request(self, request: Request) -> Result<Response> {
-        let (media_meta, cached_media) = self.resolve_media(&request).await?;
+    async fn process_request(self, request: CachePostRequest) -> Result<CachedPost> {
+        let (post, cached_blobs) = futures::try_join!(
+            self.platforms.get_post(request.id.clone()),
+            self.platforms.get_cached_blobs(request.id)
+        )?;
 
-        let items: Vec<_> = media_meta
+        let blobs: Vec<_> = post
+            .blobs
             .iter()
-            .filter_map(|meta| {
-                let cached = cached_media.iter().find(|cached| cached.id == meta.id)?;
-                Some(ResponseItem::new(cached.tg_file.clone(), meta.clone()))
+            .filter_map(|blob| {
+                let cached_blob = cached_blobs
+                    .iter()
+                    .find(|cached_blob| cached_blob.id == blob.id)?;
+
+                Some(CachedBlob {
+                    blob: blob.clone(),
+                    tg_file: cached_blob.tg_file.clone(),
+                })
             })
             .collect();
 
-        media_cache_requests_total(vec![]).increment(1);
+        blob_cache_requests_total(vec![]).increment(1);
 
-        if !items.is_empty() && items.len() == cached_media.len() {
-            info!(items = items.len(), "Media cache hit");
-            media_cache_hits_total(vec![]).increment(1);
-            return Ok(Response { items });
+        if blobs.len() == cached_blobs.len() {
+            info!(blobs = blobs.len(), "Blobs cache hit");
+            blob_cache_hits_total(vec![]).increment(1);
+            return Ok(post.base.with_cached_blobs(blobs));
         }
 
         info!(
-            matched = items.len(),
-            media = media_meta.len(),
-            cached = cached_media.len(),
-            "Media cache miss"
+            matched = blobs.len(),
+            actual = post.blobs.len(),
+            cached = cached_blobs.len(),
+            "Blobs cache miss"
         );
 
-        let items = stream::iter(media_meta)
-            .map(|meta| async {
-                let tg_file = tg_upload::upload(&self, &meta, &request.requested_by).await?;
+        let cached_blobs = stream::iter(post.blobs)
+            .map(|blob| async {
+                let tg_file =
+                    tg_upload::upload(&self, &post.base, &blob, &request.requested_by).await?;
 
-                if let Err(err) = self.set_cache(&meta, &tg_file).await {
+                let cached_blob = CachedBlob { tg_file, blob };
+
+                let result = self
+                    .platforms
+                    .set_cached_blob(post.base.id.clone(), cached_blob.to_id())
+                    .await;
+
+                if let Err(err) = result {
                     warn!(
                         err = tracing_err(&err),
-                        "Failed to save cache info in the database"
+                        "Failed to save cache info to the database"
                     );
                 }
 
-                Ok::<_, crate::Error>(ResponseItem::new(tg_file, meta))
+                Ok::<_, crate::Error>(cached_blob)
             })
             .buffer_unordered(10)
             .try_collect()
             .await?;
 
-        Ok(Response { items })
-    }
-
-    /// Fetch metadata about the media from the media hosting, and the cached
-    /// version of the media from the database. Talking to the media hosting
-    /// will dominate the time spent in this function, so reaching out to the
-    /// cache almost doesn't influence the latency of the request.
-    async fn resolve_media(&self, request: &Request) -> Result<(Vec<MediaMeta>, Vec<CachedMedia>)> {
-        match request.id {
-            RequestId::Derpibooru(media_id) => {
-                let (media_meta, cached_media) = futures::try_join!(
-                    imp::derpi::get_media_meta(self, media_id),
-                    imp::derpi::get_cached_media(self, media_id),
-                )?;
-
-                Ok((vec![media_meta], Vec::from_iter(cached_media)))
-            }
-            RequestId::Twitter(tweet_id) => futures::try_join!(
-                imp::twitter::get_media_meta(self, tweet_id),
-                imp::twitter::get_cached_media(self, tweet_id),
-            ),
-        }
-    }
-
-    /// Save the information about the file uploaded to Telegram in the database.
-    async fn set_cache(&self, media: &MediaMeta, tg_file: &TgFileMeta) -> Result {
-        let tg_file = tg_file.clone();
-        match &media.id {
-            MediaId::Derpibooru(media_id) => {
-                self.db.tg_media_cache.derpi.set(*media_id, tg_file).await
-            }
-            MediaId::Twitter(tweet_id, media_key) => {
-                self.db
-                    .tg_media_cache
-                    .twitter
-                    .set(*tweet_id, media_key.clone(), tg_file)
-                    .await
-            }
-        }
+        Ok(post.base.with_cached_blobs(cached_blobs))
     }
 }

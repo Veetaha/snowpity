@@ -1,10 +1,9 @@
-use super::media_cache::{self, TgFileKind};
+use crate::posting::{self, TgFileKind};
 use crate::prelude::*;
 use crate::util::DynResult;
-use crate::{encoding, tg, Error, ErrorKind};
+use crate::{encoding, err, tg, Error, ErrorKind};
 use futures::prelude::*;
 use itertools::Itertools;
-use lazy_regex::regex_captures;
 use metrics_bat::prelude::*;
 use reqwest::Url;
 use std::future::IntoFuture;
@@ -24,7 +23,7 @@ const CACHE_TIME_SECS: u32 = 0;
 
 metrics_bat::labels! {
     InlineQueryTotalLabels { user }
-    InlineQueryLabels { media_host }
+    InlineQueryLabels { posting_platform_host }
 }
 
 metrics_bat::counters! {
@@ -44,13 +43,13 @@ metrics_bat::histograms! {
 }
 
 pub(crate) struct InlineQueryService {
-    media_cache_client: media_cache::Client,
+    posting: posting::Client,
 }
 
 impl InlineQueryService {
-    pub(crate) fn new(ctx: media_cache::Context) -> Self {
+    pub(crate) fn new(ctx: posting::Context) -> Self {
         Self {
-            media_cache_client: media_cache::spawn_service(ctx),
+            posting: posting::spawn_service(ctx),
         }
     }
 }
@@ -63,7 +62,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 
     let inline_query_id = query.id;
 
-    let Some((media_host, request_id)) = parse_query(&query.query) else {
+    let Some((posting_platform_host, request_id)) = posting::parse_query(&query.query) else {
         inline_queries_skipped_total(vec![]).increment(1);
 
         info!("Skipping inline query");
@@ -91,37 +90,41 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     .increment(1);
 
     let labels = InlineQueryLabels {
-        media_host: media_host.to_owned(),
+        posting_platform_host: posting_platform_host.to_owned(),
     };
 
     async {
-        let request = media_cache::Request {
+        let request = posting::CachePostRequest {
             requested_by: query.from,
             id: request_id,
         };
 
-        let response = inline_query.media_cache_client.get_media(request).await?;
+        let post = inline_query.posting.cache_post(request).await?;
 
-        let tg_file_types = response
-            .items
+        if post.blobs.is_empty() {
+            return Err(err!(InlineQueryError::MissingMedia));
+        }
+
+        let tg_file_types = post
+            .blobs
             .iter()
             .map(|response| response.tg_file.kind)
             .unique()
             .join(", ");
 
-        let total_responses = response.items.len();
+        let total_blobs = post.blobs.len();
 
-        let results = response
-            .items
+        let results = post
+            .blobs
             .into_iter()
-            .map(|response| media_response_item_to_inline_query_result(&comments, response));
+            .map(|blob| make_inline_query_result(&comments, &post.base, blob));
 
         bot.answer_inline_query(&inline_query_id, results.clone())
             .is_personal(false)
             .cache_time(CACHE_TIME_SECS)
             .into_future()
             .with_duration_log("Answering inline query")
-            .instrument(info_span!("payload", %tg_file_types, total_responses))
+            .instrument(info_span!("payload", %tg_file_types, total_blobs))
             .await?;
 
         Ok::<_, Error>(())
@@ -134,7 +137,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
         let title_suffix = ". Try another link 😅";
 
         let (title, full_err) = match err.kind() {
-            ErrorKind::MediaCache { source } => (source.to_string(), "".to_owned()),
+            ErrorKind::Posting { source } => (source.to_string(), "".to_owned()),
             _ => (
                 default_title.to_owned(),
                 format!(
@@ -189,61 +192,65 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     .await
 }
 
-fn media_response_item_to_inline_query_result(
+fn make_inline_query_result(
     comments: &str,
-    response: media_cache::ResponseItem,
+    post: &posting::BasePost,
+    blob: posting::CachedBlob,
 ) -> InlineQueryResult {
-    let mut caption = response.media_meta.caption();
+    let mut caption = post.caption();
     if !comments.is_empty() {
         caption = format!("{caption}\n\n{}", markdown::escape(comments));
     }
 
     let parse_mode = ParseMode::MarkdownV2;
     let title = "Click to send";
-    let id = encoding::encode_base64_sha2(&response.tg_file.id);
+    let id = encoding::encode_base64_sha2(&blob.tg_file.id);
+    let file_id = blob.tg_file.id;
 
-    match response.tg_file.kind {
-        TgFileKind::Photo => InlineQueryResultCachedPhoto::new(id, response.tg_file.id)
+    match blob.tg_file.kind {
+        TgFileKind::Photo => InlineQueryResultCachedPhoto::new(id, file_id)
             .caption(caption)
-            .parse_mode(parse_mode)
             // XXX: title is ignored for photos in in results preview popup.
             // That's really surprising, but that's how telegram works -_-
             .title(title)
+            .parse_mode(parse_mode)
             .into(),
-        TgFileKind::Document => {
-            InlineQueryResultCachedDocument::new(id, title, response.tg_file.id)
-                .caption(caption)
-                .parse_mode(parse_mode)
-                .into()
-        }
-        TgFileKind::Video => InlineQueryResultCachedVideo::new(id, response.tg_file.id, title)
+        TgFileKind::Document => InlineQueryResultCachedDocument::new(id, title, file_id)
             .caption(caption)
             .title(title)
             .parse_mode(parse_mode)
             .into(),
-        TgFileKind::Mpeg4Gif => {
-            InlineQueryResultCachedMpeg4Gif::new(id, response.tg_file.id)
-                .caption(caption)
-                // XXX: title is ignored for gifs as well as for photos,
-                // see the comment on photos match arm above
-                .title(title)
-                .parse_mode(parse_mode)
-                .into()
-        }
+        TgFileKind::Video => InlineQueryResultCachedVideo::new(id, file_id, title)
+            .caption(caption)
+            .title(title)
+            .parse_mode(parse_mode)
+            .into(),
+        TgFileKind::Mpeg4Gif => InlineQueryResultCachedMpeg4Gif::new(id, file_id)
+            .caption(caption)
+            // XXX: title is ignored for gifs as well as for photos,
+            // see the comment on photos match arm above
+            .title(title)
+            .parse_mode(parse_mode)
+            .into(),
     }
 }
-
 
 /// XXX: This handler must be enabled manually via `/setinlinefeedback` command in
 /// Telegram BotFather, otherwise `ChosenInlineResult` updates will not be sent.
 pub(crate) async fn handle_chosen_inline_result(result: ChosenInlineResult) -> DynResult {
-    let media_host = parse_query(&result.query)
+    let platform = posting::parse_query(&result.query)
         .map(|(host, _id)| host)
         .unwrap_or("{unknown}");
 
     chosen_inline_results_total(InlineQueryLabels {
-        media_host: media_host.to_owned(),
+        posting_platform_host: platform.to_owned(),
     })
     .increment(1);
     Ok(())
+}
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum InlineQueryError {
+    #[error("The post contains no media")]
+    MissingMedia,
 }

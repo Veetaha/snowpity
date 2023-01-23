@@ -6,9 +6,8 @@ mod error;
 mod ftai;
 mod http;
 mod media_conv;
-mod posting;
-mod media_cache;
 mod observability;
+mod posting;
 mod sysinfo;
 mod tg;
 
@@ -32,8 +31,8 @@ pub async fn run(config: Config) -> Result<()> {
 
     let opts = tg::RunBotOptions {
         tg_cfg: config.tg,
+        posting_cfg: config.posting,
         db,
-        media_cfg: config.media,
     };
 
     tg::run_bot(opts).await?;

@@ -1,6 +1,7 @@
-use super::services::{BlobId, DistinctPostMeta, PostId};
-use super::{DisplayInFileName, DistinctPostMetaTrait};
+use super::platform::prelude::*;
+use super::AllPlatforms;
 use crate::tg;
+use derivative::Derivative;
 use itertools::Itertools;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use reqwest::Url;
@@ -77,9 +78,17 @@ pub(crate) struct TgFileMeta {
     pub(crate) kind: TgFileKind,
 }
 
-#[derive(Clone)]
-pub(crate) struct CachedBlob {
-    pub(crate) id: BlobId,
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""))]
+pub(crate) struct CachedBlobId<Service: PlatformTypes = AllPlatforms> {
+    pub(crate) id: Service::BlobId,
+    pub(crate) tg_file: TgFileMeta,
+}
+
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""))]
+pub(crate) struct CachedBlob<Service: PlatformTypes = AllPlatforms> {
+    pub(crate) blob: Blob<Service>,
     pub(crate) tg_file: TgFileMeta,
 }
 
@@ -112,13 +121,15 @@ pub(crate) enum BlobSize {
     ApproxMax(u64),
 }
 
-#[derive(Clone)]
-pub(crate) struct PostMeta {
+/// Basic information about the post that doesn't contain the list of blobs
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""))]
+pub(crate) struct BasePost<Service: PlatformTypes = AllPlatforms> {
     /// Unique identifier of the post specific to the posting platform
     ///
     /// Invariant: the variant of [`PostId`] must correspond to the variant
     /// of [`MediaHostSpecific`]
-    pub(crate) id: PostId,
+    pub(crate) id: Service::PostId,
 
     /// A set of authors who created the media
     pub(crate) authors: BTreeSet<Author>,
@@ -127,20 +138,40 @@ pub(crate) struct PostMeta {
     pub(crate) web_url: Url,
 
     /// Information specific to the posting platform
-    pub(crate) distinct: DistinctPostMeta,
-
-    /// List of blobs attached to the post
-    pub(crate) blobs: Vec<BlobMeta>,
+    pub(crate) distinct: Service::DistinctPostMeta,
 }
 
-pub(crate) struct BlobMeta {
+/// Metadata about the post that includes the [`BasePostMeta`] and
+/// the list of blobs attached to the post without caching information.
+pub(crate) struct Post<Service: PlatformTypes = AllPlatforms> {
+    pub(crate) base: BasePost<Service>,
+
+    /// List of blobs attached to the post. It may be empty
+    pub(crate) blobs: Vec<Blob<Service>>,
+}
+
+/// Metadata about the post that is essentially an extension of [`Post`],
+/// but adds caching information to each blob.
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""))]
+pub(crate) struct CachedPost<Service: PlatformTypes = AllPlatforms> {
+    pub(crate) base: BasePost<Service>,
+
+    /// List of blobs attached to the post. It may be empty
+    pub(crate) blobs: Vec<CachedBlob<Service>>,
+}
+
+/// Metadata about a blob
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""))]
+pub(crate) struct Blob<Service: PlatformTypes = AllPlatforms> {
     /// Unique identifier of the blob specific to the posting platform
-    id: BlobId,
+    pub(crate) id: Service::BlobId,
 
     /// Describes whether this is an image, video, or an animation
     pub(crate) kind: BlobKind,
 
-    /// The dimensions of the blob, if it is a media (which it is always today)
+    /// The dimensions of the blob, if it is visual kind of blob (which it always is today)
     pub(crate) dimensions: MediaDimensions,
 
     /// Size of the blob in bytes if known. It should not be considered
@@ -163,7 +194,7 @@ pub(crate) struct Author {
     pub(crate) web_url: Url,
 }
 
-impl PostMeta {
+impl BasePost {
     pub(crate) fn caption(&self) -> String {
         // FIXME: ensure the caption doesn't overflow 1024 characters
         let authors: Vec<_> = self
@@ -199,9 +230,9 @@ impl PostMeta {
     }
 }
 
-impl BlobMeta {
+impl Blob {
     /// Short name of the file (not more than 255 characters) for the media
-    pub(crate) fn tg_file_name(&self, post: &PostMeta) -> String {
+    pub(crate) fn tg_file_name(&self, post: &BasePost) -> String {
         fn sanitize(tag: &str) -> impl std::fmt::Display + '_ {
             tag.chars()
                 .flat_map(char::to_lowercase)
@@ -227,16 +258,17 @@ impl BlobMeta {
         let ratings = join(&mut post.distinct.nsfw_ratings().into_iter());
         let authors = join(&mut post.authors.iter().map(|artist| artist.name.as_str()));
 
-        let media_host = post.distinct.platform_name().to_lowercase();
+        let platform = post.distinct.platform_name().to_lowercase();
 
         let post_segment = post.id.display_in_file_name();
         let blob_segment = self.id.display_in_file_name();
 
-        let segments = [&media_host, ratings.as_str(), authors.as_str()]
+        let segments = [&platform, ratings.as_str(), authors.as_str()]
             .into_iter()
             .chain(post_segment.as_deref())
             .chain(blob_segment.as_deref())
-            .filter(|s| !s.is_empty());
+            .filter(|s| !s.is_empty())
+            .format("-");
 
         // FIXME: this file type detection influences how telegram processes the file.
         // For example, if we send_video with wrong extension, then it will be registered
@@ -259,6 +291,10 @@ impl MediaDimensions {
 }
 
 impl BlobSize {
+    pub(crate) fn max_mb(megabytes: u64) -> Self {
+        Self::Max(megabytes * MB)
+    }
+
     /// Approximate maximum size of the file in bytes
     pub(crate) fn approx_max(&self) -> u64 {
         match self {
@@ -283,5 +319,31 @@ impl BlobKind {
             BlobKind::ImageSvg => "svg",
             BlobKind::VideoMp4 | BlobKind::AnimationMp4 => "mp4",
         }
+    }
+}
+
+impl<Service: PlatformTypes> CachedBlob<Service> {
+    pub(crate) fn to_id(&self) -> CachedBlobId<Service> {
+        CachedBlobId {
+            id: self.blob.id.clone(),
+            tg_file: self.tg_file.clone(),
+        }
+    }
+}
+
+impl<Service> CachedBlobId<Service>
+where
+    Service: PlatformTypes<BlobId = ()>,
+{
+    /// Specialized constructor of [`CachedBlob`] that ignores the [`ServiceTypes::BlobId`],
+    /// because it is a unit type.
+    pub(crate) fn with_tg_file(tg_file: TgFileMeta) -> Self {
+        Self { id: (), tg_file }
+    }
+}
+
+impl<Service: PlatformTypes> BasePost<Service> {
+    pub(crate) fn with_cached_blobs(self, blobs: Vec<CachedBlob<Service>>) -> CachedPost<Service> {
+        CachedPost { base: self, blobs }
     }
 }

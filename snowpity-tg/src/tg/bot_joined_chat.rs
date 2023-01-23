@@ -36,8 +36,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, update: ChatMemberUpdated) -> DynR
             "Joined chat"
         );
 
-        ctx.db
-            .tg_chat
+        ctx.tg_chats
             .register_chat(TgChatQuery {
                 chat: &update.chat,
                 requested_by: &update.from,

@@ -542,7 +542,7 @@
             "uid": "victoria-metrics"
           },
           "editorMode": "code",
-          "expr": "sum(snowpity_tg_media_cache_hits_total) / sum(snowpity_tg_media_cache_requests_total)",
+          "expr": "sum(snowpity_tg_blob_cache_hits_total) / sum(snowpity_tg_blob_cache_requests_total)",
           "hide": false,
           "legendFormat": "all time",
           "range": true,
@@ -734,7 +734,7 @@
             "uid": "victoria-metrics"
           },
           "editorMode": "code",
-          "expr": "avg_over_time(avg(snowpity_tg_media_cache_requests_in_flight_total[4i]))",
+          "expr": "avg_over_time(avg(snowpity_tg_blob_cache_requests_in_flight_total[4i]))",
           "legendFormat": "In flight",
           "range": true,
           "refId": "A"
@@ -813,7 +813,7 @@
             "uid": "victoria-metrics"
           },
           "editorMode": "code",
-          "expr": "sum by (le) (increase(snowpity_tg_media_file_size_bytes_bucket[4i]))",
+          "expr": "sum by (le) (increase(snowpity_tg_blob_size_bytes_bucket[4i]))",
           "format": "heatmap",
           "legendFormat": "{{le}}",
           "range": true,
@@ -1002,7 +1002,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (le) (increase(snowpity_tg_media_tg_upload_duration_seconds_bucket[4i]))",
+          "expr": "sum by (le) (increase(snowpity_tg_blob_tg_upload_duration_seconds_bucket[4i]))",
           "format": "heatmap",
           "instant": false,
           "interval": "",
@@ -1096,7 +1096,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (le) (increase(snowpity_tg_media_download_duration_seconds_bucket[4i]))",
+          "expr": "sum by (le) (increase(snowpity_tg_blob_download_duration_seconds_bucket[4i]))",
           "format": "heatmap",
           "instant": false,
           "interval": "",
@@ -1299,7 +1299,7 @@
                 "uid": "victoria-metrics"
               },
               "editorMode": "code",
-              "expr": "sum by (result) (running_sum(increase(snowpity_tg_media_file_size_bytes_sum)))",
+              "expr": "sum by (result) (running_sum(increase(snowpity_tg_blob_size_bytes_sum)))",
               "legendFormat": "__auto",
               "range": true,
               "refId": "A"
@@ -1496,7 +1496,7 @@
                 "uid": "victoria-metrics"
               },
               "editorMode": "code",
-              "expr": "sum(running_sum(increase(snowpity_tg_media_cache_hits_total)))",
+              "expr": "sum(running_sum(increase(snowpity_tg_blob_cache_hits_total)))",
               "legendFormat": "__auto",
               "range": true,
               "refId": "A"
@@ -1558,7 +1558,7 @@
                 "uid": "victoria-metrics"
               },
               "editorMode": "code",
-              "expr": "sum(running_sum(increase(snowpity_tg_media_cache_requests_total - snowpity_tg_media_cache_hits_total)))",
+              "expr": "sum(running_sum(increase(snowpity_tg_blob_cache_requests_total - snowpity_tg_blob_cache_hits_total)))",
               "legendFormat": "__auto",
               "range": true,
               "refId": "A"
@@ -1778,7 +1778,7 @@
               },
               "editorMode": "code",
               "exemplar": false,
-              "expr": "sum by (le) (running_sum(increase(snowpity_tg_media_file_size_bytes_bucket)))",
+              "expr": "sum by (le) (running_sum(increase(snowpity_tg_blob_size_bytes_bucket)))",
               "format": "heatmap",
               "instant": false,
               "legendFormat": "__auto",

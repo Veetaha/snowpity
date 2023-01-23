@@ -1,21 +1,21 @@
-use crate::sites::twitter::{self, TweetId};
+use crate::posting::{TgFileMeta};
+use crate::posting::twitter::api::{TweetId, MediaKey};
 use crate::prelude::*;
-use crate::tg::TgFileMeta;
 use crate::Result;
-use futures::prelude::*;
 use sqlx_bat::prelude::*;
+use futures::prelude::*;
 
-pub(crate) struct TgTwitterMediaCacheRepo {
+pub(crate) struct BlobCacheRepo {
     db: sqlx::PgPool,
 }
 
 pub(crate) struct CachedMediaRecord {
-    pub(crate) tweet_id: TweetId,
-    pub(crate) media_key: twitter::MediaKey,
+    // pub(crate) tweet_id: TweetId,
+    pub(crate) media_key: MediaKey,
     pub(crate) tg_file: TgFileMeta,
 }
 
-impl TgTwitterMediaCacheRepo {
+impl BlobCacheRepo {
     pub(crate) fn new(db: sqlx::PgPool) -> Self {
         Self { db }
     }
@@ -24,11 +24,11 @@ impl TgTwitterMediaCacheRepo {
     pub(crate) async fn set(
         &self,
         tweet_id: TweetId,
-        media_key: twitter::MediaKey,
+        media_key: MediaKey,
         tg_file: TgFileMeta,
     ) -> Result {
         sqlx::query!(
-            "insert into tg_twitter_media_cache (
+            "insert into tg_twitter_blob_cache (
                 tweet_id,
                 media_key,
                 tg_file_id,
@@ -50,7 +50,7 @@ impl TgTwitterMediaCacheRepo {
     pub(crate) async fn get(&self, tweet_id: TweetId) -> Result<Vec<CachedMediaRecord>> {
         sqlx::query!(
             "select media_key, tg_file_id, tg_file_kind
-            from tg_twitter_media_cache
+            from tg_twitter_blob_cache
             where tweet_id = $1",
             tweet_id.try_into_db()?,
         )
@@ -58,7 +58,6 @@ impl TgTwitterMediaCacheRepo {
         .err_into()
         .and_then(|record| async move {
             Ok::<_, crate::Error>(CachedMediaRecord {
-                tweet_id,
                 media_key: record.media_key.try_into_app()?,
                 tg_file: TgFileMeta {
                     id: record.tg_file_id,

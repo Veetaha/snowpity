@@ -2,7 +2,7 @@
 //! Use [TypeScript declarations] as a reference (though they may go out of date):
 //!
 //! [TypeScript declarations]: https://github.com/octet-stream/dinky/blob/master/lib/Dinky.d.ts
-use super::derpi;
+use crate::posting::derpi::api::derpi;
 use reqwest::Url;
 use serde::Deserialize;
 

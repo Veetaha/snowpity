@@ -5,7 +5,6 @@ mod captcha;
 mod cmd;
 mod config;
 mod inline_query;
-mod media_cache;
 mod message_from_channel;
 
 use crate::ftai::FtaiService;
@@ -24,7 +23,7 @@ use teloxide::utils::command::BotCommands;
 
 pub(crate) use cmd::{DescribeCommandError, FtaiCommandError};
 pub(crate) use config::*;
-pub(crate) use media_cache::{MediaCacheError, TgFileMeta};
+pub(crate) use inline_query::InlineQueryError;
 
 pub(crate) type Bot = Trace<CacheMe<DefaultParseMode<Throttle<teloxide::Bot>>>>;
 
@@ -42,7 +41,7 @@ metrics_bat::counters! {
 
 pub(crate) struct Ctx {
     bot: Bot,
-    db: Arc<db::Repo>,
+    tg_chats: db::TgChatRepo,
     cfg: Arc<Config>,
     ftai: FtaiService,
     captcha: CaptchaCtx,
@@ -50,16 +49,41 @@ pub(crate) struct Ctx {
     inline_query: InlineQueryService,
 }
 
+impl Ctx {
+    fn new(bot: Bot, opts: RunBotOptions) -> Self {
+        let http = http::create_client();
+
+        let ftai = FtaiService::new(http.clone());
+        let tg_cfg = Arc::new(opts.tg_cfg);
+
+        let posting_params = posting::platform::PlatformParams {
+            config: opts.posting_cfg,
+            http,
+            db: opts.db.clone(),
+        };
+
+        let ctx = posting::Context::new(bot.clone(), tg_cfg.clone(), posting_params);
+
+        Ctx {
+            tg_chats: db::TgChatRepo::new(opts.db),
+            bot,
+            cfg: tg_cfg,
+            ftai,
+            sysinfo: SysInfoService::new(),
+            captcha: Default::default(),
+            inline_query: InlineQueryService::new(ctx),
+        }
+    }
+}
+
 pub(crate) struct RunBotOptions {
     pub(crate) tg_cfg: Config,
-    pub(crate) db: db::Repo,
-    pub(crate) media_cfg: posting::Config,
+    pub(crate) db: sqlx::PgPool,
+    pub(crate) posting_cfg: posting::Config,
 }
 
 pub(crate) async fn run_bot(opts: RunBotOptions) -> Result {
     let mut di = DependencyMap::new();
-
-    let http = http::create_client();
 
     let bot: Bot = teloxide::Bot::new(opts.tg_cfg.token.clone())
         .throttle(Default::default())
@@ -67,28 +91,7 @@ pub(crate) async fn run_bot(opts: RunBotOptions) -> Result {
         .cache_me()
         .trace(teloxide::adaptors::trace::Settings::all());
 
-    let ftai = FtaiService::new(http.clone());
-    let media = Arc::new(posting::Services::new(opts.media_cfg, http.clone()));
-    let tg_cfg = Arc::new(opts.tg_cfg);
-    let db = Arc::new(opts.db);
-
-    let ctx = media_cache::Context {
-        http,
-        bot: bot.clone(),
-        media,
-        cfg: tg_cfg.clone(),
-        db: db.clone(),
-    };
-
-    di.insert(Arc::new(Ctx {
-        db,
-        bot: bot.clone(),
-        cfg: tg_cfg,
-        ftai,
-        sysinfo: SysInfoService::new(),
-        captcha: Default::default(),
-        inline_query: InlineQueryService::new(ctx),
-    }));
+    di.insert(Arc::new(Ctx::new(bot.clone(), opts)));
 
     info!("Starting bot...");
 

@@ -16,11 +16,7 @@ metrics_bat::histograms! {
     pub(crate) db_query_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 }
 
-pub(crate) struct Repo {
-    pub(crate) tg_chat: TgChatRepo,
-}
-
-pub(crate) async fn init(config: Config) -> Result<Repo> {
+pub(crate) async fn init(config: Config) -> Result<sqlx::PgPool> {
     let mut connect_options = config.url.as_str().parse::<PgConnectOptions>()?;
 
     connect_options.log_statements(log::LevelFilter::Debug);
@@ -42,7 +38,5 @@ pub(crate) async fn init(config: Config) -> Result<Repo> {
     // Validate that our constraint names in code are fresh
     constraints::validate(db.clone()).await;
 
-    Ok(Repo {
-        tg_chat: TgChatRepo::new(db),
-    })
+    Ok(db)
 }
