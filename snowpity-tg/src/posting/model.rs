@@ -187,11 +187,21 @@ pub(crate) struct Author {
     /// The main nick name or real name of the authors they is known under
     pub(crate) name: String,
 
+    /// The kind of the author that when defined specifies what role the
+    /// author played in the creation of the post
+    pub(crate) kind: Option<AuthorKind>,
+
     /// Link to the authors's web page.
     ///
     /// It's either the authors's profile/home page, or a query for their posts
     /// if the web site identifies authors by tags (like derpibooru)
     pub(crate) web_url: Url,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum AuthorKind {
+    /// The author is not the original creator, but the editor
+    Editor,
 }
 
 impl BasePost {
@@ -200,11 +210,13 @@ impl BasePost {
         let authors: Vec<_> = self
             .authors
             .iter()
-            .map(|artist| {
-                markdown::link(
-                    artist.web_url.as_str(),
-                    &markdown::escape(artist.name.as_str()),
-                )
+            .map(|author| {
+                let author_entry = if matches!(author.kind, Some(AuthorKind::Editor)) {
+                    format!("{} (editor)", author.name)
+                } else {
+                    author.name.clone()
+                };
+                markdown::link(author.web_url.as_str(), &markdown::escape(&author_entry))
             })
             .collect();
 

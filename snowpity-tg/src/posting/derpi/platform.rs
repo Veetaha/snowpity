@@ -49,10 +49,14 @@ impl PlatformTrait for Platform {
             .await?;
 
         let authors = media
-            .artists()
-            .map(|artist| Author {
-                web_url: api::artist_to_webpage_url(artist),
-                name: artist.to_owned(),
+            .authors()
+            .map(|author| Author {
+                web_url: author.web_url(),
+                kind: match author.kind {
+                    api::AuthorKind::Artist => None,
+                    api::AuthorKind::Editor => Some(AuthorKind::Editor),
+                },
+                name: author.name,
             })
             .collect();
 

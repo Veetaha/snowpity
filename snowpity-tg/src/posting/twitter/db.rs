@@ -1,9 +1,9 @@
-use crate::posting::{TgFileMeta};
-use crate::posting::twitter::api::{TweetId, MediaKey};
+use crate::posting::twitter::api::{MediaKey, TweetId};
+use crate::posting::TgFileMeta;
 use crate::prelude::*;
 use crate::Result;
-use sqlx_bat::prelude::*;
 use futures::prelude::*;
+use sqlx_bat::prelude::*;
 
 pub(crate) struct BlobCacheRepo {
     db: sqlx::PgPool,

@@ -7,11 +7,11 @@ use std::hash::Hash;
 use super::model::*;
 
 pub(crate) mod prelude {
-    pub(crate) use crate::posting::model::*;
     pub(crate) use super::{
-        parse_with_regexes, DisplayInFileName, DisplayInFileNameViaToString, DistinctPostMetaTrait,
-        ParseQueryResult, PlatformParams, PlatformTrait, PlatformTypes, ConfigTrait
+        parse_with_regexes, ConfigTrait, DisplayInFileName, DisplayInFileNameViaToString,
+        DistinctPostMetaTrait, ParseQueryResult, PlatformParams, PlatformTrait, PlatformTypes,
     };
+    pub(crate) use crate::posting::model::*;
 }
 
 // The name of the media host, e.g. "derpibooru.org" and the request ID

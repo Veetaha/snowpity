@@ -1,9 +1,9 @@
+use crate::fatal;
 use crate::http;
 use crate::posting::twitter::api::model::*;
 use crate::posting::twitter::Config;
 use crate::prelude::*;
 use crate::Result;
-use crate::fatal;
 
 http::def_url_base!(twitter_api, "https://api.twitter.com/2");
 

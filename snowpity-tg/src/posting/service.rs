@@ -268,7 +268,7 @@ impl Context {
 
         blob_cache_requests_total(vec![]).increment(1);
 
-        if blobs.len() == cached_blobs.len() {
+        if post.blobs.len() == blobs.len() {
             info!(blobs = blobs.len(), "Blobs cache hit");
             blob_cache_hits_total(vec![]).increment(1);
             return Ok(post.base.with_cached_blobs(blobs));

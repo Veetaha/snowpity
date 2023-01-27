@@ -119,7 +119,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
             .into_iter()
             .map(|blob| make_inline_query_result(&comments, &post.base, blob));
 
-        bot.answer_inline_query(&inline_query_id, results.clone())
+        bot.answer_inline_query(&inline_query_id, results)
             .is_personal(false)
             .cache_time(CACHE_TIME_SECS)
             .into_future()

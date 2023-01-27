@@ -139,6 +139,7 @@ impl From<api::User> for Author {
     fn from(user: api::User) -> Self {
         Self {
             web_url: user.web_url(),
+            kind: None,
             name: user.name,
         }
     }

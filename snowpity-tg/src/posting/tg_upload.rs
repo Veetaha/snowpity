@@ -290,9 +290,10 @@ impl TgUploadMethodContext<'_> {
             tg_file_type = %self.tg_file_type,
             tg_upload_method = %<&'static str>::from(&self.tg_upload_method),
             download_url = %self.blob.download_url,
-            blpb_kind = %self.blob.kind,
-            blpb_size = ?self.blob.size,
-            blpb_id = ?self.blob.id,
+            blob_kind = %self.blob.kind,
+            blob_size = ?self.blob.size,
+            blob_id = ?self.blob.id,
+            post_id = ?self.post.id,
         )
     }
 
