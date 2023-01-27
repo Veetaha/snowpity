@@ -6,7 +6,7 @@ mod tg_upload;
 
 pub(crate) mod platform;
 
-pub(crate) mod derpi;
+pub(crate) mod derpibooru;
 pub(crate) mod twitter;
 
 pub(crate) use all_platforms::*;

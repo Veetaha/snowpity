@@ -1,11 +1,11 @@
 use crate::http;
-use crate::posting::derpi::api::model::*;
-use crate::posting::derpi::Config;
+use crate::posting::derpibooru::api::model::*;
+use crate::posting::derpibooru::Config;
 use crate::prelude::*;
 use crate::Result;
 
-http::def_url_base!(pub(crate) derpi_api, "https://derpibooru.org/api/v1/json");
-http::def_url_base!(pub(crate) derpi, "https://derpibooru.org");
+http::def_url_base!(pub(crate) derpibooru_api, "https://derpibooru.org/api/v1/json");
+http::def_url_base!(pub(crate) derpibooru, "https://derpibooru.org");
 
 pub(crate) struct Client {
     http: http::Client,
@@ -23,7 +23,7 @@ impl Client {
     pub(crate) async fn get_media(&self, media_id: MediaId) -> Result<Media> {
         Ok(self
             .http
-            .get(derpi_api(["images", &media_id.to_string()]))
+            .get(derpibooru_api(["images", &media_id.to_string()]))
             .read_json::<GetImageResponse>()
             .await?
             .image)

@@ -2,7 +2,7 @@
 //! Use [TypeScript declarations] as a reference (though they may go out of date):
 //!
 //! [TypeScript declarations]: https://github.com/octet-stream/dinky/blob/master/lib/Dinky.d.ts
-use crate::posting::derpi::api::derpi;
+use crate::posting::derpibooru::api::derpibooru;
 use reqwest::Url;
 use serde::Deserialize;
 use strum::IntoEnumIterator;
@@ -134,7 +134,7 @@ pub(crate) struct Author {
 
 impl Author {
     pub(crate) fn web_url(&self) -> Url {
-        let mut url = derpi(["search"]);
+        let mut url = derpibooru(["search"]);
         let tag = format!("{}:{}", self.kind, self.name);
         url.query_pairs_mut().append_pair("q", &tag);
         url
@@ -143,6 +143,6 @@ impl Author {
 
 impl MediaId {
     pub(crate) fn to_webpage_url(self) -> Url {
-        derpi(["images", &self.to_string()])
+        derpibooru(["images", &self.to_string()])
     }
 }

@@ -1,5 +1,5 @@
 use super::platform::prelude::*;
-use super::{derpi, twitter};
+use super::{derpibooru, twitter};
 use crate::Result;
 use assert_matches::assert_matches;
 
@@ -196,7 +196,7 @@ macro_rules! def_all_platforms {
 }
 
 def_all_platforms! {
-    [derpi, Derpi],
+    [derpibooru, Derpibooru],
     [twitter, Twitter],
 }
 

@@ -1,5 +1,5 @@
-use crate::posting::derpi::api::{self, MediaId};
-use crate::posting::derpi::{db, Config};
+use crate::posting::derpibooru::api::{self, MediaId};
+use crate::posting::derpibooru::{db, Config};
 use crate::posting::platform::prelude::*;
 use crate::prelude::*;
 use crate::Result;

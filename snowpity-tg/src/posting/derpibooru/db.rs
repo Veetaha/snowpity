@@ -1,4 +1,4 @@
-use crate::posting::{derpi::api::MediaId, TgFileMeta};
+use crate::posting::{derpibooru::api::MediaId, TgFileMeta};
 use crate::prelude::*;
 use crate::Result;
 use sqlx_bat::prelude::*;
