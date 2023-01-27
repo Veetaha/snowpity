@@ -31,7 +31,7 @@ skip = [
   # in the ecosystem depend on the older version
   { name = "base64", version = "=0.13.1" },
 
-  # `from_variants` and `serde_with` depend on older version of `darling`
+  # `serde_with` depends on older version of `darling`
   { name = "darling", version = "=0.13.4" },
   { name = "darling_core", version = "=0.13.4" },
   { name = "darling_macro", version = "=0.13.4" },

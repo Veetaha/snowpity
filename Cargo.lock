@@ -654,27 +654,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "from_variants"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd6e0c314d32a210f213d2de7fc205a415498c32477022bffdb8927a95f44493"
-dependencies = [
- "from_variants_impl",
-]
-
-[[package]]
-name = "from_variants_impl"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "243da8644e4e4ac28a22f7f30187f9d3f17eafbc219884ff8935edb5ebfe621c"
-dependencies = [
- "darling 0.13.4",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "fs-err"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2325,7 +2304,6 @@ dependencies = [
  "easy-ext",
  "envy",
  "expect-test",
- "from_variants",
  "futures",
  "humansize",
  "itertools 0.10.5",
