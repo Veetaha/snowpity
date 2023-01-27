@@ -56,7 +56,7 @@ impl fmt::Debug for Envelope {
     }
 }
 
-pub(crate) fn spawn_service(ctx: Context) -> Client {
+pub(crate) fn spawn_service(ctx: Context) -> Handle {
     let (send, recv) = mpsc::channel(MAX_IN_FLIGHT);
     let service = Service {
         ctx,
@@ -64,13 +64,13 @@ pub(crate) fn spawn_service(ctx: Context) -> Client {
         return_slots: Default::default(),
         requests: recv,
     };
-    Client {
+    Handle {
         send: Some(send),
         join_handle: Some(tokio::spawn(service.run_loop())),
     }
 }
 
-pub(crate) struct Client {
+pub(crate) struct Handle {
     send: Option<mpsc::Sender<Envelope>>,
     join_handle: Option<tokio::task::JoinHandle<()>>,
 }
@@ -91,7 +91,7 @@ struct Service {
     requests: mpsc::Receiver<Envelope>,
 }
 
-impl Client {
+impl Handle {
     /// Resolves a post with the telegram file ids for all blobs attached to the post.
     ///
     /// It maintains a cache of blobs, that were already requested, using
@@ -113,7 +113,7 @@ impl Client {
     }
 }
 
-impl Drop for Client {
+impl Drop for Handle {
     fn drop(&mut self) {
         // Drop the sender to signal the service to exit.
         self.send = None;

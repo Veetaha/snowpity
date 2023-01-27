@@ -1,6 +1,6 @@
 {
   "db": "PostgreSQL",
-  "00ec46949ce9a286567f90165ae1f292a6037ad1d7902c74852442c8945db8f9": {
+  "122afb020c02fff40f486ddde828fd1fdd0c7265714d8ab0638f011828090e76": {
     "describe": {
       "columns": [
         {
@@ -24,9 +24,41 @@
         ]
       }
     },
-    "query": "select tg_file_id, tg_file_kind from tg_derpi_media_cache\n            where derpi_id = $1"
+    "query": "select tg_file_id, tg_file_kind from tg_derpibooru_blob_cache\n            where derpi_id = $1"
   },
-  "2f1def991a60e7a20143367400e5a6be3f3c664e8b9b41fa7f7027572bc70b89": {
+  "393eb8482138bb60e3fbd9aecf7bd6119fb29ec7c890bc606e1b3e0fc38a8049": {
+    "describe": {
+      "columns": [
+        {
+          "name": "conname",
+          "ordinal": 0,
+          "type_info": "Name"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "\n            select conname\n            from pg_catalog.pg_constraint\n            inner join pg_catalog.pg_namespace nsp\n            on nsp.oid = connamespace and nsp.nspname = 'public'\n            "
+  },
+  "48aa708459906f239a61d20f23c1021de777b5ec1ce61b81a0f224d8c68abeee": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Varchar",
+          "Int2"
+        ]
+      }
+    },
+    "query": "insert into tg_derpibooru_blob_cache (derpi_id, tg_file_id, tg_file_kind)\n            values ($1, $2, $3)"
+  },
+  "c09f36d26d156a09ff2d988a0e3e8ca03d006e68a4da7e0e8987a2b2532e7b5b": {
     "describe": {
       "columns": [],
       "nullable": [],
@@ -39,9 +71,9 @@
         ]
       }
     },
-    "query": "insert into tg_twitter_media_cache (\n                tweet_id,\n                media_key,\n                tg_file_id,\n                tg_file_kind\n            )\n            values ($1, $2, $3, $4)"
+    "query": "insert into tg_twitter_blob_cache (\n                tweet_id,\n                media_key,\n                tg_file_id,\n                tg_file_kind\n            )\n            values ($1, $2, $3, $4)"
   },
-  "3732483a7801ffba9314d44ef4cf9a87ed6260d97de134564c6608bfcb6a548e": {
+  "c9e557f08c7b42fce54e0025ed466fd8e246a6226f317e4a37db4a5ac5c83aef": {
     "describe": {
       "columns": [
         {
@@ -71,38 +103,6 @@
         ]
       }
     },
-    "query": "select media_key, tg_file_id, tg_file_kind\n            from tg_twitter_media_cache\n            where tweet_id = $1"
-  },
-  "393eb8482138bb60e3fbd9aecf7bd6119fb29ec7c890bc606e1b3e0fc38a8049": {
-    "describe": {
-      "columns": [
-        {
-          "name": "conname",
-          "ordinal": 0,
-          "type_info": "Name"
-        }
-      ],
-      "nullable": [
-        false
-      ],
-      "parameters": {
-        "Left": []
-      }
-    },
-    "query": "\n            select conname\n            from pg_catalog.pg_constraint\n            inner join pg_catalog.pg_namespace nsp\n            on nsp.oid = connamespace and nsp.nspname = 'public'\n            "
-  },
-  "bb1089d11ec3a0b60a0f4b5034c7d2dfee9c010ed98484391ee0a7f6698e3d93": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Varchar",
-          "Int2"
-        ]
-      }
-    },
-    "query": "insert into tg_derpi_media_cache (derpi_id, tg_file_id, tg_file_kind)\n            values ($1, $2, $3)"
+    "query": "select media_key, tg_file_id, tg_file_kind\n            from tg_twitter_blob_cache\n            where tweet_id = $1"
   }
 }

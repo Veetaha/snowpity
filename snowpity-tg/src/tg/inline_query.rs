@@ -43,7 +43,7 @@ metrics_bat::histograms! {
 }
 
 pub(crate) struct InlineQueryService {
-    posting: posting::Client,
+    posting: posting::Handle,
 }
 
 impl InlineQueryService {

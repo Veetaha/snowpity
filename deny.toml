@@ -55,8 +55,6 @@ skip-tree = []
 deny = []
 
 [sources]
-# FIXME: remove this once https://github.com/teloxide/teloxide/pull/764 is merged and available
-allow-git        = ["https://github.com/Veetaha/teloxide"]
 unknown-git      = "deny"
 unknown-registry = "warn"
 
