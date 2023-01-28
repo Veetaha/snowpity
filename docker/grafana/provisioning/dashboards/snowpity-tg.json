@@ -820,7 +820,7 @@
           "refId": "A"
         }
       ],
-      "title": "Telegram media uploade file  sizes",
+      "title": "Telegram media upload file sizes",
       "transparent": true,
       "type": "heatmap"
     },
@@ -1833,7 +1833,7 @@
                 "uid": "loki"
               },
               "editorMode": "code",
-              "expr": "{ source=\"snowpity-tg\" } | json | _target = \"panic\" |  line_format \"{{.message}} ----- {{.location}}\"",
+              "expr": "{ source=\"snowpity-tg\" } | json | _target = \"panic\" | line_format \"{{.message}} ----- {{.location}}\"",
               "queryType": "range",
               "refId": "A"
             }
