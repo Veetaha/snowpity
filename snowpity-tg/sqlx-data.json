@@ -1,30 +1,18 @@
 {
   "db": "PostgreSQL",
-  "122afb020c02fff40f486ddde828fd1fdd0c7265714d8ab0638f011828090e76": {
+  "11cd0d4df18e8102bb62e39f7e302b6f1891cff1254c6c8b365763108e059cd2": {
     "describe": {
-      "columns": [
-        {
-          "name": "tg_file_id",
-          "ordinal": 0,
-          "type_info": "Varchar"
-        },
-        {
-          "name": "tg_file_kind",
-          "ordinal": 1,
-          "type_info": "Int2"
-        }
-      ],
-      "nullable": [
-        false,
-        false
-      ],
+      "columns": [],
+      "nullable": [],
       "parameters": {
         "Left": [
-          "Int8"
+          "Int8",
+          "Varchar",
+          "Int2"
         ]
       }
     },
-    "query": "select tg_file_id, tg_file_kind from tg_derpibooru_blob_cache\n            where derpi_id = $1"
+    "query": "insert into tg_derpibooru_blob_cache (derpibooru_id, tg_file_id, tg_file_kind)\n            values ($1, $2, $3)"
   },
   "393eb8482138bb60e3fbd9aecf7bd6119fb29ec7c890bc606e1b3e0fc38a8049": {
     "describe": {
@@ -43,20 +31,6 @@
       }
     },
     "query": "\n            select conname\n            from pg_catalog.pg_constraint\n            inner join pg_catalog.pg_namespace nsp\n            on nsp.oid = connamespace and nsp.nspname = 'public'\n            "
-  },
-  "48aa708459906f239a61d20f23c1021de777b5ec1ce61b81a0f224d8c68abeee": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Varchar",
-          "Int2"
-        ]
-      }
-    },
-    "query": "insert into tg_derpibooru_blob_cache (derpi_id, tg_file_id, tg_file_kind)\n            values ($1, $2, $3)"
   },
   "c09f36d26d156a09ff2d988a0e3e8ca03d006e68a4da7e0e8987a2b2532e7b5b": {
     "describe": {
@@ -104,5 +78,31 @@
       }
     },
     "query": "select media_key, tg_file_id, tg_file_kind\n            from tg_twitter_blob_cache\n            where tweet_id = $1"
+  },
+  "c9fa1598389eef6d48b59d958979747a38ca35874e5f6aacde44cecfad92c00f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tg_file_id",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "tg_file_kind",
+          "ordinal": 1,
+          "type_info": "Int2"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "select tg_file_id, tg_file_kind from tg_derpibooru_blob_cache\n            where derpibooru_id = $1"
   }
 }

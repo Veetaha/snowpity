@@ -23,5 +23,5 @@ pub(crate) struct Config {
 }
 
 impl ConfigTrait for Config {
-    const ENV_PREFIX: &'static str = "DERPI_";
+    const ENV_PREFIX: &'static str = "DERPIBOORU_";
 }
