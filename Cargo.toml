@@ -14,16 +14,12 @@ default-members = ["snowpity-tg"]
 debug = 0
 
 [workspace.package]
-version = "0.7.1"
+version = "0.8.0"
 
 authors = ["Veetaha <veetaha2@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 publish = false
-
-[patch.crates-io]
-# FIXME: remove this once https://github.com/teloxide/teloxide/pull/764 is merged and available
-teloxide-core = { git = "https://github.com/Veetaha/teloxide", branch = "feat/add-missing-restricted-fields" }
 
 [workspace.dependencies]
 anyhow                = "1.0"
@@ -33,6 +29,7 @@ async-trait           = "0.1"
 base64                = "0.21"
 bytes                 = "1.1"
 darling               = "0.14"
+derivative            = "2.2"
 derive_more           = "0.99"
 devx-cmd              = "0.5"
 display-error-chain   = "=0.1.1"
@@ -42,7 +39,6 @@ duplicate             = "0.4"
 easy-ext              = "1.0"
 envy                  = "0.4"
 expect-test           = "1.4"
-from_variants         = "1.0"
 fs-err                = "2.7"
 futures               = "0.3"
 governor              = "0.5"
@@ -86,7 +82,7 @@ serde                       = { version = "1.0", features = ["derive"] }
 serde_with                  = { version = "2.0", features = ["json"] }
 sqlx                        = { version = "0.6", features = ["runtime-tokio-rustls", "postgres", "macros", "chrono", "offline"] }
 strum                       = { version = "0.24", features = ["derive"] }
-teloxide                    = { version = "0.11", features = ["rustls"], default-features = false }
+teloxide                    = { version = "0.12", features = ["rustls"], default-features = false }
 test-log                    = { version = "0.2", features = ["trace"], default-features = false }
 timeago                     = { version = "0.4", features = ["chrono"] }
 tracing-error               = { version = "0.2", default-features = false }

@@ -8,5 +8,5 @@ pub(crate) struct Config {
     /// ID of the user, who owns the bot, and thus has full access to it
     pub(crate) maintainer: UserId,
 
-    pub(crate) media_cache_chat: ChatId,
+    pub(crate) blob_cache_chat: ChatId,
 }

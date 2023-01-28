@@ -63,8 +63,8 @@ impl tg::cmd::Command for Cmd {
                     (EXAMPLE_TWITTER_MEDIA_URL, "Twitter"),
                 ];
 
-                let buttons = examples.map(|(url, media_host)| {
-                    let text = format!("See {media_host} example");
+                let buttons = examples.map(|(url, platform)| {
+                    let text = format!("See {platform} example");
                     [InlineKeyboardButton::switch_inline_query_current_chat(
                         text, url,
                     )]

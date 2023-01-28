@@ -13,13 +13,13 @@ async-trait                 = { workspace = true }
 base64                      = { workspace = true }
 bytes                       = { workspace = true }
 chrono                      = { workspace = true, features = ["serde"] }
+derivative                  = { workspace = true }
 derive_more                 = { workspace = true }
 display-error-chain         = { workspace = true }
 dotenvy                     = { workspace = true }
 dptree                      = { workspace = true }
 easy-ext                    = { workspace = true }
 envy                        = { workspace = true }
-from_variants               = { workspace = true }
 futures                     = { workspace = true }
 humansize                   = { workspace = true }
 itertools                   = { workspace = true }

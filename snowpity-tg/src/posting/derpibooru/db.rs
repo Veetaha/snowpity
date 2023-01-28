@@ -1,22 +1,21 @@
-use crate::media_host::derpi;
+use crate::posting::{derpibooru::api::MediaId, TgFileMeta};
 use crate::prelude::*;
-use crate::tg::TgFileMeta;
 use crate::Result;
 use sqlx_bat::prelude::*;
 
-pub(crate) struct TgDerpiMediaCacheRepo {
+pub(crate) struct BlobCacheRepo {
     db: sqlx::PgPool,
 }
 
-impl TgDerpiMediaCacheRepo {
+impl BlobCacheRepo {
     pub(crate) fn new(db: sqlx::PgPool) -> Self {
         Self { db }
     }
 
     #[metered_db]
-    pub(crate) async fn set(&self, derpi_id: derpi::MediaId, tg_file: TgFileMeta) -> Result {
+    pub(crate) async fn set(&self, derpi_id: MediaId, tg_file: TgFileMeta) -> Result {
         sqlx::query!(
-            "insert into tg_derpi_media_cache (derpi_id, tg_file_id, tg_file_kind)
+            "insert into tg_derpibooru_blob_cache (derpi_id, tg_file_id, tg_file_kind)
             values ($1, $2, $3)",
             derpi_id.try_into_db()?,
             tg_file.id,
@@ -29,9 +28,9 @@ impl TgDerpiMediaCacheRepo {
     }
 
     #[metered_db]
-    pub(crate) async fn get(&self, derpi_id: derpi::MediaId) -> Result<Option<TgFileMeta>> {
+    pub(crate) async fn get(&self, derpi_id: MediaId) -> Result<Option<TgFileMeta>> {
         sqlx::query!(
-            "select tg_file_id, tg_file_kind from tg_derpi_media_cache
+            "select tg_file_id, tg_file_kind from tg_derpibooru_blob_cache
             where derpi_id = $1",
             derpi_id.try_into_db()?,
         )

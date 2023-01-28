@@ -16,8 +16,8 @@ macro_rules! def_constraints {
 
 def_constraints! {
     tg_chat_pk
-    tg_derpi_media_cache_pk
-    tg_twitter_media_cache_pk
+    tg_derpibooru_blob_cache_pk
+    tg_twitter_blob_cache_pk
 }
 
 pub(crate) async fn validate(pool: sqlx::PgPool) {

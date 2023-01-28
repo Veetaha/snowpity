@@ -212,7 +212,7 @@ def "main tf output" [] {
 }
 
 # Fetch the image metadata from derpibooru
-def "main derpi image" [id:int] {
+def "main derpibooru image" [id:int] {
     fetch $"https://derpibooru.org/api/v1/json/images/($id)" | get image | flatten representations | get 0
 }
 

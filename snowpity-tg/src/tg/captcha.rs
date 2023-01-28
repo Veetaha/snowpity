@@ -153,8 +153,7 @@ pub(crate) async fn handle_new_chat_members(
 
         if let Some(user) = users.first() {
             let is_captcha_enabled = ctx
-                .db
-                .tg_chat
+                .tg_chats
                 .get_or_update_captcha(db::TgChatQuery {
                     chat: &msg.chat,
                     requested_by: user,
@@ -506,6 +505,7 @@ fn restricted_to_chat_perms(restricted: &Restricted) -> ChatPermissions {
         can_invite_users,
         can_pin_messages,
         can_send_polls,
+        can_manage_topics,
     } = restricted;
 
     #[rustfmt::skip]
@@ -518,6 +518,7 @@ fn restricted_to_chat_perms(restricted: &Restricted) -> ChatPermissions {
         (can_invite_users,          ChatPermissions::INVITE_USERS),
         (can_pin_messages,          ChatPermissions::PIN_MESSAGES),
         (can_send_polls,            ChatPermissions::SEND_POLLS),
+        (can_manage_topics,         ChatPermissions::MANAGE_TOPICS),
     ];
 
     perms

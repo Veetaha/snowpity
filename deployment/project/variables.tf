@@ -11,7 +11,7 @@ variable "tg_bot_image_tag" {
   type     = string
 }
 
-variable "tg_bot_media_cache_chat" {
+variable "tg_bot_blob_cache_chat" {
   nullable = false
   type = object({
     prod = optional(string)

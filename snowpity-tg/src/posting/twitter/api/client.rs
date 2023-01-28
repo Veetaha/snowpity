@@ -1,16 +1,11 @@
+use crate::fatal;
+use crate::http;
+use crate::posting::twitter::api::model::*;
+use crate::posting::twitter::Config;
 use crate::prelude::*;
-use crate::{fatal, http, Result};
-use serde::Deserialize;
-
-pub(crate) mod rpc;
-pub(crate) use rpc::*;
+use crate::Result;
 
 http::def_url_base!(twitter_api, "https://api.twitter.com/2");
-
-#[derive(Clone, Deserialize)]
-pub struct Config {
-    bearer_token: String,
-}
 
 pub(crate) struct Client {
     http: http::Client,
@@ -88,7 +83,7 @@ mod tests {
         let client = Client::new(cfg, http::create_client());
 
         let tweet = client
-            .get_tweet(TweetId(1609634286050623492))
+            .get_tweet(TweetId::from_raw(1609634286050623492))
             .await
             .unwrap();
 

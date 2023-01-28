@@ -66,7 +66,7 @@ Then, create a file `deployment/project/terraform.tfvars` with the secrets and c
 
 ```hcl
 tg_bot_maintainer = "999999999"
-tg_bot_media_cache_chat = {
+tg_bot_blob_cache_chat = {
   prod = "-9999999999999"
   dev  = "..."
 }

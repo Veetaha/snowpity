@@ -1,8 +1,6 @@
-use super::{
-    Context, FileSize, MediaCacheError, MediaMeta, TgFileKind, TgFileMeta, KB,
-    MAX_DIRECT_URL_FILE_SIZE, MAX_DIRECT_URL_PHOTO_SIZE, MAX_FILE_SIZE, MAX_PHOTO_SIZE, MB,
-};
 use crate::observability::logging::prelude::*;
+use crate::posting::platform::prelude::*;
+use crate::posting::{Context, PostingError};
 use crate::prelude::*;
 use crate::{err, Result};
 use assert_matches::assert_matches;
@@ -17,12 +15,12 @@ const MB_F: f64 = MB as f64;
 
 metrics_bat::labels! {
     DownloadLabels {
-        media_kind,
-        tg_media_kind,
+        blob_kind,
+        tg_blob_kind,
     }
     TgUploadLabels {
-        media_kind,
-        tg_media_kind,
+        blob_kind,
+        tg_blob_kind,
         tg_upload_method,
     }
 }
@@ -34,15 +32,16 @@ enum TgUploadMethod {
 }
 
 metrics_bat::histograms! {
-    /// Number of seconds it took to upload derpibooru media to Telegram.
-    /// It doensn't include the time to query the media from derpibooru and db cache.
-    media_tg_upload_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
+    /// Number of seconds it took to upload a blob to Telegram.
+    /// It doensn't include the time to query the blob from the posting platform
+    /// and db cache.
+    blob_tg_upload_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 
-    /// Number of seconds it took to download media from derpibooru.
-    media_download_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
+    /// Number of seconds it took to download blob from the posting platform.
+    blob_download_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 
-    /// Size of media to be uploaded to Telegram
-    media_file_size_bytes = [
+    /// Size of blob to be uploaded to Telegram
+    blob_size_bytes = [
         KB_F * 4.,
         KB_F * 16.,
         KB_F * 64.,
@@ -58,15 +57,16 @@ metrics_bat::histograms! {
     ];
 }
 
-// TODO: pass only derpibooru media ID
 pub(crate) async fn upload(
     base: &Context,
-    media: &MediaMeta,
+    post: &BasePost,
+    blob: &Blob,
     requested_by: &teloxide::types::User,
 ) -> Result<TgFileMeta> {
     TgUploadContext {
         base,
-        media,
+        post,
+        blob,
         requested_by,
     }
     .upload()
@@ -77,7 +77,8 @@ pub(crate) async fn upload(
 struct TgUploadContext<'a> {
     #[deref(forward)]
     base: &'a Context,
-    media: &'a MediaMeta,
+    post: &'a BasePost,
+    blob: &'a Blob,
     requested_by: &'a teloxide::types::User,
 }
 
@@ -91,20 +92,20 @@ macro_rules! try_return_upload {
 
 impl TgUploadContext<'_> {
     async fn upload(&self) -> Result<TgFileMeta> {
-        if let FileSize::Approx(size) = self.media.size {
-            media_file_size_bytes(vec![]).record(size as f64);
+        if let BlobSize::Approx(size) = self.blob.size {
+            blob_size_bytes(vec![]).record(size as f64);
         }
 
-        use super::MediaKind::*;
+        use crate::posting::BlobKind::*;
 
-        match self.media.kind {
+        match self.blob.kind {
             ImageJpeg | ImagePng | ImageSvg => self.upload_image().await,
             AnimationMp4 => self.upload_mpeg4_gif().await,
             VideoMp4 => self.upload_video().await,
         }
     }
     async fn upload_image(&self) -> Result<TgFileMeta> {
-        let dim = &self.media.dimensions;
+        let dim = &self.blob.dimensions;
 
         // FIXME: resize the image if it doesn't fit into telegram's limit
         if dim.aspect_ratio() > 20.0 || dim.height + dim.width > 10000 {
@@ -112,7 +113,7 @@ impl TgUploadContext<'_> {
         }
 
         let ctx = self.file_kind(TgFileKind::Photo);
-        let approx_max_size = self.media.size.approx_max();
+        let approx_max_size = self.blob.size.approx_max();
 
         if approx_max_size <= MAX_DIRECT_URL_PHOTO_SIZE {
             try_return_upload!(ctx.direct_url());
@@ -121,7 +122,7 @@ impl TgUploadContext<'_> {
         let maybe_downloaded = if approx_max_size > MAX_PHOTO_SIZE {
             MaybeDownloaded::None
         } else {
-            let downloaded = ctx.download_media().await?;
+            let downloaded = ctx.download_blob().await?;
             if downloaded.size < MAX_PHOTO_SIZE {
                 try_return_upload!(ctx.downloaded(&downloaded));
             }
@@ -142,13 +143,13 @@ impl TgUploadContext<'_> {
     async fn upload_mp4(&self, file_kind: TgFileKind) -> Result<TgFileMeta> {
         let ctx = self.file_kind(file_kind);
 
-        // We can't rely on the size of the media, because it's not the size of MP4
+        // We can't rely on the size of the blob, because it's not the size of MP4
         // do this optimization with direct URL upload won't always work
-        if self.media.size.approx_max() <= MAX_DIRECT_URL_FILE_SIZE {
+        if self.blob.size.approx_max() <= MAX_DIRECT_URL_FILE_SIZE {
             try_return_upload!(ctx.direct_url());
         }
 
-        let downloaded = ctx.download_media().await?;
+        let downloaded = ctx.download_blob().await?;
 
         downloaded.try_size_less_than(MAX_FILE_SIZE)?;
 
@@ -158,14 +159,14 @@ impl TgUploadContext<'_> {
     async fn upload_document(&self, maybe_downloaded: MaybeDownloaded) -> Result<TgFileMeta> {
         let ctx = self.file_kind(TgFileKind::Document);
 
-        if self.media.size.approx_max() <= MAX_DIRECT_URL_FILE_SIZE {
+        if self.blob.size.approx_max() <= MAX_DIRECT_URL_FILE_SIZE {
             if let MaybeDownloaded::None = &maybe_downloaded {
                 try_return_upload!(ctx.direct_url());
             }
         }
 
         let downloaded = match maybe_downloaded {
-            MaybeDownloaded::None => ctx.download_media().await?,
+            MaybeDownloaded::None => ctx.download_blob().await?,
             MaybeDownloaded::Some(downloaded) => downloaded,
         };
 
@@ -195,11 +196,11 @@ struct Downloaded {
 
 impl Downloaded {
     /// We shouldn't trust derpibooru with the size of the file.
-    /// There was a precedent where a media with incorrect size was
+    /// There was a precedent where a blob with incorrect size was
     /// found. It was reported to derpibooru's Discord:
     /// https://discord.com/channels/430829008402251796/438029140659142657/1049534872739389440
     ///
-    /// The media that was reported is https://derpibooru.org/api/v1/json/images/1127198
+    /// The blob that was reported is https://derpibooru.org/api/v1/json/images/1127198
     /// When downloaded, the image's size is 4_941_837 bytes,
     /// but the API reports size as 5_259_062.
     ///
@@ -210,7 +211,7 @@ impl Downloaded {
         if self.size <= max_size {
             return Ok(());
         }
-        Err(err!(MediaCacheError::FileTooBig {
+        Err(err!(PostingError::BlobTooBig {
             actual: self.size,
             max: max_size
         }))
@@ -225,15 +226,15 @@ struct TgUploadKindContext<'a> {
 }
 
 impl TgUploadKindContext<'_> {
-    async fn download_media(&self) -> Result<Downloaded> {
+    async fn download_blob(&self) -> Result<Downloaded> {
         let labels = DownloadLabels {
-            media_kind: <&'static str>::from(self.media.kind),
-            tg_media_kind: <&'static str>::from(self.tg_file_type),
+            blob_kind: <&'static str>::from(self.blob.kind),
+            tg_blob_kind: <&'static str>::from(self.tg_file_type),
         };
 
         let bytes = self
-            .download_media_imp()
-            .record_duration(media_download_duration_seconds, labels)
+            .download_blob_imp()
+            .record_duration(blob_download_duration_seconds, labels)
             .await?;
 
         Ok(Downloaded {
@@ -242,10 +243,10 @@ impl TgUploadKindContext<'_> {
         })
     }
 
-    async fn download_media_imp(&self) -> Result<bytes::Bytes> {
+    async fn download_blob_imp(&self) -> Result<bytes::Bytes> {
         let (bytes, duration) = self
             .http
-            .get(self.media.download_url.clone())
+            .get(self.blob.download_url.clone())
             .read_bytes()
             .with_duration_ok()
             .await?;
@@ -288,15 +289,16 @@ impl TgUploadMethodContext<'_> {
             "tg_upload",
             tg_file_type = %self.tg_file_type,
             tg_upload_method = %<&'static str>::from(&self.tg_upload_method),
-            download_url = %self.media.download_url,
-            media_kind = %self.media.kind,
-            media_size = ?self.media.size,
-            media_id = ?self.media.id,
+            download_url = %self.blob.download_url,
+            blob_kind = %self.blob.kind,
+            blob_size = ?self.blob.size,
+            blob_id = ?self.blob.id,
+            post_id = ?self.post.id,
         )
     }
 
     fn warn_failed_upload(&self, err: &crate::Error) {
-        warn!(err = tracing_err(err), "Failed to upload media to telegram");
+        warn!(err = tracing_err(err), "Failed to upload blob to telegram");
     }
 
     #[instrument(skip_all)]
@@ -314,13 +316,13 @@ impl TgUploadMethodContext<'_> {
 
     async fn upload_imp(&self) -> Result<TgFileMeta> {
         let input_file = match &self.tg_upload_method {
-            TgUploadMethod::DirectUrl => InputFile::url(self.media.download_url.clone()),
+            TgUploadMethod::DirectUrl => InputFile::url(self.blob.download_url.clone()),
             TgUploadMethod::Downloaded(downloaded) => downloaded.file.clone(),
         };
 
-        let input_file = input_file.file_name(self.media.tg_file_name());
+        let input_file = input_file.file_name(self.blob.tg_file_name(self.post));
 
-        self.make_cached_media(self.upload_file(input_file).await?)
+        self.make_cached_blob(self.upload_file(input_file).await?)
     }
 
     async fn upload_file(&self, input_file: InputFile) -> Result<Message, teloxide::RequestError> {
@@ -328,25 +330,25 @@ impl TgUploadMethodContext<'_> {
             .tg_file_type
             .upload(
                 &self.bot,
-                self.cfg.media_cache_chat,
+                self.config.blob_cache_chat,
                 input_file,
                 self.caption(),
             )
             .with_duration_log("Send file to telegram")
-            .record_duration(media_tg_upload_duration_seconds, self.upload_labels())
+            .record_duration(blob_tg_upload_duration_seconds, self.upload_labels())
             .await
     }
 
     fn upload_labels(&self) -> TgUploadLabels<&'static str, &'static str, &'static str> {
         TgUploadLabels {
-            media_kind: <&'static str>::from(self.media.kind),
-            tg_media_kind: <&'static str>::from(&self.tg_upload_method),
+            blob_kind: <&'static str>::from(self.blob.kind),
+            tg_blob_kind: <&'static str>::from(&self.tg_upload_method),
             tg_upload_method: <&'static str>::from(self.tg_file_type),
         }
     }
 
     fn caption(&self) -> String {
-        let core_caption = self.media.caption();
+        let core_caption = self.post.caption();
         let requested_by = self.requested_by.md_link();
         let via_method = match &self.tg_upload_method {
             TgUploadMethod::DirectUrl => "direct URL",
@@ -359,7 +361,7 @@ impl TgUploadMethodContext<'_> {
         )
     }
 
-    fn make_cached_media(&self, msg: Message) -> Result<TgFileMeta> {
+    fn make_cached_blob(&self, msg: Message) -> Result<TgFileMeta> {
         let (actual_file_kind, file_meta) = self.find_file(msg)?;
 
         if actual_file_kind != self.tg_file_type {
@@ -381,17 +383,17 @@ impl TgUploadMethodContext<'_> {
         let common = assert_matches!(msg.kind, MessageKind::Common(common) => common);
 
         Ok(match common.media_kind {
-            Document(media) => (TgFileKind::Document, media.document.file),
-            Photo(media) => (
+            Document(blob) => (TgFileKind::Document, blob.document.file),
+            Photo(blob) => (
                 TgFileKind::Photo,
-                media.photo.into_iter().next().unwrap().file,
+                blob.photo.into_iter().next().unwrap().file,
             ),
-            Video(media) => (TgFileKind::Video, media.video.file),
-            Animation(media) => (TgFileKind::Mpeg4Gif, media.animation.file),
+            Video(blob) => (TgFileKind::Video, blob.video.file),
+            Animation(blob) => (TgFileKind::Mpeg4Gif, blob.animation.file),
             actual => {
-                return Err(err!(MediaCacheError::UnexpectedMediaKind {
+                return Err(err!(PostingError::UnexpectedMediaKind {
                     actual,
-                    expected: self.media.kind,
+                    expected: self.blob.kind,
                 }))
             }
         })

@@ -1,11 +1,11 @@
-use crate::media_host;
+use crate::posting;
 use crate::{db, tg};
 use serde::de::DeserializeOwned;
 
 pub struct Config {
     pub(crate) tg: tg::Config,
     pub(crate) db: db::Config,
-    pub(crate) media: media_host::Config,
+    pub(crate) posting: posting::Config,
 }
 
 impl Config {
@@ -13,7 +13,7 @@ impl Config {
         Self {
             tg: from_env_or_panic("TG_BOT_"),
             db: from_env_or_panic("DATABASE_"),
-            media: media_host::Config::load_or_panic(),
+            posting: posting::Config::load_or_panic(),
         }
     }
 }

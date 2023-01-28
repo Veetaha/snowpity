@@ -2,9 +2,10 @@
 //! Use [TypeScript declarations] as a reference (though they may go out of date):
 //!
 //! [TypeScript declarations]: https://github.com/octet-stream/dinky/blob/master/lib/Dinky.d.ts
-use super::derpi;
+use crate::posting::derpibooru::api::derpibooru;
 use reqwest::Url;
 use serde::Deserialize;
+use strum::IntoEnumIterator;
 
 const RATING_TAGS: &[&str] = &[
     "safe",
@@ -20,7 +21,7 @@ const RATING_TAGS: &[&str] = &[
     derive_more::Display, derive_more::FromStr, Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize,
 )]
 #[serde(transparent)]
-pub struct MediaId(u64);
+pub(crate) struct MediaId(u64);
 
 sqlx_bat::impl_try_into_db_via_newtype!(MediaId(u64));
 
@@ -79,10 +80,17 @@ impl Media {
         url
     }
 
-    pub(crate) fn artists(&self) -> impl Iterator<Item = &str> {
-        self.tags
-            .iter()
-            .filter_map(|tag| tag.strip_prefix("artist:"))
+    /// Returns all authors of the media. This includes the artists and the editors.
+    pub(crate) fn authors(&self) -> impl Iterator<Item = Author> + '_ {
+        self.tags.iter().filter_map(move |tag| {
+            let (prefix, value) = tag.split_once(':')?;
+            AuthorKind::iter()
+                .find(|kind| <&'static str>::from(kind) == prefix)
+                .map(|kind| Author {
+                    kind,
+                    name: value.to_owned(),
+                })
+        })
     }
 
     pub(crate) fn rating_tags(&self) -> impl Iterator<Item = &str> {
@@ -112,15 +120,29 @@ impl Media {
     }
 }
 
-pub(crate) fn artist_to_webpage_url(artist: &str) -> Url {
-    let mut url = derpi(["search"]);
-    let tag = format!("artist:{artist}");
-    url.query_pairs_mut().append_pair("q", &tag);
-    url
+#[derive(Debug, Deserialize, strum::IntoStaticStr, strum::Display, strum::EnumIter)]
+#[strum(serialize_all = "snake_case")]
+pub(crate) enum AuthorKind {
+    Artist,
+    Editor,
+}
+
+pub(crate) struct Author {
+    pub(crate) kind: AuthorKind,
+    pub(crate) name: String,
+}
+
+impl Author {
+    pub(crate) fn web_url(&self) -> Url {
+        let mut url = derpibooru(["search"]);
+        let tag = format!("{}:{}", self.kind, self.name);
+        url.query_pairs_mut().append_pair("q", &tag);
+        url
+    }
 }
 
 impl MediaId {
     pub(crate) fn to_webpage_url(self) -> Url {
-        derpi(["images", &self.to_string()])
+        derpibooru(["images", &self.to_string()])
     }
 }
