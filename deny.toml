@@ -52,7 +52,11 @@ skip = [
 ]
 skip-tree = []
 
-deny = []
+deny = [
+  # Using only `rustls` relives us from linking to openssl
+  { name = "native-tls" },
+  { name = "openssl" },
+]
 
 [sources]
 unknown-git      = "deny"
