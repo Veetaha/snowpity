@@ -198,6 +198,7 @@ macro_rules! def_all_platforms {
 def_all_platforms! {
     [derpibooru, Derpibooru],
     [twitter, Twitter],
+    [deviant_art, DeviantArt],
 }
 
 impl PlatformTypes for AllPlatforms {
