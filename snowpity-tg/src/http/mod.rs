@@ -1,27 +1,17 @@
+mod basic_ext;
+mod json_ext;
+
 use crate::prelude::*;
-use crate::util::prelude::*;
-use crate::{err, err_ctx, Result};
 use async_trait::async_trait;
-use bytes::Bytes;
-use easy_ext::ext;
 use reqwest_middleware::RequestBuilder;
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use std::time::{Duration, Instant};
 
-macro_rules! def_url_base {
-    ($vis:vis $ident:ident, $url:literal) => {
-        $vis fn $ident<T: AsRef<str>>(segments: impl IntoIterator<Item = T>) -> ::url::Url {
-            let mut url: ::url::Url = $url.parse().unwrap();
-            url.path_segments_mut().unwrap().extend(segments);
-            url
-        }
-    };
+pub(crate) mod prelude {
+    pub(crate) use super::basic_ext::{RequestBuilderBasicExt, ResponseBasicExt};
+    pub(crate) use super::json_ext::RequestBuilderJsonExt;
 }
-
-pub(crate) use def_url_base;
 
 metrics_bat::labels! {
     HttpRequestLabels { version, method, host }
@@ -171,106 +161,16 @@ fn request_labels(request: &reqwest::Request) -> HttpRequestLabels {
     }
 }
 
-#[ext(RequestBuilderExt)]
-#[async_trait]
-pub(crate) impl RequestBuilder {
-    async fn send_and_read_json<Req: Serialize + Send + Sync, Res: DeserializeOwned>(
-        self,
-        req: Req,
-    ) -> Result<Res> {
-        self.json(&req).read_json().await
-    }
-
-    async fn read_json<Res: DeserializeOwned>(self) -> Result<Res> {
-        let bytes = self.read_bytes().await?;
-
-        serde_json::from_slice(&bytes).map_err(|err| {
-            match std::str::from_utf8(&bytes) {
-                Ok(response_body) => warn!(%response_body, "Bad JSON response"),
-                Err(utf8_decode_err) => warn!(
-                    response_body = ?bytes,
-                    ?utf8_decode_err,
-                    "Bad JSON response"
-                ),
-            };
-            err!(HttpClientError::UnexpectedResponseJsonShape { source: err })
-        })
-    }
-
-    async fn read_bytes(self) -> Result<Bytes> {
-        let res = self
-            .send()
-            .await
-            .map_err(err_ctx!(HttpClientError::SendRequest))?;
-
-        let status = res.status();
-
-        if status.is_client_error() || status.is_server_error() {
-            let body = match res.text().await {
-                Ok(it) => it,
-                Err(err) => format!(
-                    "Could not collect the error response body text: {}",
-                    err.display_chain()
-                ),
-            };
-
-            return Err(err!(HttpClientError::BadResponseStatusCode {
-                status,
-                body
-            }));
-        }
-
-        res.bytes()
-            .await
-            .map_err(err_ctx!(HttpClientError::ReadResponse))
-    }
-
-    // async fn read_to_temp_file(self) -> Result<tempfile::TempPath> {
-    //     let file =
-    //         tempfile::NamedTempFile::new().map_err(err_ctx!(crate::IoError::CreateTempFile))?;
-
-    //     let (file, path) = file.into_parts();
-    //     let mut file = tokio::fs::File::from_std(file);
-
-    //     self.read_to_file_handle(&mut file).await?;
-
-    //     Ok(path)
-    // }
-
-    // async fn read_to_file_handle(self, file_handle: &mut tokio::fs::File) -> Result {
-    //     let mut stream = self
-    //         .send()
-    //         .await
-    //         .map_err(err_ctx!(HttpClientError::ReadResponse))?
-    //         .bytes_stream();
-
-    //     while let Some(chunk) = stream.next().await {
-    //         let chunk = chunk.map_err(err_ctx!(HttpClientError::ReadResponse))?;
-    //         file_handle
-    //             .write_all(&chunk)
-    //             .await
-    //             .map_err(err_ctx!(HttpClientError::WriteToFile))?;
-    //     }
-
-    //     file_handle
-    //         .flush()
-    //         .await
-    //         .map_err(err_ctx!(HttpClientError::FlushToFile))?;
-
-    //     Ok(())
-    // }
-}
-
 /// Errors at the layer of the HTTP API
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum HttpClientError {
-    #[error("Failed to send an http request")]
-    SendRequest { source: reqwest_middleware::Error },
+    #[error("HTTP request failed")]
+    Request { source: reqwest_middleware::Error },
 
-    #[error("Failed to read http response")]
-    ReadResponse { source: reqwest_middleware::Error },
+    #[error("Failed to read HTTP response")]
+    ReadPayload { source: reqwest_middleware::Error },
 
-    #[error("HTTP request has failed (http status code: {status}):\n{body}")]
+    #[error("HTTP request has failed (HTTP status code: {status}):\n{body}")]
     BadResponseStatusCode {
         status: reqwest::StatusCode,
         body: String,
@@ -278,11 +178,6 @@ pub(crate) enum HttpClientError {
 
     #[error("Received an unexpected response JSON object")]
     UnexpectedResponseJsonShape { source: serde_json::Error },
-    // #[error("Failed to write bytes to a file")]
-    // WriteToFile { source: std::io::Error },
-
-    // #[error("Failed to flush bytes to a file")]
-    // FlushToFile { source: std::io::Error },
 }
 
 #[cfg(test)]

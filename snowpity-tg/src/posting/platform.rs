@@ -9,7 +9,7 @@ use super::model::*;
 pub(crate) mod prelude {
     pub(crate) use super::{
         parse_with_regexes, ConfigTrait, DisplayInFileName, DisplayInFileNameViaToString,
-        DistinctPostMetaTrait, ParseQueryResult, PlatformParams, PlatformTrait, PlatformTypes,
+        ParseQueryResult, PlatformParams, PlatformTrait, PlatformTypes,
     };
     pub(crate) use crate::posting::model::*;
 }
@@ -27,7 +27,6 @@ pub(crate) trait PlatformTypes {
     type PostId: fmt::Debug + Clone + PartialEq + Eq + Hash + DisplayInFileName;
     type BlobId: fmt::Debug + Clone + PartialEq + Eq + Hash + DisplayInFileName;
     type RequestId: fmt::Debug + Clone + PartialEq + Eq + Hash;
-    type DistinctPostMeta: DistinctPostMetaTrait;
 }
 
 #[async_trait]
@@ -48,10 +47,6 @@ pub(crate) trait PlatformTrait: Sized + PlatformTypes {
 
     /// Save the information about the file uploaded to Telegram in the database.
     async fn set_cached_blob(&self, post: Self::PostId, blob: CachedBlobId<Self>) -> Result;
-}
-
-pub(crate) trait DistinctPostMetaTrait: Clone {
-    fn nsfw_ratings(&self) -> Vec<&str>;
 }
 
 pub(crate) trait ConfigTrait {

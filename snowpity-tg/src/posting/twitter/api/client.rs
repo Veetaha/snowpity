@@ -5,7 +5,7 @@ use crate::posting::twitter::Config;
 use crate::prelude::*;
 use crate::Result;
 
-http::def_url_base!(twitter_api, "https://api.twitter.com/2");
+crate::url::def!(twitter_api, "https://api.twitter.com/2");
 
 pub(crate) struct Client {
     http: http::Client,

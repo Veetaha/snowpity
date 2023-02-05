@@ -1,4 +1,5 @@
 mod macros;
+mod ext;
 
 use crate::prelude::*;
 use crate::util::DynError;
@@ -9,6 +10,7 @@ use thiserror::Error;
 use tracing_error::SpanTrace;
 
 pub(crate) use macros::*;
+pub(crate) use ext::*;
 
 pub type Result<T = (), E = Error> = std::result::Result<T, E>;
 
@@ -97,18 +99,6 @@ pub(crate) enum ErrorKind {
         source: crate::posting::twitter::TwitterError,
     },
 
-    #[error(transparent)]
-    MediaConv {
-        #[from]
-        source: crate::media_conv::MediaConvError,
-    },
-
-    #[error(transparent)]
-    Io {
-        #[from]
-        source: IoError,
-    },
-
     #[error("Not implemented yet: {message}")]
     // This variant is used only as a gag when we postpone the implementation
     // for the future, therefore it's not always used.
@@ -122,24 +112,6 @@ pub(crate) enum ErrorKind {
     Fatal {
         message: String,
         source: Option<Box<DynError>>,
-    },
-}
-
-impl From<std::io::Error> for ErrorKind {
-    fn from(err: std::io::Error) -> Self {
-        Self::Io { source: err.into() }
-    }
-}
-
-#[derive(Debug, Error)]
-pub(crate) enum IoError {
-    #[error("Failed to create a temporary file")]
-    CreateTempFile { source: std::io::Error },
-
-    #[error(transparent)]
-    Other {
-        #[from]
-        source: std::io::Error,
     },
 }
 
@@ -163,8 +135,6 @@ impl Error {
             | ErrorKind::Db { .. }
             | ErrorKind::Deserialize { .. }
             | ErrorKind::Posting { .. }
-            | ErrorKind::MediaConv { .. }
-            | ErrorKind::Io { .. }
             | ErrorKind::Todo { .. }
             | ErrorKind::Fatal { .. } => false,
         }

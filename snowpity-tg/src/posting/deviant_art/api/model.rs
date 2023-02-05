@@ -1,9 +1,8 @@
-use crate::http;
 use reqwest::Url;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr, PickFirst};
 
-http::def_url_base!(www_deviantart_com, "https://www.deviantart.com");
+crate::url::def!(www_deviantart_com, "https://www.deviantart.com");
 
 /// Numeric ID of the deviation. It is not the UUID from the API, but some (probably incremental)
 /// number that appears in the suffix of URLs. No documentation exists on this, but let's suppose
@@ -19,50 +18,57 @@ sqlx_bat::impl_try_into_db_via_newtype!(DeviationNumericId(u64));
 #[serde_as]
 #[derive(Debug, Deserialize)]
 pub(crate) struct GetOembedResponse {
-    version: String,
+    pub(crate) version: String,
 
     #[serde(rename = "type")]
-    kind: OembedResourceType,
+    pub(crate) kind: OembedResourceType,
 
-    url: Url,
+    pub(crate) url: Url,
 
-    author_name: String,
+    pub(crate) author_name: String,
 
-    author_url: Url,
+    pub(crate) author_url: Url,
 
-    safety: Option<Safety>,
+    pub(crate) safety: Option<Safety>,
 
+    /// XXX: This is very weird, and it is not documented anywhere, but
+    /// sometimes this field may be returned as a string, and sometimes as a number.
+    ///
+    /// Here are examples of both cases:
+    /// - Number: https://backend.deviantart.com/oembed?url=https://www.deviantart.com/deviation/754296933
+    /// - String: https://backend.deviantart.com/oembed?url=https://www.deviantart.com/deviation/699813776
+    ///
     #[serde_as(as = "PickFirst<(_, DisplayFromStr)>")]
-    width: u64,
+    pub(crate) width: u64,
 
-    height: u64,
+    /// XXX: Same weirdness may potentially be possible as with `width`
+    #[serde_as(as = "PickFirst<(_, DisplayFromStr)>")]
+    pub(crate) height: u64,
 
-    imagetype: ImageType,
+    // There is a field called `imagetype` here, but sometimess it is an empty
+    // string like here:
+    // - imagetype is the empty string for jpg:
+    //   https://backend.deviantart.com/oembed?url=https://www.deviantart.com/deviation/754296933
+    // - imagetype is the empty string for gif:
+    //   https://backend.deviantart.com/oembed?url=https://www.deviantart.com/deviation/776090835
+    // - imagetype is "png":
+    //   https://backend.deviantart.com/oembed?url=https://www.deviantart.com/deviation/699813776
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum OembedResourceType {
     Photo,
 }
 
-#[derive(strum::EnumString, serde_with::DeserializeFromStr, Clone)]
+#[derive(strum::EnumString, serde_with::DeserializeFromStr, Debug)]
 #[strum(serialize_all = "snake_case")]
 pub(crate) enum Safety {
     Nonadult,
     Adult,
 
     #[strum(default)]
-    Unknown(String),
-}
-
-#[derive(strum::EnumString, serde_with::DeserializeFromStr)]
-#[strum(serialize_all = "snake_case")]
-pub(crate) enum ImageType {
-    Png,
-
-    #[strum(default)]
-    Unknown(String),
+    Other(String),
 }
 
 /// Union of all possible information that can be parsed from a DeviantArt deviation URL.
@@ -73,6 +79,7 @@ pub(crate) enum ImageType {
 /// Used resources:
 /// - [Syfaro/foxbot source code](https://github.com/Syfaro/foxbot/blob/e1d0c97c77014c4bedb91577407e067e71a9a504/src/sites/mod.rs#L1611)
 /// - [Permalinks article](https://www.deviantart.com/ginkgowerkstatt/journal/Did-You-Know-Permalinks-456038680)
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum DeviationId {
     /// Represents several URL formats.
     ///

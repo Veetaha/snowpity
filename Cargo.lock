@@ -654,6 +654,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "from_variants"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd6e0c314d32a210f213d2de7fc205a415498c32477022bffdb8927a95f44493"
+dependencies = [
+ "from_variants_impl",
+]
+
+[[package]]
+name = "from_variants_impl"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "243da8644e4e4ac28a22f7f30187f9d3f17eafbc219884ff8935edb5ebfe621c"
+dependencies = [
+ "darling 0.13.4",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "fs-err"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2246,6 +2267,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "shlex"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
+
+[[package]]
 name = "signal-hook-registry"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2304,6 +2331,7 @@ dependencies = [
  "easy-ext",
  "envy",
  "expect-test",
+ "from_variants",
  "futures",
  "humansize",
  "itertools 0.10.5",
@@ -2325,6 +2353,7 @@ dependencies = [
  "serde_with",
  "serde_yaml",
  "sha2",
+ "shlex",
  "snowpity-tg-macros",
  "sqlx",
  "sqlx-bat",
@@ -3358,3 +3387,8 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
 ]
+
+[[patch.unused]]
+name = "from_variants"
+version = "1.0.2"
+source = "git+https://github.com/TedDriggs/from_variants?branch=master#5ced1950ed3f5bc01b10cf8c036588ac4b02558a"

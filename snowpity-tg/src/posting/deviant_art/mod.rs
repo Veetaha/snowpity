@@ -1,5 +1,5 @@
 mod api;
-// mod db;
+mod db;
 mod platform;
 
 pub(crate) use platform::*;

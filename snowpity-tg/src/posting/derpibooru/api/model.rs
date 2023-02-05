@@ -7,7 +7,7 @@ use reqwest::Url;
 use serde::Deserialize;
 use strum::IntoEnumIterator;
 
-const RATING_TAGS: &[&str] = &[
+const SAFETY_RATING_TAGS: &[&str] = &[
     "safe",
     "suggestive",
     "questionable",
@@ -93,11 +93,11 @@ impl Media {
         })
     }
 
-    pub(crate) fn rating_tags(&self) -> impl Iterator<Item = &str> {
+    pub(crate) fn safety_rating_tags(&self) -> impl Iterator<Item = &str> {
         self.tags
             .iter()
             .map(String::as_str)
-            .filter(|tag| RATING_TAGS.contains(tag))
+            .filter(|tag| SAFETY_RATING_TAGS.contains(tag))
     }
 
     /// URL of the media that best suits Telegram.

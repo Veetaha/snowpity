@@ -39,6 +39,7 @@ duplicate             = "0.4"
 easy-ext              = "1.0"
 envy                  = "0.4"
 expect-test           = "1.4"
+from_variants         = "1.0"
 fs-err                = "2.7"
 futures               = "0.3"
 governor              = "0.5"
@@ -61,6 +62,7 @@ reqwest-retry         = "0.2"
 serde_json            = "1.0"
 serde_yaml            = "0.9"
 sha2                  = "0.10"
+shlex                 = "1.1"
 syn                   = "1.0"
 sysinfo               = "0.27"
 task-local-extensions = "0.1"
@@ -95,3 +97,7 @@ metrics-bat        = { path = "metrics-bat" }
 metrics-bat-macros = { path = "metrics-bat-macros" }
 snowpity-tg-macros = { path = "snowpity-tg-macros" }
 sqlx-bat           = { path = "sqlx-bat" }
+
+[patch.crates-io]
+# FIXME: remove this when `>1.0.1` version of this crate is released
+from_variants = { branch = "master", git = "https://github.com/TedDriggs/from_variants" }

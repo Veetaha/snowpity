@@ -4,10 +4,9 @@ use crate::posting::platform::prelude::*;
 use crate::prelude::*;
 use crate::Result;
 use async_trait::async_trait;
-use std::collections::BTreeSet;
 
 pub(crate) struct Platform {
-    client: api::Client,
+    api: api::Client,
     db: db::BlobCacheRepo,
 }
 
@@ -15,7 +14,6 @@ impl PlatformTypes for Platform {
     type PostId = MediaId;
     type BlobId = ();
     type RequestId = MediaId;
-    type DistinctPostMeta = DistinctPostMeta;
 }
 
 #[async_trait]
@@ -26,7 +24,7 @@ impl PlatformTrait for Platform {
 
     fn new(params: PlatformParams<Config>) -> Self {
         Self {
-            client: api::Client::new(params.config, params.http),
+            api: api::Client::new(params.config, params.http),
             db: db::BlobCacheRepo::new(params.db),
         }
     }
@@ -43,7 +41,7 @@ impl PlatformTrait for Platform {
 
     async fn get_post(&self, media: MediaId) -> Result<Post<Self>> {
         let media = self
-            .client
+            .api
             .get_media(media)
             .instrument(info_span!("Fetching media meta from Derpibooru"))
             .await?;
@@ -60,7 +58,12 @@ impl PlatformTrait for Platform {
             })
             .collect();
 
-        let ratings = media.rating_tags().map(ToOwned::to_owned).collect();
+        let safety = media.safety_rating_tags().map(ToOwned::to_owned).collect();
+        let safety = if safety == ["safe"] {
+            SafetyRating::Sfw
+        } else {
+            SafetyRating::Nsfw { kinds: safety }
+        };
 
         let dimensions = MediaDimensions {
             width: media.width,
@@ -89,7 +92,7 @@ impl PlatformTrait for Platform {
                 id: media.id,
                 authors,
                 web_url: media.id.to_webpage_url(),
-                distinct: DistinctPostMeta { ratings },
+                safety,
             },
             blobs: vec![blob],
         })
@@ -107,22 +110,6 @@ impl PlatformTrait for Platform {
 
     async fn set_cached_blob(&self, media: MediaId, blob: CachedBlobId<Self>) -> Result {
         self.db.set(media, blob.tg_file).await
-    }
-}
-
-#[derive(Clone)]
-pub(crate) struct DistinctPostMeta {
-    /// A set of tags `safe`, `suggestive`, `explicit`, etc.
-    ratings: BTreeSet<String>,
-}
-
-impl DistinctPostMetaTrait for DistinctPostMeta {
-    fn nsfw_ratings(&self) -> Vec<&str> {
-        self.ratings
-            .iter()
-            .filter(|tag| *tag != "safe")
-            .map(String::as_str)
-            .collect()
     }
 }
 
