@@ -89,6 +89,8 @@ services:
     command:
       - --storageDataPath=/storage
       - --promscrape.config=/prometheus.yml
+      # We don't generate too much metrics, so we can keep them for a long time
+      - --retentionPeriod=1y
 
     # Exposed the port, because grafana-agent uses host network mode
     # and needs to push metrics to victoria-metrics as well

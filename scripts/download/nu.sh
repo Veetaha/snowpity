@@ -6,7 +6,7 @@ script_dir=$(readlink -f $(dirname $0))
 
 . $script_dir/common.sh
 
-version=0.74.0
+version=0.76.0
 
 base_url="https://github.com/nushell/nushell/releases/download/$version"
 

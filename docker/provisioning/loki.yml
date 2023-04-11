@@ -1,3 +1,5 @@
+# The config was based on the default one taken from here:
+# https://github.com/grafana/loki/blob/main/cmd/loki/loki-docker-config.yaml
 
 # We don't care about auth in loki yet
 auth_enabled: false
@@ -25,6 +27,23 @@ schema_config:
       index:
         prefix: index_
         period: 24h
+
+# We are not using table_manager retention because see quotations from the docs
+# https://grafana.com/docs/loki/latest/operations/storage/retention/
+#
+# > Retention through the Table Manager is achieved by relying on the object store TTL feature
+# (we don't use an object store)
+#
+# > The Compactor retention will become the default and have long term support.
+# > It supports more granular retention policies on per tenant and per stream use cases.
+#
+# > When applying retention with the Compactor, the Table Manager is unnecessary.
+compactor:
+  retention_enabled: true
+  working_directory: /loki/retention
+
+limits_config:
+  retention_period: 180d
 
 # ruler:
 #   alertmanager_url: http://localhost:9093

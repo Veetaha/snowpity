@@ -3,7 +3,7 @@
 # Possible values: debug or release
 ARG RUST_BUILD_MODE="debug"
 
-FROM rust:1.67.0-bullseye as build_base
+FROM rust:1.68.2-bullseye as build_base
 
 ENV CARGO_NET_RETRY=50
 ENV CARGO_TERM_COLOR=always
@@ -42,6 +42,8 @@ ARG RUST_BUILD_MODE
 WORKDIR /app
 
 COPY scripts/install-runtime-deps.sh /app
+COPY scripts/download/common.sh /app/download/common.sh
+COPY scripts/download/ffmpeg.sh /app/download/ffmpeg.sh
 
 # The apt caching setup is inspired by https://vsupalov.com/buildkit-cache-mount-dockerfile/
 #
