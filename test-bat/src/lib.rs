@@ -19,7 +19,7 @@ pub fn assert_debug_eq(actual: &dyn fmt::Debug, expected: &Expect) {
 }
 
 /// Formats `actual` to string using [`fmt::Debug`] implementation of `actual`.
-/// If its string length exceeds aprroximately a single-screen amount of characters,
+/// If its string length exceeds approximately a single-screen amount of characters,
 /// it will be pretty-formatted with the `#` formatting specifier to fit its width
 /// into a single screen.
 pub fn make_debug_snapshot(actual: &dyn fmt::Debug) -> String {

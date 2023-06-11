@@ -72,7 +72,7 @@ pub(crate) enum Safety {
 ///
 /// DeviantArt doesn't seem to have documentation on URLs, so the following may break.
 ///
-/// The infromation was gathered from various unofficial resources and experimentation.
+/// The information was gathered from various unofficial resources and experimentation.
 /// Used resources:
 /// - [Syfaro/foxbot source code](https://github.com/Syfaro/foxbot/blob/e1d0c97c77014c4bedb91577407e067e71a9a504/src/sites/mod.rs#L1611)
 /// - [Permalinks article](https://www.deviantart.com/ginkgowerkstatt/journal/Did-You-Know-Permalinks-456038680)
@@ -111,8 +111,8 @@ pub(crate) enum DeviationId {
     },
 
     /// - Deviation URL with numeric deviation ID (from permalinks article).
-    ///   Only `www` subdomain is suppported by oembed API. Links without of
-    ///   this format, but without the `www` domain perfix will be rejected with 404
+    ///   Only `www` subdomain is supported by oembed API. Links without of
+    ///   this format, but without the `www` domain prefix will be rejected with 404
     ///   (found experimentally as of 2023-01-30).
     ///   - `https://deviantart.com/deviation/418078970`
     ///   - `https://wwww.deviantart.com/deviation/947204791`

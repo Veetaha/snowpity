@@ -340,7 +340,7 @@ impl TgUploadKindContext<'_> {
             // but the API reports size as 5_259_062.
             //
             // Unfortunately, it does't seem this bug will be fixed anytime soon,
-            // so the workaround is using the content legth information from the
+            // so the workaround is using the content length information from the
             // blob URL download endpoint
             if content_length > max_size {
                 return Err(err!(PostingError::BlobTooBig {

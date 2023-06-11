@@ -7,7 +7,7 @@ script_dir=$(readlink -f $(dirname $0))
 . $script_dir/common.sh
 
 # Download from https://johnvansickle.com/ffmpeg/
-# The URL format is not documented, it was just infered from the links on the page
+# The URL format is not documented, it was just inferred from the links on the page
 
 version=6.0
 
