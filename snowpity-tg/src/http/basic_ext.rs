@@ -55,8 +55,7 @@ pub(crate) impl RequestBuilder {
     }
 
     async fn read_bytes(self) -> Result<Bytes> {
-        self
-            .try_send()
+        self.try_send()
             .await?
             .bytes()
             .await
@@ -88,13 +87,13 @@ pub(crate) impl Response {
             file_handle
                 .write_all(&chunk)
                 .await
-                .fatal_ctx(|| format!("Failed to write HTTP stream chunk to file"))?;
+                .fatal_ctx(|| "Failed to write HTTP stream chunk to file")?;
         }
 
         file_handle
             .flush()
             .await
-            .fatal_ctx(|| format!("Failed to flush file created for HTTP stream"))?;
+            .fatal_ctx(|| "Failed to flush file created for HTTP stream")?;
 
         Ok(())
     }

@@ -81,7 +81,7 @@ impl PlatformTrait for Platform {
 
                 Ok(MultiBlob {
                     id: media.media_key,
-                    repr: vec![repr]
+                    repr: vec![repr],
                 })
             })
             .collect::<Result<_>>()?;

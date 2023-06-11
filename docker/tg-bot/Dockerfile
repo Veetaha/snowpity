@@ -3,7 +3,7 @@
 # Possible values: debug or release
 ARG RUST_BUILD_MODE="debug"
 
-FROM rust:1.68.2-bullseye as build_base
+FROM rust:1.70.0-bullseye as build_base
 
 ENV CARGO_NET_RETRY=50
 ENV CARGO_TERM_COLOR=always

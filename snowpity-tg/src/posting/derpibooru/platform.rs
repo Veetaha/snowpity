@@ -132,19 +132,21 @@ impl DisplayInFileNameViaToString for api::MediaId {}
 /// [wiki]: https://github.com/Veetaha/snowpity/wiki/Telegram-images-compression
 /// [sources]: https://github.com/philomena-dev/philomena/blob/743699c6afe38b20b23f866c2c1a590c86d6095e/lib/philomena/images/thumbnailer.ex#L16-L24
 fn best_tg_reprs(media: &api::Media) -> Vec<(Url, BlobKind)> {
-    let blob_kind = match media.mime_type {
-        api::MimeType::ImageJpeg => BlobKind::ImageJpeg,
-        api::MimeType::ImagePng => BlobKind::ImagePng,
-        api::MimeType::ImageSvgXml => BlobKind::ImageSvg,
+    match media.mime_type {
+        api::MimeType::ImageJpeg => vec![(media.view_url.clone(), BlobKind::ImageJpeg)],
+        api::MimeType::ImagePng => vec![(media.view_url.clone(), BlobKind::ImagePng)],
+        api::MimeType::ImageSvgXml => vec![(media.view_url.clone(), BlobKind::ImageSvg)],
         api::MimeType::ImageGif => {
-            return vec![
+            vec![
+                // First of all try to get an existing MP4 representation for the GIF
                 (media.unwrap_mp4_url(), BlobKind::AnimationMp4),
+                // If there is no MP4 representation, then generate it on the fly
+                // from the original GIF file
                 (media.view_url.clone(), BlobKind::AnimationGif),
             ]
         }
-        api::MimeType::VideoWebm => return vec![(media.unwrap_mp4_url(), BlobKind::VideoMp4)],
-    };
-    vec![(media.view_url.clone(), blob_kind)]
+        api::MimeType::VideoWebm => vec![(media.unwrap_mp4_url(), BlobKind::VideoMp4)],
+    }
 }
 
 #[cfg(test)]

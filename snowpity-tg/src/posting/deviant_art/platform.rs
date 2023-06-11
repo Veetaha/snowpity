@@ -49,7 +49,6 @@ impl PlatformTrait for Platform {
                 let art = art.to_owned();
                 let author = author.to_owned();
 
-
                 let host = format!("{host_prefix}{{author}}.deviantart.com");
                 return Some((host, DeviationId::Full { author, art, id }));
             }

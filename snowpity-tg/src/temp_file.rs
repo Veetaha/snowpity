@@ -7,7 +7,7 @@ pub(crate) async fn create_temp_file() -> Result<NamedTempFile> {
     tokio::task::spawn_blocking(move || {
         tempfile::Builder::new()
             .tempfile()
-            .fatal_ctx(|| format!("Failed to create a temporary file"))
+            .fatal_ctx(|| "Failed to create a temporary file")
     })
     .await
     .unwrap()

@@ -1,5 +1,5 @@
 use super::platform::prelude::*;
-use super::{derpibooru, twitter, deviant_art};
+use super::{derpibooru, deviant_art, twitter};
 use crate::Result;
 use assert_matches::assert_matches;
 

@@ -18,10 +18,14 @@ sqlx_bat::impl_try_into_db_via_newtype!(DeviationNumericId(u64));
 #[serde_as]
 #[derive(Debug, Deserialize)]
 pub(crate) struct GetOembedResponse {
+    // Useful to determine the version of the Oembed response schema in debug representation
+    #[allow(dead_code)]
     pub(crate) version: String,
 
+    // Useful for debugging
+    #[allow(dead_code)]
     #[serde(rename = "type")]
-    pub(crate) kind: OembedResourceType,
+    pub(crate) kind: String,
 
     pub(crate) url: Url,
 
@@ -44,7 +48,6 @@ pub(crate) struct GetOembedResponse {
     /// XXX: Same weirdness may potentially be possible as with `width`
     #[serde_as(as = "PickFirst<(_, DisplayFromStr)>")]
     pub(crate) height: u64,
-
     // There is a field called `imagetype` here, but sometimess it is an empty
     // string like here:
     // - imagetype is the empty string for jpg:
@@ -53,12 +56,6 @@ pub(crate) struct GetOembedResponse {
     //   https://backend.deviantart.com/oembed?url=https://www.deviantart.com/deviation/776090835
     // - imagetype is "png":
     //   https://backend.deviantart.com/oembed?url=https://www.deviantart.com/deviation/699813776
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum OembedResourceType {
-    Photo,
 }
 
 #[derive(strum::EnumString, serde_with::DeserializeFromStr, Debug)]

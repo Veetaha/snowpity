@@ -23,7 +23,6 @@ use tokio::sync::oneshot;
 /// Duration for the new users to solve the captcha. If they don't reply
 /// in this time, they will be kicked.
 const CAPTCHA_VERIFICATION_TIMEOUT: Duration = Duration::from_secs(3 * 60);
-const CAPTCHA_VERIFICATION_TIMEOUT_TEXT: &str = "3 минуты";
 
 /// Duration that is added to [`CAPTCHA_VERIFICATION_TIMEOUT`] to guarantee that
 /// the restrictions for the user will be lifted after the timeout of the bot
@@ -185,7 +184,7 @@ pub(crate) async fn handle_new_chat_members(
                     &mention,
                     &markdown::escape(
                         "\nHi, new friend!\n\n\
-                        Ответь на капчу: "
+                        Ответь на капчу: ",
                     ),
                     "*Кто должен победить в войне?*",
                 ]
