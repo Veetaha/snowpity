@@ -1,5 +1,5 @@
-mod macros;
 mod ext;
+mod macros;
 
 use crate::prelude::*;
 use crate::util::DynError;
@@ -10,7 +10,10 @@ use thiserror::Error;
 use tracing_error::SpanTrace;
 
 pub(crate) use macros::*;
-pub(crate) use ext::*;
+
+pub(crate) mod prelude {
+    pub use super::ext::{OptionExt, ResultExt};
+}
 
 pub type Result<T = (), E = Error> = std::result::Result<T, E>;
 

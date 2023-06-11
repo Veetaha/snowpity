@@ -4,6 +4,7 @@ use crate::posting::platform::prelude::*;
 use crate::prelude::*;
 use crate::Result;
 use async_trait::async_trait;
+use reqwest::Url;
 
 pub(crate) struct Platform {
     api: api::Client,
@@ -29,14 +30,14 @@ impl PlatformTrait for Platform {
         }
     }
 
-    fn parse_query(query: &str) -> ParseQueryResult<'_, MediaId> {
+    fn parse_query(query: &str) -> ParseQueryResult<MediaId> {
         let (_, host, id) = parse_with_regexes!(
             query,
             r"(derpibooru.org(?:/images)?)/(\d+)",
             r"(derpicdn.net/img)/\d+/\d+/\d+/(\d+)",
             r"(derpicdn.net/img/(?:view|download))/\d+/\d+/\d+/(\d+)",
         )?;
-        Some((host, id.parse().ok()?))
+        Some((host.into(), id.parse().ok()?))
     }
 
     async fn get_post(&self, media: MediaId) -> Result<Post<Self>> {
@@ -70,22 +71,23 @@ impl PlatformTrait for Platform {
             height: media.height,
         };
 
-        use api::MimeType::*;
-        let size = match media.mime_type {
-            ImageJpeg | ImagePng | ImageSvgXml => BlobSize::approx_max_direct_photo_url(),
-            ImageGif | VideoWebm => BlobSize::approx_max_direct_file_url(),
-        };
+        let repr = best_tg_reprs(&media)
+            .into_iter()
+            .map(|(download_url, kind)| {
+                BlobRepr {
+                    dimensions,
+                    download_url,
+                    kind,
+                    // Sizes for images are ~good enough, although not always accurate,
+                    // but we don't know the size of MP4 equivalent for GIF or WEBM,
+                    // however those will often fit into the limit of uploading via direct URL.
+                    // Anyway, this is all not precise, so be it this way for now.
+                    size: BlobSize::Unknown,
+                }
+            })
+            .collect();
 
-        let blob = Blob {
-            id: (),
-            dimensions,
-            download_url: media.best_tg_url(),
-            kind: media.mime_type.into(),
-            // Sizes for images are ~good enough, although not always accurate,
-            // but we don't know the size of MP4 equivalent for GIF or WEBM,
-            // however those will often fit into the limit of uploading via direct URL.
-            size,
-        };
+        let blob = MultiBlob { id: (), repr };
 
         Ok(Post {
             base: BasePost {
@@ -115,16 +117,34 @@ impl PlatformTrait for Platform {
 
 impl DisplayInFileNameViaToString for api::MediaId {}
 
-impl From<api::MimeType> for BlobKind {
-    fn from(value: api::MimeType) -> Self {
-        match value {
-            api::MimeType::ImageGif => BlobKind::AnimationMp4,
-            api::MimeType::ImageJpeg => BlobKind::ImageJpeg,
-            api::MimeType::ImagePng => BlobKind::ImagePng,
-            api::MimeType::ImageSvgXml => BlobKind::ImageSvg,
-            api::MimeType::VideoWebm => BlobKind::VideoMp4,
+/// URL of the media that best suits Telegram.
+///
+/// Right now this is just the `view_url`, i.e. the original image representation.
+/// Best would be if derpibooru could generate the representation of an image for
+/// 2560x2560 pixels, but the biggest non-original representation is 1280x1024,
+/// according to philomena's [sources].
+///
+/// This doesn't however guarantee the images will have top-notch quality (see [wiki]).
+/// The GIFs don't use the `passthrough` flag when they are converted to MP4,
+/// which means the FPS of the MP4 may be lower than the original GIF, so we
+/// are re-generating the MP4 on the fly ourselves.
+///
+/// [wiki]: https://github.com/Veetaha/snowpity/wiki/Telegram-images-compression
+/// [sources]: https://github.com/philomena-dev/philomena/blob/743699c6afe38b20b23f866c2c1a590c86d6095e/lib/philomena/images/thumbnailer.ex#L16-L24
+fn best_tg_reprs(media: &api::Media) -> Vec<(Url, BlobKind)> {
+    let blob_kind = match media.mime_type {
+        api::MimeType::ImageJpeg => BlobKind::ImageJpeg,
+        api::MimeType::ImagePng => BlobKind::ImagePng,
+        api::MimeType::ImageSvgXml => BlobKind::ImageSvg,
+        api::MimeType::ImageGif => {
+            return vec![
+                (media.unwrap_mp4_url(), BlobKind::AnimationMp4),
+                (media.view_url.clone(), BlobKind::AnimationGif),
+            ]
         }
-    }
+        api::MimeType::VideoWebm => return vec![(media.unwrap_mp4_url(), BlobKind::VideoMp4)],
+    };
+    vec![(media.view_url.clone(), blob_kind)]
 }
 
 #[cfg(test)]

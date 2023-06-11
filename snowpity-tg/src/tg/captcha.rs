@@ -181,19 +181,15 @@ pub(crate) async fn handle_new_chat_members(
                 let user_id = user.id;
                 let tg::Ctx { bot, captcha, .. } = &*ctx;
 
-                let caption = format!(
-                    "{}{}{}{}",
-                    mention,
-                    markdown::escape(
-                        "\nHi, new friend! Привет, поняша :3\n\n\
+                let caption = [
+                    &mention,
+                    &markdown::escape(
+                        "\nHi, new friend!\n\n\
                         Ответь на капчу: "
                     ),
                     "*Кто должен победить в войне?*",
-                    markdown::escape(&format!(
-                        "\n\nУ тебя {CAPTCHA_VERIFICATION_TIMEOUT_TEXT} на правильный ответ, \
-                        иначе будешь кикнут.",
-                    ))
-                );
+                ]
+                .join("");
 
                 let payload_allow = CaptchaReplyPayload {
                     expected_user_id: user_id,
@@ -209,8 +205,8 @@ pub(crate) async fn handle_new_chat_members(
                 let payload_deny = encoding::secure_encode(&payload_deny);
 
                 let buttons = [[
-                    InlineKeyboardButton::callback("Украина 😉", payload_allow),
-                    InlineKeyboardButton::callback("Россия (бан) 🤨", payload_deny),
+                    InlineKeyboardButton::callback("Украина", payload_allow),
+                    InlineKeyboardButton::callback("Россия", payload_deny),
                 ]];
 
                 let restricted_until_date = {

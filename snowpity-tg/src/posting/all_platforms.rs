@@ -89,21 +89,8 @@ macro_rules! def_all_platforms {
                                 .blobs
                                 .into_iter()
                                 .map(|blob| {
-                                    let Blob {
-                                        id,
-                                        kind,
-                                        dimensions,
-                                        size,
-                                        download_url,
-                                    } = blob;
-
-                                    Blob {
-                                        id: BlobId::$Platform(id),
-                                        kind,
-                                        dimensions,
-                                        size,
-                                        download_url,
-                                    }
+                                    let MultiBlob { repr, id } = blob;
+                                    MultiBlob { repr, id: BlobId::$Platform(id) }
                                 })
                                 .collect();
 
@@ -168,7 +155,7 @@ macro_rules! def_all_platforms {
             }
         }
 
-        pub(crate) fn parse_query(input: &str) -> ParseQueryResult<'_, RequestId> {
+        pub(crate) fn parse_query(input: &str) -> ParseQueryResult<RequestId> {
             let input = input.trim();
 
             $(

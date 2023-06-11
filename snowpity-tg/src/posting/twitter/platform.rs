@@ -29,7 +29,7 @@ impl PlatformTrait for Platform {
         }
     }
 
-    fn parse_query(query: &str) -> ParseQueryResult<'_, TweetId> {
+    fn parse_query(query: &str) -> ParseQueryResult<TweetId> {
         // The regex was inspired by the one in the booru/scraper repository:
         // https://github.com/booru/scraper/blob/095771b28521b49ae67e30db2764406a68b74395/src/scraper/twitter.rs#L16
         let (_, host, id) = parse_with_regexes!(
@@ -37,7 +37,7 @@ impl PlatformTrait for Platform {
             r"((?:(?:mobile\.)|vx)?twitter.com)/[A-Za-z\d_]+/status/(\d+)",
         )?;
 
-        Some((host, id.parse().ok()?))
+        Some((host.into(), id.parse().ok()?))
     }
 
     async fn get_post(&self, tweet_id: TweetId) -> Result<Post<Self>> {
@@ -61,14 +61,11 @@ impl PlatformTrait for Platform {
                     api::MediaKind::Photo(_) => BlobSize::max_mb(5),
                     api::MediaKind::AnimatedGif(_) => BlobSize::max_mb(15),
 
-                    // Technically the video can be up to 512MB, but optimisticaly
-                    // we assume that most video are under 20MB to try uploading
-                    // them via a direct URL to telegram first
-                    api::MediaKind::Video(_) => BlobSize::approx_max_direct_file_url(),
+                    // Technically the video can be up to 512MB
+                    api::MediaKind::Video(_) => BlobSize::Unknown,
                 };
 
-                Ok(Blob {
-                    id: media.media_key,
+                let repr = BlobRepr {
                     kind: (&media.kind).into(),
                     // XXX: the dimensions are not always correct. They are for `orig`
                     // representation, but we use `large` one. However this is a
@@ -80,6 +77,11 @@ impl PlatformTrait for Platform {
                     },
                     size,
                     download_url,
+                };
+
+                Ok(MultiBlob {
+                    id: media.media_key,
+                    repr: vec![repr]
                 })
             })
             .collect::<Result<_>>()?;

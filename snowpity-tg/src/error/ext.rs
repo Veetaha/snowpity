@@ -13,10 +13,10 @@ impl<T, E> Result<T, E> {
         // doesn't propagate to them.
         match self {
             Ok(value) => Ok(value),
-            Err(err) => err!(ErrorKind::Fatal {
+            Err(err) => Err(err!(ErrorKind::Fatal {
                 message: message().into(),
                 source: Some(err.into()),
-            }),
+            })),
         }
     }
 }
@@ -32,10 +32,10 @@ impl<T> Option<T> {
         // doesn't propagate to them.
         match self {
             Some(value) => Ok(value),
-            None => err!(ErrorKind::Fatal {
+            None => Err(err!(ErrorKind::Fatal {
                 message: message().into(),
                 source: None,
-            }),
+            })),
         }
     }
 }

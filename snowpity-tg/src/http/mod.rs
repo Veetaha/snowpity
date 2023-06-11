@@ -100,25 +100,27 @@ impl reqwest_middleware::Middleware for InnermostObservingMiddleware {
 
         let duration = tracing_duration(duration);
 
-        match &result {
-            Ok(response) => {
-                let status = response.status();
-
-                if let Err(err) = response.error_for_status_ref() {
-                    warn!(
-                        err = tracing_err(&err),
-                        duration,
-                        %status,
-                        "Network request failed (error status)"
-                    );
-                } else {
-                    info!(duration, %status, "Network request succeeded");
-                }
-            }
+        let response = match &result {
+            Ok(response) => response,
             Err(err) => {
                 error!(duration, err = tracing_err(err), "Network request failed");
+                return result;
             }
         };
+
+        let status = response.status();
+
+        let Err(err) = response.error_for_status_ref() else {
+            info!(duration, %status, "Network request succeeded");
+            return result;
+        };
+
+        warn!(
+            err = tracing_err(&err),
+            duration,
+            %status,
+            "Network request failed (error status)"
+        );
 
         result
     }

@@ -15,7 +15,7 @@ pub(crate) mod prelude {
 }
 
 // The name of the media host, e.g. "derpibooru.org" and the request ID
-pub(crate) type ParseQueryResult<'i, R> = Option<(&'i str, R)>;
+pub(crate) type ParseQueryResult<R> = Option<(String, R)>;
 
 pub(crate) struct PlatformParams<C> {
     pub(crate) config: C,
@@ -37,7 +37,7 @@ pub(crate) trait PlatformTrait: Sized + PlatformTypes {
 
     fn new(params: PlatformParams<Self::Config>) -> Self;
 
-    fn parse_query(query: &str) -> ParseQueryResult<'_, Self::RequestId>;
+    fn parse_query(query: &str) -> ParseQueryResult<Self::RequestId>;
 
     /// Fetch metadata about the post from the posting platform.
     async fn get_post(&self, request: Self::RequestId) -> Result<Post<Self>>;
@@ -91,10 +91,12 @@ pub(crate) mod tests {
     #[track_caller]
     pub(crate) fn assert_parse_query(query: &str, expected: Expect) {
         let actual = if let Some((platform, id)) = all_platforms::parse_query(query) {
-            format!("{platform}:{id:?}")
+            let id = test_bat::make_debug_snapshot(&id);
+            format!("{platform}:{id}")
         } else {
             "None".to_owned()
         };
+
         expected.assert_eq(&actual);
     }
 

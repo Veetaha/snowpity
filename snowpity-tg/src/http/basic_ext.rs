@@ -55,7 +55,12 @@ pub(crate) impl RequestBuilder {
     }
 
     async fn read_bytes(self) -> Result<Bytes> {
-        self.try_send().await?
+        self
+            .try_send()
+            .await?
+            .bytes()
+            .await
+            .fatal_ctx(|| "Failed to read bytes from HTTP response")
     }
 }
 
@@ -63,10 +68,7 @@ pub(crate) impl RequestBuilder {
 #[async_trait]
 pub(crate) impl Response {
     async fn read_to_temp_file(self) -> Result<tempfile::TempPath> {
-        let file = create_temp_file().await?;
-
-        let (file, path) = file.into_parts();
-        let mut file = tokio::fs::File::from_std(file);
+        let (mut file, path) = create_temp_file().await?.into_tokio();
 
         self.read_to_file_handle(&mut file).await?;
 
@@ -76,7 +78,7 @@ pub(crate) impl Response {
     async fn read_to_file_handle(self, file_handle: &mut tokio::fs::File) -> Result {
         let mut stream = self.bytes_stream();
 
-        let file_handle = tokio::io::BufWriter::with_capacity(
+        let mut file_handle = tokio::io::BufWriter::with_capacity(
             1024 * 1024, // 1 MB
             file_handle,
         );

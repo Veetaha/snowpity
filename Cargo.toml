@@ -5,6 +5,7 @@ members = [
   "snowpity-tg-macros",
   "snowpity-tg",
   "sqlx-bat",
+  "test-bat",
   "xtask",
 ]
 
@@ -99,6 +100,7 @@ metrics-bat        = { path = "metrics-bat" }
 metrics-bat-macros = { path = "metrics-bat-macros" }
 snowpity-tg-macros = { path = "snowpity-tg-macros" }
 sqlx-bat           = { path = "sqlx-bat" }
+test-bat           = { path = "test-bat" }
 
 [patch.crates-io]
 # FIXME: remove this when `>1.0.1` version of this crate is released

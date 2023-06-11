@@ -20,9 +20,12 @@ dotenvy                     = { workspace = true }
 dptree                      = { workspace = true }
 easy-ext                    = { workspace = true }
 envy                        = { workspace = true }
+fast_image_resize           = { workspace = true }
 from_variants               = { workspace = true }
+fs-err                      = { workspace = true, features = ["tokio"] }
 futures                     = { workspace = true }
 humansize                   = { workspace = true }
+image                       = { workspace = true }
 itertools                   = { workspace = true }
 lazy-regex                  = { workspace = true }
 log                         = { workspace = true }
@@ -64,6 +67,7 @@ sqlx-bat           = { workspace = true }
 
 [dev-dependencies]
 expect-test = { workspace = true }
+test-bat    = { workspace = true }
 test-log    = { workspace = true }
 
 [build-dependencies]

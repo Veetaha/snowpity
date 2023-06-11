@@ -43,11 +43,11 @@ metrics_bat::histograms! {
 }
 
 pub(crate) struct InlineQueryService {
-    posting: posting::Handle,
+    posting: posting::PostingServiceHandle,
 }
 
 impl InlineQueryService {
-    pub(crate) fn new(ctx: posting::Context) -> Self {
+    pub(crate) fn new(ctx: posting::PostingContext) -> Self {
         Self {
             posting: posting::spawn_service(ctx),
         }
@@ -195,7 +195,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 fn make_inline_query_result(
     comments: &str,
     post: &posting::BasePost,
-    blob: posting::CachedBlob,
+    blob: posting::CachedBlobId,
 ) -> InlineQueryResult {
     let mut caption = post.caption();
     if !comments.is_empty() {
@@ -238,14 +238,16 @@ fn make_inline_query_result(
 /// XXX: This handler must be enabled manually via `/setinlinefeedback` command in
 /// Telegram BotFather, otherwise `ChosenInlineResult` updates will not be sent.
 pub(crate) async fn handle_chosen_inline_result(result: ChosenInlineResult) -> DynResult {
-    let platform = posting::parse_query(&result.query)
+    let posting_platform_host = posting::parse_query(&result.query)
         .map(|(host, _id)| host)
-        .unwrap_or("{unknown}");
+        .unwrap_or("{unknown}".to_owned());
 
-    chosen_inline_results_total(InlineQueryLabels {
-        posting_platform_host: platform.to_owned(),
-    })
-    .increment(1);
+    let labels = InlineQueryLabels {
+        posting_platform_host,
+    };
+
+    chosen_inline_results_total(labels).increment(1);
+
     Ok(())
 }
 

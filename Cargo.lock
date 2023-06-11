@@ -2642,6 +2642,7 @@ dependencies = [
  "task-local-extensions",
  "teloxide",
  "tempfile",
+ "test-bat",
  "test-log",
  "thiserror",
  "timeago",
@@ -3002,6 +3003,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be55cf8942feac5c765c2c993422806843c9a9a45d4d5c407ad6dd2ea95eb9b6"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "test-bat"
+version = "0.8.0"
+dependencies = [
+ "expect-test",
 ]
 
 [[package]]

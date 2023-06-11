@@ -1,62 +1,102 @@
 use crate::prelude::*;
-use crate::temp_file::create_temp_file;
-use crate::{err, err_ctx, Result};
+use crate::{fatal, Result};
+use std::path::Path;
 use std::process::Stdio;
-use url::Url;
+
+// pub(crate) async fn resize_image(data: bytes::Bytes) -> Result<tempfile::TempPath> {
+//     // fast_image_resize::Image::from_slice_u8(width, height, buffer, fast_image_resize::PixelType::)
+//     // use image::
+//     // use fast_image_resize::
+//     todo!()
+// }
 
 #[instrument]
-pub(crate) async fn gif_to_mp4(input: &[u8]) -> Result<tempfile::TempPath> {
-    let input = tempfile::NamedTempFile::new()
-        .map_err(err_ctx!(IoError::CreateTempFile))?
-        .into_temp_path();
+pub(crate) async fn gif_to_mp4(input: &Path) -> Result<tempfile::TempPath> {
+    let output = std::env::temp_dir().join(format!("{}.mp4", nanoid::nanoid!()));
+    let log_message = format!("Converting GIF to mp4 with output at {output:?}");
 
-    let output = tempfile::NamedTempFile::new()
-        .map_err(err_ctx!(IoError::CreateTempFile))?
-        .into_temp_path();
+    let output = tempfile::TempPath::from_path(output);
 
-    debug!(output = %output.display(), "Converting to mp4");
+    // This is inspired a bit by this code:
+    // https://github.com/philomena-dev/philomena/blob/master/lib/philomena/processors/gif.ex#L96
 
-    let status = ffmpeg([
-            // Overwrite output file without interactive confirmation
-            "-y",
-            "-i",
-            input.as_str(),
-            // ,
-            // MP4 videos using H.264 need to have a dimensions that are divisible by 2.
-            // This option ensures that's the case.
-            "scale=ceil(iw/2)*2:ceil(ih/2)*2",
+    // Rustfmt is doing a bad job of condensing this code, so let's disable it
+    #[rustfmt::skip]
+    ffmpeg(&[
+        // Overwrite output file without interactive confirmation
+        "-y",
 
-            // Set output format
-            // "-f",
-            // "mp4",
-        ])
-        .arg(&output)
-        .stdin(Stdio::null())
-        .spawn()
-        .map_err(err_ctx!(MediaConvError::SpawnFfmpeg))?
-        .wait()
-        .await
-        .map_err(err_ctx!(MediaConvError::WaitForFfmpeg))?;
+        // Force GIF format of the input
+        "-f",
+        "gif",
 
-    if status.success() {
-        return Ok(output);
-    }
+        // Set input path
+        "-i",
+        &input.to_string_lossy(),
 
-    Err(err!(MediaConvError::Ffmpeg { status }))
+        // Preserve the original FPS
+        "-fps_mode",
+        "passthrough",
+
+        // MP4 videos using H.264 need to have a dimensions that are divisible by 2.
+        // This option ensures that's the case.
+        "-vf",
+        "scale=ceil(iw/2)*2:ceil(ih/2)*2",
+
+        "-c:v",
+        "libx264",
+
+        // Experimentally determined it to be the most optimal one for our server class
+        "-preset",
+        "faster",
+
+        // Some video players require this setting, but Telegram doesn't seem to need
+        // this. So let's not enable it and see where this gets us
+        "-pix_fmt",
+        "yuv420p",
+
+        // It's the default value, but it's better to be explicit
+        "-crf",
+        "23",
+
+        // Fast start is needed to make the video playable before it's fully downloaded
+        "-movflags",
+        "+faststart",
+
+        // No audio channel is needed at all, because GIFs don't have sound
+        "-an",
+
+        &output.to_string_lossy(),
+    ])
+    .with_duration_log(&log_message)
+    .await?;
+
+    Ok(output)
 }
 
-async fn ffmpeg(args: Vec<String>) -> Result<Vec<u8>> {
+async fn ffmpeg(args: &[&str]) -> Result<Vec<u8>> {
+    let cmd = shlex::join(args.iter().copied());
     debug!(
-        cmd = %shlex::join(args.iter().map(String::as_str)),
+        %cmd,
         "Running ffmpeg"
     );
 
     let output = tokio::process::Command::new("ffmpeg")
         .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
         .kill_on_drop(true)
         .output()
-        .await?
-        .stdout;
+        .await
+        .fatal_ctx(|| format!("ffmpeg invocation failed. Command: `{cmd}`"))?;
 
-    Ok(output)
+    let status = output.status;
+
+    if !status.success() {
+        return Err(fatal!(
+            "ffmpeg invocation failed with status {status}.\nCommand: `{cmd}`"
+        ));
+    }
+
+    Ok(output.stdout)
 }
