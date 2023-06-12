@@ -48,7 +48,7 @@ pub(crate) fn create_client() -> Client {
                 "User-Agent",
                 concat!(
                     "SnowpityTelegramBot/",
-                    env!("VERGEN_BUILD_SEMVER"),
+                    env!("CARGO_PKG_VERSION"),
                     " (https://github.com/Veetaha/snowpity)",
                 ),
             )

@@ -29,14 +29,13 @@ async-recursion       = "1.0"
 async-trait           = "0.1"
 base64                = "0.21"
 bytes                 = "1.1"
-darling               = "0.14"
+darling               = "0.20"
 derivative            = "2.2"
 derive_more           = "0.99"
 devx-cmd              = "0.5"
 display-error-chain   = "=0.1.1"
 dotenvy               = "0.15"
 dptree                = "0.3"
-duplicate             = "1.0"
 easy-ext              = "1.0"
 envy                  = "0.4"
 expect-test           = "1.4"
@@ -51,7 +50,7 @@ inventory             = "0.3"
 itertools             = "0.10"
 lazy-regex            = "2.3"
 log                   = "0.4"
-metrics               = "0.20"
+metrics               = "0.21"
 nanoid                = "0.4"
 num_enum              = "0.6"
 ogg-opus              = "0.1"
@@ -66,8 +65,8 @@ serde_json            = "1.0"
 serde_yaml            = "0.9"
 sha2                  = "0.10"
 shlex                 = "1.1"
-syn                   = "1.0"
-sysinfo               = "0.28"
+syn                   = "2.0"
+sysinfo               = "0.29"
 task-local-extensions = "0.1"
 tempfile              = "3.3"
 thiserror             = "1.0"
@@ -79,12 +78,12 @@ wav_io                = "0.1"
 # Deps with feature overrides
 chrono                      = { version = "0.4", features = ["clock", "std"], default-features = false }
 clap                        = { version = "4.0", features = ["derive"] }
-metrics-exporter-prometheus = { version = "0.11", default-features = false }
+metrics-exporter-prometheus = { version = "0.12", default-features = false }
 reqwest                     = { version = "0.11", features = ["rustls-tls"], default-features = false }
 sea-query                   = { version = "0.28", features = ["attr"], default-features = false }
 sea-query-binder            = { version = "0.3", features = ["sqlx-postgres"], default-features = false }
 serde                       = { version = "1.0", features = ["derive"] }
-serde_with                  = { version = "2.0", features = ["json"] }
+serde_with                  = { version = "3.0", features = ["json"] }
 sqlx                        = { version = "0.6", features = ["runtime-tokio-rustls", "postgres", "macros", "chrono", "offline"] }
 strum                       = { version = "0.24", features = ["derive"] }
 teloxide                    = { version = "0.12", features = ["rustls"], default-features = false }
@@ -93,7 +92,7 @@ timeago                     = { version = "0.4", features = ["chrono"] }
 tracing-error               = { version = "0.2", default-features = false }
 tracing-loki                = { version = "0.2", features = ["rustls", "compat-0-2-1"], default-features = false }
 tracing-subscriber          = { version = "0.3", features = ["env-filter"] }
-vergen                      = { version = "7.2", features = ["build", "rustc", "git", "cargo"], default-features = false }
+vergen                      = { version = "8.2", features = ["build", "rustc", "git", "gix", "cargo"] }
 
 # Path deps
 metrics-bat        = { path = "metrics-bat" }
@@ -101,7 +100,3 @@ metrics-bat-macros = { path = "metrics-bat-macros" }
 snowpity-tg-macros = { path = "snowpity-tg-macros" }
 sqlx-bat           = { path = "sqlx-bat" }
 test-bat           = { path = "test-bat" }
-
-[patch.crates-io]
-# FIXME: remove this when `>1.0.1` version of this crate is released
-from_variants = { branch = "master", git = "https://github.com/TedDriggs/from_variants" }

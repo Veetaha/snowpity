@@ -133,13 +133,10 @@ impl tg::cmd::Command for Cmd {
                     }
                 }
 
-                let meta = vergen_meta!(
-                    "BUILD_SEMVER",
-                    "BUILD_DATE",
-                    "BUILD_TIME",
+                let meta = vergen_meta![
+                    "BUILD_TIMESTAMP",
                     "GIT_BRANCH",
-                    "GIT_COMMIT_DATE",
-                    "GIT_COMMIT_TIME",
+                    "GIT_COMMIT_TIMESTAMP",
                     "GIT_SHA",
                     "RUSTC_CHANNEL",
                     "RUSTC_COMMIT_DATE",
@@ -147,14 +144,18 @@ impl tg::cmd::Command for Cmd {
                     "RUSTC_HOST_TRIPLE",
                     "RUSTC_LLVM_VERSION",
                     "RUSTC_SEMVER",
-                    "CARGO_FEATURES",
-                    "CARGO_PROFILE",
                     "CARGO_TARGET_TRIPLE",
-                );
+                    "CARGO_DEBUG",
+                    "CARGO_OPT_LEVEL",
+                ];
 
-                let max_name_len = meta.iter().map(|(name, _)| name.len()).max().unwrap();
+                let meta = [("VERSION", env!("CARGO_PKG_VERSION"))]
+                    .into_iter()
+                    .chain(meta);
 
-                let metadata = meta.iter().format_with("\n", |(name, val), f| {
+                let max_name_len = meta.clone().map(|(name, _)| name.len()).max().unwrap();
+
+                let metadata = meta.format_with("\n", |(name, val), f| {
                     let name = name.to_lowercase();
                     let kv = format!("{name:<max_name_len$} = {val}");
                     f(&markdown::escape(&kv))

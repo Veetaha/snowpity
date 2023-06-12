@@ -18,8 +18,5 @@ type Result<T = (), E = darling::Error> = std::result::Result<T, E>;
 /// return type name ends with `Result` suffix.
 #[proc_macro_attribute]
 pub fn metered(opts: TokenStream, item: TokenStream) -> TokenStream {
-    let opts = syn::parse_macro_input!(opts as syn::AttributeArgs);
-    let item = syn::parse_macro_input!(item as syn::ItemFn);
-
     metered::generate(opts, item).map_or_else(|err| err.write_errors().into(), Into::into)
 }
