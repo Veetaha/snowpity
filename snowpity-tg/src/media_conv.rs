@@ -6,9 +6,9 @@ use std::process::Stdio;
 // TODO: we need these dependencies to resize images to fit into telegram's limits
 // Adding `use` statements to make sure `cargo-machete` doesn't mark them as unused
 #[allow(clippy::single_component_path_imports, unused_imports)]
-use image;
-#[allow(clippy::single_component_path_imports, unused_imports)]
 use fast_image_resize;
+#[allow(clippy::single_component_path_imports, unused_imports)]
+use image;
 
 // pub(crate) async fn resize_image(data: bytes::Bytes) -> Result<tempfile::TempPath> {
 //     // fast_image_resize::Image::from_slice_u8(width, height, buffer, fast_image_resize::PixelType::)
