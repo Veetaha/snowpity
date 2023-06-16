@@ -9,7 +9,9 @@ mod media_conv;
 mod observability;
 mod posting;
 mod sysinfo;
+mod temp_file;
 mod tg;
+mod url;
 
 pub mod util;
 
@@ -19,8 +21,11 @@ pub use observability::*;
 
 #[allow(unused_imports)]
 mod prelude {
-    pub(crate) use crate::http::RequestBuilderExt;
+    pub(crate) use crate::error::prelude::*;
+    pub(crate) use crate::http::prelude::*;
     pub(crate) use crate::observability::logging::prelude::*;
+    pub(crate) use crate::temp_file::NamedTempFileExt;
+    pub(crate) use crate::url::UrlExt;
     pub(crate) use crate::util::prelude::*;
     pub(crate) use snowpity_tg_macros::metered_db;
 }

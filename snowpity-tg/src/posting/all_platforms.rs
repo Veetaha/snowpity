@@ -1,5 +1,5 @@
 use super::platform::prelude::*;
-use super::{derpibooru, twitter};
+use super::{derpibooru, deviant_art, twitter};
 use crate::Result;
 use assert_matches::assert_matches;
 
@@ -38,24 +38,11 @@ macro_rules! def_all_platforms {
             }
         }
 
-        #[derive(Clone)]
-        pub(crate) enum DistinctPostMeta {
-            $( $Platform(<$platform::Platform as PlatformTypes>::DistinctPostMeta), )*
-        }
-
-        impl DistinctPostMeta {
+        impl PostId {
             /// Name of the posting platform that hosts the post.
             pub(crate) fn platform_name(&self) -> &'static str {
                 match self {
                     $( Self::$Platform(_) => <$platform::Platform as PlatformTrait>::NAME, )*
-                }
-            }
-        }
-
-        impl DistinctPostMetaTrait for DistinctPostMeta {
-            fn nsfw_ratings(&self) -> Vec<&str> {
-                match &self {
-                    $( Self::$Platform(distinct) => distinct.nsfw_ratings(), )*
                 }
             }
         }
@@ -102,21 +89,8 @@ macro_rules! def_all_platforms {
                                 .blobs
                                 .into_iter()
                                 .map(|blob| {
-                                    let Blob {
-                                        id,
-                                        kind,
-                                        dimensions,
-                                        size,
-                                        download_url,
-                                    } = blob;
-
-                                    Blob {
-                                        id: BlobId::$Platform(id),
-                                        kind,
-                                        dimensions,
-                                        size,
-                                        download_url,
-                                    }
+                                    let MultiBlob { repr, id } = blob;
+                                    MultiBlob { repr, id: BlobId::$Platform(id) }
                                 })
                                 .collect();
 
@@ -124,14 +98,14 @@ macro_rules! def_all_platforms {
                                 id,
                                 authors,
                                 web_url,
-                                distinct,
+                                safety,
                             } = post.base;
 
                             let base = BasePost {
                                 id: PostId::$Platform(id),
                                 authors,
                                 web_url,
-                                distinct: DistinctPostMeta::$Platform(distinct),
+                                safety,
                             };
 
                             Post { base, blobs }
@@ -181,7 +155,7 @@ macro_rules! def_all_platforms {
             }
         }
 
-        pub(crate) fn parse_query(input: &str) -> ParseQueryResult<'_, RequestId> {
+        pub(crate) fn parse_query(input: &str) -> ParseQueryResult<RequestId> {
             let input = input.trim();
 
             $(
@@ -198,11 +172,11 @@ macro_rules! def_all_platforms {
 def_all_platforms! {
     [derpibooru, Derpibooru],
     [twitter, Twitter],
+    [deviant_art, DeviantArt],
 }
 
 impl PlatformTypes for AllPlatforms {
     type RequestId = RequestId;
     type PostId = PostId;
     type BlobId = BlobId;
-    type DistinctPostMeta = DistinctPostMeta;
 }

@@ -28,7 +28,7 @@ def "main ssh cloud-init log" [
     --dump # Don't show the tail of the log file, but dump its full contents
 ] {
     let log_file = '/var/log/cloud-init-output.log'
-    let cmd = if $dump { "cat" } else { "tail --follow"}
+    let cmd = if $dump { "cat" } else { "tail --follow" }
     ssh $"sudo ($cmd) ($log_file)"
 }
 
@@ -60,6 +60,7 @@ def "main ssh" [
     code --folder-uri $"vscode-remote://ssh-remote+(ssh-str)"
 }
 
+# Returns the user@ip string for the app's server
 def "main ssh str" [] {
     ssh-str
 }
@@ -178,6 +179,7 @@ def "main deploy" [
     }
 }
 
+# Create a git tag with the current project's version and push it to the remote
 def "main tag" [] {
     git tag $"v(project-version)"
     git push --tags
@@ -213,7 +215,7 @@ def "main tf output" [] {
 
 # Fetch the image metadata from derpibooru
 def "main derpibooru image" [id:int] {
-    fetch $"https://derpibooru.org/api/v1/json/images/($id)" | get image | flatten representations | get 0
+    http get $"https://derpibooru.org/api/v1/json/images/($id)" | get image | flatten representations | get 0
 }
 
 # Get the ID of the telegram chat by its public tag.
@@ -224,7 +226,7 @@ def "main tg chat-id" [
     --bot-token: string
     --chat-tag: string
 ] {
-    fetch $"https://api.telegram.org/bot($bot_token)/sendMessage?chat_id=@($chat_tag)&text=snowpity"
+    http get $"https://api.telegram.org/bot($bot_token)/sendMessage?chat_id=@($chat_tag)&text=snowpity"
         | get result.chat.id
 }
 
@@ -233,6 +235,7 @@ def "main sqlx prepare" [] {
     with-debug cargo sqlx prepare
 }
 
+# Invoke `cargo test` with logging enabled
 def "main test" [...args: string] {
     cd (repo)
     let args = ([test '--'] | append $args)

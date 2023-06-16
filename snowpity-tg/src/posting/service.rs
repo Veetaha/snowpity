@@ -56,42 +56,47 @@ impl fmt::Debug for Envelope {
     }
 }
 
-pub(crate) fn spawn_service(ctx: Context) -> Handle {
+pub(crate) fn spawn_service(ctx: PostingContext) -> PostingServiceHandle {
     let (send, recv) = mpsc::channel(MAX_IN_FLIGHT);
-    let service = Service {
+    let service = PostingService {
         ctx,
         in_flight_futs: Default::default(),
         return_slots: Default::default(),
         requests: recv,
     };
-    Handle {
+    PostingServiceHandle {
         send: Some(send),
         join_handle: Some(tokio::spawn(service.run_loop())),
     }
 }
 
-pub(crate) struct Handle {
+pub(crate) struct PostingServiceHandle {
     send: Option<mpsc::Sender<Envelope>>,
     join_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 #[derive(Clone)]
-pub(crate) struct Context {
+pub(crate) struct PostingContext {
     pub(super) bot: tg::Bot,
     pub(super) config: Arc<tg::Config>,
     pub(super) http: http::Client,
     pub(super) platforms: Arc<posting::AllPlatforms>,
 }
 
-struct Service {
-    ctx: Context,
+struct PostingService {
+    ctx: PostingContext,
 
+    /// Pool of in-flight requests to the blob cache
     in_flight_futs: FuturesUnordered<BoxFuture<'static, (RequestId, Result<CachedPost>)>>,
+
+    /// Multiplexes the results of the cache requests to the callers
     return_slots: HashMap<RequestId, Vec<oneshot::Sender<Result<CachedPost>>>>,
+
+    /// Channel for incoming requests
     requests: mpsc::Receiver<Envelope>,
 }
 
-impl Handle {
+impl PostingServiceHandle {
     /// Resolves a post with the telegram file ids for all blobs attached to the post.
     ///
     /// It maintains a cache of blobs, that were already requested, using
@@ -113,7 +118,7 @@ impl Handle {
     }
 }
 
-impl Drop for Handle {
+impl Drop for PostingServiceHandle {
     fn drop(&mut self) {
         // Drop the sender to signal the service to exit.
         self.send = None;
@@ -132,7 +137,7 @@ impl Envelope {
     }
 }
 
-impl Service {
+impl PostingService {
     #[instrument(skip(self))]
     async fn run_loop(mut self) {
         loop {
@@ -222,7 +227,7 @@ impl Service {
     }
 }
 
-impl Context {
+impl PostingContext {
     pub(crate) fn new(
         bot: tg::Bot,
         config: Arc<tg::Config>,
@@ -255,14 +260,11 @@ impl Context {
             .blobs
             .iter()
             .filter_map(|blob| {
-                let cached_blob = cached_blobs
+                let blob = cached_blobs
                     .iter()
                     .find(|cached_blob| cached_blob.id == blob.id)?;
 
-                Some(CachedBlob {
-                    blob: blob.clone(),
-                    tg_file: cached_blob.tg_file.clone(),
-                })
+                Some(blob.clone())
             })
             .collect();
 
@@ -283,14 +285,13 @@ impl Context {
 
         let cached_blobs = stream::iter(post.blobs)
             .map(|blob| async {
-                let tg_file =
-                    tg_upload::upload(&self, &post.base, &blob, &request.requested_by).await?;
-
-                let cached_blob = CachedBlob { tg_file, blob };
+                let cached_blob = tg_upload::upload(&self, &post.base, blob, &request.requested_by)
+                    .await?
+                    .to_id();
 
                 let result = self
                     .platforms
-                    .set_cached_blob(post.base.id.clone(), cached_blob.to_id())
+                    .set_cached_blob(post.base.id.clone(), cached_blob.clone())
                     .await;
 
                 if let Err(err) = result {

@@ -9,13 +9,13 @@ use super::model::*;
 pub(crate) mod prelude {
     pub(crate) use super::{
         parse_with_regexes, ConfigTrait, DisplayInFileName, DisplayInFileNameViaToString,
-        DistinctPostMetaTrait, ParseQueryResult, PlatformParams, PlatformTrait, PlatformTypes,
+        ParseQueryResult, PlatformParams, PlatformTrait, PlatformTypes,
     };
     pub(crate) use crate::posting::model::*;
 }
 
 // The name of the media host, e.g. "derpibooru.org" and the request ID
-pub(crate) type ParseQueryResult<'i, R> = Option<(&'i str, R)>;
+pub(crate) type ParseQueryResult<R> = Option<(String, R)>;
 
 pub(crate) struct PlatformParams<C> {
     pub(crate) config: C,
@@ -27,7 +27,6 @@ pub(crate) trait PlatformTypes {
     type PostId: fmt::Debug + Clone + PartialEq + Eq + Hash + DisplayInFileName;
     type BlobId: fmt::Debug + Clone + PartialEq + Eq + Hash + DisplayInFileName;
     type RequestId: fmt::Debug + Clone + PartialEq + Eq + Hash;
-    type DistinctPostMeta: DistinctPostMetaTrait;
 }
 
 #[async_trait]
@@ -38,7 +37,7 @@ pub(crate) trait PlatformTrait: Sized + PlatformTypes {
 
     fn new(params: PlatformParams<Self::Config>) -> Self;
 
-    fn parse_query(query: &str) -> ParseQueryResult<'_, Self::RequestId>;
+    fn parse_query(query: &str) -> ParseQueryResult<Self::RequestId>;
 
     /// Fetch metadata about the post from the posting platform.
     async fn get_post(&self, request: Self::RequestId) -> Result<Post<Self>>;
@@ -48,10 +47,6 @@ pub(crate) trait PlatformTrait: Sized + PlatformTypes {
 
     /// Save the information about the file uploaded to Telegram in the database.
     async fn set_cached_blob(&self, post: Self::PostId, blob: CachedBlobId<Self>) -> Result;
-}
-
-pub(crate) trait DistinctPostMetaTrait: Clone {
-    fn nsfw_ratings(&self) -> Vec<&str>;
 }
 
 pub(crate) trait ConfigTrait {
@@ -96,10 +91,12 @@ pub(crate) mod tests {
     #[track_caller]
     pub(crate) fn assert_parse_query(query: &str, expected: Expect) {
         let actual = if let Some((platform, id)) = all_platforms::parse_query(query) {
-            format!("{platform}:{id:?}")
+            let id = test_bat::make_debug_snapshot(&id);
+            format!("{platform}:{id}")
         } else {
             "None".to_owned()
         };
+
         expected.assert_eq(&actual);
     }
 

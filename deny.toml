@@ -35,6 +35,9 @@ skip = [
   { name = "darling", version = "=0.13.4" },
   { name = "darling_core", version = "=0.13.4" },
   { name = "darling_macro", version = "=0.13.4" },
+  { name = "darling", version = "=0.14.4" },
+  { name = "darling_core", version = "=0.14.4" },
+  { name = "darling_macro", version = "=0.14.4" },
 
   # The ecosystem migration with `itertools` breaking changes seems to never end
   { name = "itertools", version = "=0.9.0" },
@@ -48,7 +51,30 @@ skip = [
 
   # Having `oldtime` feature by default in chrono is a huge mistake, because
   # people don't read docs and don't disable it explicitly 🥲
-  { name = "time", version = "=0.1.43" },
+  { name = "time", version = "=0.1.45" },
+
+  # Comes from `sqlx-core`
+  { name = "ahash", version = "=0.7.6" },
+  { name = "rustls", version = "=0.20.8" },
+  { name = "tokio-rustls", version = "=0.23.4" },
+
+  # Comes from `ring`
+  { name = "spin", version = "=0.5.2" },
+
+
+  # Comes from `png`
+  { name = "bitflags", version = "=1.3.2" },
+
+  # Comes from `imara-diff` and `indexmap`
+  { name = "hashbrown", version = "0.12.3" },
+  { name = "hashbrown", version = "0.13.2" },
+
+  # Comes through `bstr`
+  { name = "regex-syntax", version = "0.6.29" },
+
+  # I wish to witness the day when the ecosystem actually transitions to syn v2.
+  # I guess this won't ever happen, so be this line a memorial for syn v1!
+  { name = "syn", version = "=1.0.109" },
 ]
 skip-tree = []
 
@@ -104,3 +130,9 @@ license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 expression    = "ISC"
 license-files = [{ path = "LICENSE", hash = 0x001c7e6c }]
 name          = "webpki"
+
+[[licenses.clarify]]
+expression    = "ISC"
+license-files = [{ path = "LICENSE", hash = 0x001c7e6c }]
+# This seems like a fork of `webpki` crate higher
+name = "rustls-webpki"

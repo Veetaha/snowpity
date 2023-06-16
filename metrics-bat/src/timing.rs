@@ -99,7 +99,7 @@ where
         };
 
         let message = format!(
-            "BUG: label uses a name `{RESULT_LABEL}` that reserved for \
+            "BUG: label uses a name `{RESULT_LABEL}` that is reserved for \
             recording the result of a future: {existing_result:?}"
         );
 

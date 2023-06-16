@@ -7,7 +7,7 @@ use reqwest::Url;
 use serde::Deserialize;
 use strum::IntoEnumIterator;
 
-const RATING_TAGS: &[&str] = &[
+const SAFETY_RATING_TAGS: &[&str] = &[
     "safe",
     "suggestive",
     "questionable",
@@ -93,30 +93,11 @@ impl Media {
         })
     }
 
-    pub(crate) fn rating_tags(&self) -> impl Iterator<Item = &str> {
+    pub(crate) fn safety_rating_tags(&self) -> impl Iterator<Item = &str> {
         self.tags
             .iter()
             .map(String::as_str)
-            .filter(|tag| RATING_TAGS.contains(tag))
-    }
-
-    /// URL of the media that best suits Telegram.
-    ///
-    /// Right now this is just the `view_url`, i.e. the original image representation.
-    /// Best would be if derpibooru could generate the representation of an image for
-    /// 2560x2560 pixels, but the biggest non-original representation is 1280x1024,
-    /// according to philomena's [sources].
-    ///
-    /// This doesn't however guarantee the images will have top-notch quality (see [wiki]).
-    ///
-    /// [wiki]: https://github.com/Veetaha/snowpity/wiki/Telegram-images-compression
-    /// [sources]: https://github.com/philomena-dev/philomena/blob/743699c6afe38b20b23f866c2c1a590c86d6095e/lib/philomena/images/thumbnailer.ex#L16-L24
-    pub(crate) fn best_tg_url(&self) -> Url {
-        use MimeType::*;
-        match self.mime_type {
-            ImageJpeg | ImagePng | ImageSvgXml => self.view_url.clone(),
-            ImageGif | VideoWebm => self.unwrap_mp4_url(),
-        }
+            .filter(|tag| SAFETY_RATING_TAGS.contains(tag))
     }
 }
 

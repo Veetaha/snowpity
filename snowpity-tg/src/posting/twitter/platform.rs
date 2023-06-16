@@ -6,7 +6,7 @@ use crate::Result;
 use async_trait::async_trait;
 
 pub(crate) struct Platform {
-    client: api::Client,
+    api: api::Client,
     db: db::BlobCacheRepo,
 }
 
@@ -14,7 +14,6 @@ impl PlatformTypes for Platform {
     type PostId = TweetId;
     type BlobId = MediaKey;
     type RequestId = TweetId;
-    type DistinctPostMeta = DistinctPostMeta;
 }
 
 #[async_trait]
@@ -25,12 +24,12 @@ impl PlatformTrait for Platform {
 
     fn new(params: PlatformParams<Config>) -> Self {
         Self {
-            client: api::Client::new(params.config, params.http),
+            api: api::Client::new(params.config, params.http),
             db: db::BlobCacheRepo::new(params.db),
         }
     }
 
-    fn parse_query(query: &str) -> ParseQueryResult<'_, TweetId> {
+    fn parse_query(query: &str) -> ParseQueryResult<TweetId> {
         // The regex was inspired by the one in the booru/scraper repository:
         // https://github.com/booru/scraper/blob/095771b28521b49ae67e30db2764406a68b74395/src/scraper/twitter.rs#L16
         let (_, host, id) = parse_with_regexes!(
@@ -38,7 +37,7 @@ impl PlatformTrait for Platform {
             r"((?:(?:mobile\.)|vx)?twitter.com)/[A-Za-z\d_]+/status/(\d+)",
         )?;
 
-        Some((host, id.parse().ok()?))
+        Some((host.into(), id.parse().ok()?))
     }
 
     async fn get_post(&self, tweet_id: TweetId) -> Result<Post<Self>> {
@@ -47,12 +46,12 @@ impl PlatformTrait for Platform {
             media,
             tweet,
         } = self
-            .client
+            .api
             .get_tweet(tweet_id)
             .instrument(info_span!("Fetching media meta from Twitter"))
             .await?;
 
-        let blobs: Vec<_> = media
+        let blobs = media
             .into_iter()
             .map(|media| {
                 let download_url = media.best_tg_url()?;
@@ -62,14 +61,11 @@ impl PlatformTrait for Platform {
                     api::MediaKind::Photo(_) => BlobSize::max_mb(5),
                     api::MediaKind::AnimatedGif(_) => BlobSize::max_mb(15),
 
-                    // Technically the video can be up to 512MB, but optimisticaly
-                    // we assume that most video are under 20MB to try uploading
-                    // them via a direct URL to telegram first
-                    api::MediaKind::Video(_) => BlobSize::approx_max_direct_file_url(),
+                    // Technically the video can be up to 512MB
+                    api::MediaKind::Video(_) => BlobSize::Unknown,
                 };
 
-                Ok(Blob {
-                    id: media.media_key,
+                let repr = BlobRepr {
                     kind: (&media.kind).into(),
                     // XXX: the dimensions are not always correct. They are for `orig`
                     // representation, but we use `large` one. However this is a
@@ -81,6 +77,11 @@ impl PlatformTrait for Platform {
                     },
                     size,
                     download_url,
+                };
+
+                Ok(MultiBlob {
+                    id: media.media_key,
+                    repr: vec![repr],
                 })
             })
             .collect::<Result<_>>()?;
@@ -90,9 +91,7 @@ impl PlatformTrait for Platform {
                 id: tweet.id,
                 web_url: author.tweet_url(tweet.id),
                 authors: <_>::from_iter([author.into()]),
-                distinct: DistinctPostMeta {
-                    possibly_sensitive: tweet.possibly_sensitive,
-                },
+                safety: SafetyRating::sfw_if(!tweet.possibly_sensitive),
             },
             blobs,
         })
@@ -114,21 +113,6 @@ impl PlatformTrait for Platform {
 
     async fn set_cached_blob(&self, tweet: TweetId, blob: CachedBlobId<Self>) -> Result {
         self.db.set(tweet, blob.id, blob.tg_file).await
-    }
-}
-
-#[derive(Clone)]
-pub(crate) struct DistinctPostMeta {
-    /// If true the tweet may contain mature content
-    possibly_sensitive: bool,
-}
-
-impl DistinctPostMetaTrait for DistinctPostMeta {
-    fn nsfw_ratings(&self) -> Vec<&str> {
-        if self.possibly_sensitive {
-            return vec!["nsfw"];
-        }
-        vec![]
     }
 }
 

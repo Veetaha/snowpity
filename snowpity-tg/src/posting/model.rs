@@ -13,11 +13,29 @@ use teloxide::utils::markdown;
 pub(crate) const KB: u64 = 1024;
 pub(crate) const MB: u64 = 1024 * KB;
 
-pub(crate) const MAX_DIRECT_URL_PHOTO_SIZE: u64 = 5 * MB;
-pub(crate) const MAX_PHOTO_SIZE: u64 = 10 * MB;
+pub(crate) struct UploadMethodSizeRestriction {
+    /// Maximum size of the blob that is possible to upload via passing a URL to Telegram.
+    /// It is the most efficient way to upload a blob, because Telegram will download it
+    /// without any additional traffic from our side.
+    pub(crate) by_url: u64,
 
-pub(crate) const MAX_DIRECT_URL_FILE_SIZE: u64 = 20 * MB;
-pub(crate) const MAX_FILE_SIZE: u64 = 50 * MB;
+    /// Maximum size of a photo that is possible to upload via multi-part request to Telegram.
+    /// It is the least efficient way to upload a blob, because we need to do an intermediate
+    /// download of the blob and then upload it to Telegram.
+    pub(crate) by_multipart: u64,
+}
+
+/// Telegram size restrictions for photo uploads
+pub(crate) const MAX_TG_PHOTO_SIZE: UploadMethodSizeRestriction = UploadMethodSizeRestriction {
+    by_url: 5 * MB,
+    by_multipart: 10 * MB,
+};
+
+/// Telegram size restrictions for document and video uploads
+pub(crate) const MAX_TG_FILE_SIZE: UploadMethodSizeRestriction = UploadMethodSizeRestriction {
+    by_url: 20 * MB,
+    by_multipart: 50 * MB,
+};
 
 #[derive(Debug, Clone, Copy, strum::IntoStaticStr, strum::Display)]
 pub(crate) enum BlobKind {
@@ -28,6 +46,10 @@ pub(crate) enum BlobKind {
 
     /// Soundless MP4 video is considered to be an animation
     AnimationMp4,
+
+    /// Best not to have gifs, but MP4s. Use this only if MP4 is not supported
+    /// from the source. It means we'll need to convert the gif to MP4.
+    AnimationGif,
 }
 
 /// Determines the API method used when the blob was uploaded to Telegram.
@@ -88,11 +110,11 @@ pub(crate) struct CachedBlobId<Service: PlatformTypes = AllPlatforms> {
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""))]
 pub(crate) struct CachedBlob<Service: PlatformTypes = AllPlatforms> {
-    pub(crate) blob: Blob<Service>,
+    pub(crate) blob: UniBlob<Service>,
     pub(crate) tg_file: TgFileMeta,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct MediaDimensions {
     pub(crate) width: u64,
     pub(crate) height: u64,
@@ -101,12 +123,6 @@ pub(crate) struct MediaDimensions {
 /// The sizes are measured in bytes
 #[derive(Clone, Debug)]
 pub(crate) enum BlobSize {
-    /// The size of the file is known approximately. The margin for error is
-    /// low, so we can optimistically consider it as an exact size. We still
-    /// fall back to less efficient upload methods if the actual size is
-    /// greater than expected.
-    Approx(u64),
-
     /// The upper bound of the file size is known.
     /// For example, such information can be obtained from the media hosting
     /// platform docs, where they set limits on file sizes.
@@ -115,10 +131,25 @@ pub(crate) enum BlobSize {
     /// if exact size isn't specified in the API response.
     Max(u64),
 
-    /// The exact maximum size of the file is not know, but it's optimistic
-    /// estimate is heuristicially assumed to be this. This value is not a
-    /// reliable source of information, but it's better than nothing.
-    ApproxMax(u64),
+    Unknown,
+}
+
+#[derive(Clone)]
+pub(crate) enum SafetyRating {
+    /// SFW - safe for work
+    Sfw,
+
+    /// NSFW - not safe for work
+    Nsfw {
+        /// Describes the the kind of NSFW that may be seen in the content
+        /// with more detail.
+        ///
+        /// Not all platforms provide more level of detail
+        /// than just SFW/NSFW, so this field may be empty.
+        ///
+        /// Examples: "suggestive" or "questionable" (Derpibooru).
+        kinds: Vec<String>,
+    },
 }
 
 /// Basic information about the post that doesn't contain the list of blobs
@@ -138,7 +169,7 @@ pub(crate) struct BasePost<Service: PlatformTypes = AllPlatforms> {
     pub(crate) web_url: Url,
 
     /// Information specific to the posting platform
-    pub(crate) distinct: Service::DistinctPostMeta,
+    pub(crate) safety: SafetyRating,
 }
 
 /// Metadata about the post that includes the [`BasePostMeta`] and
@@ -147,7 +178,7 @@ pub(crate) struct Post<Service: PlatformTypes = AllPlatforms> {
     pub(crate) base: BasePost<Service>,
 
     /// List of blobs attached to the post. It may be empty
-    pub(crate) blobs: Vec<Blob<Service>>,
+    pub(crate) blobs: Vec<MultiBlob<Service>>,
 }
 
 /// Metadata about the post that is essentially an extension of [`Post`],
@@ -158,20 +189,15 @@ pub(crate) struct CachedPost<Service: PlatformTypes = AllPlatforms> {
     pub(crate) base: BasePost<Service>,
 
     /// List of blobs attached to the post. It may be empty
-    pub(crate) blobs: Vec<CachedBlob<Service>>,
+    pub(crate) blobs: Vec<CachedBlobId<Service>>,
 }
 
-/// Metadata about a blob
-#[derive(Derivative)]
-#[derivative(Clone(bound = ""))]
-pub(crate) struct Blob<Service: PlatformTypes = AllPlatforms> {
-    /// Unique identifier of the blob specific to the posting platform
-    pub(crate) id: Service::BlobId,
-
+#[derive(Debug, Clone)]
+pub(crate) struct BlobRepr {
     /// Describes whether this is an image, video, or an animation
     pub(crate) kind: BlobKind,
 
-    /// The dimensions of the blob, if it is visual kind of blob (which it always is today)
+    /// The dimensions of the blob, if it is a visual kind of blob (which it always is today)
     pub(crate) dimensions: MediaDimensions,
 
     /// Size of the blob in bytes if known. It should not be considered
@@ -180,6 +206,29 @@ pub(crate) struct Blob<Service: PlatformTypes = AllPlatforms> {
 
     /// URL of the resource where the blob can be downloaded from
     pub(crate) download_url: Url,
+}
+
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""))]
+pub(crate) struct UniBlob<Platform: PlatformTypes = AllPlatforms> {
+    /// Unique identifier of the blob specific to the posting platform
+    pub(crate) id: Platform::BlobId,
+    pub(crate) repr: BlobRepr,
+}
+
+/// Metadata about a blob
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""))]
+pub(crate) struct MultiBlob<Platform: PlatformTypes = AllPlatforms> {
+    /// Unique identifier of the blob specific to the posting platform
+    pub(crate) id: Platform::BlobId,
+
+    /// Different formats of the blob sorted from the most preferred to the least preferred.
+    ///
+    /// This is most important for GIFs in derpibooru. Derpibooru doesn't
+    /// have MP4 representation for some GIFs, and in this case we would fallback
+    /// to generating our own from the GIF.
+    pub(crate) repr: Vec<BlobRepr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -225,24 +274,32 @@ impl BasePost {
             _ => format!(" by {}", authors.iter().format(", ")),
         };
 
-        let nsfw_ratings = self.distinct.nsfw_ratings();
-        let nsfw_ratings = match nsfw_ratings.as_slice() {
-            [] => "".to_owned(),
-            _ => format!(" ({})", nsfw_ratings.iter().format(", ")),
+        let mut nsfw_ratings = self.safety.nsfw_ratings().peekable();
+        let nsfw_ratings = match nsfw_ratings.peek() {
+            None => "".to_owned(),
+            Some(_) => format!(" ({})", nsfw_ratings.format(", ")),
         };
+
         let nsfw_ratings = markdown::escape(&nsfw_ratings);
 
         format!(
             "*{}{authors}{nsfw_ratings}*",
             markdown::link(
                 self.web_url.as_str(),
-                &markdown::escape(&format!("Source ({})", self.distinct.platform_name()))
+                &markdown::escape(&format!("Source ({})", self.id.platform_name()))
             ),
         )
     }
 }
 
-impl Blob {
+impl<Platform: PlatformTypes<BlobId = ()>> MultiBlob<Platform> {
+    pub(crate) fn from_single(repr: BlobRepr) -> Self {
+        let repr = vec![repr];
+        Self { id: (), repr }
+    }
+}
+
+impl UniBlob {
     /// Short name of the file (not more than 255 characters) for the media
     pub(crate) fn tg_file_name(&self, post: &BasePost) -> String {
         fn sanitize(tag: &str) -> impl std::fmt::Display + '_ {
@@ -267,10 +324,10 @@ impl Blob {
             joined.chars().take(97).chain(['.', '.', '.']).collect()
         }
 
-        let ratings = join(&mut post.distinct.nsfw_ratings().into_iter());
+        let ratings = join(&mut post.safety.nsfw_ratings());
         let authors = join(&mut post.authors.iter().map(|artist| artist.name.as_str()));
 
-        let platform = post.distinct.platform_name().to_lowercase();
+        let platform = post.id.platform_name().to_lowercase();
 
         let post_segment = post.id.display_in_file_name();
         let blob_segment = self.id.display_in_file_name();
@@ -285,14 +342,40 @@ impl Blob {
         // FIXME: this file type detection influences how telegram processes the file.
         // For example, if we send_video with wrong extension, then it will be registered
         // as a document instead of video, even though it will be returned as a video kind in `Message`
-        let file_extension = self
-            .download_url
-            .path()
-            .rsplit('.')
-            .next()
-            .unwrap_or_else(|| self.kind.file_extension());
+        let file_extension = self.repr.kind.processed_file_extension();
 
         format!("{segments}.{file_extension}")
+    }
+}
+
+impl SafetyRating {
+    /// Simple conditional creation of [`SafetyRating::Sfw`] or [`SafetyRating::nsfw()`].
+    pub(crate) fn sfw_if(condition: bool) -> Self {
+        if condition {
+            Self::Sfw
+        } else {
+            Self::nsfw()
+        }
+    }
+
+    /// Returns [`SafetyRating::Nsfw`] with no additional information about the
+    /// rating. Use this only if the posting platform's API doesn't provide more
+    /// detailed information about the safety rating, than just SFW/NSFW switch
+    pub(crate) fn nsfw() -> Self {
+        Self::Nsfw { kinds: vec![] }
+    }
+
+    fn nsfw_ratings(&self) -> impl Iterator<Item = &str> {
+        use itertools::Either::{Left, Right};
+        match self {
+            Self::Sfw => Left(std::iter::empty()),
+            Self::Nsfw { kinds } => Right(
+                kinds
+                    .iter()
+                    .map(|kind| kind.as_str())
+                    .chain(kinds.is_empty().then_some("nsfw")),
+            ),
+        }
     }
 }
 
@@ -307,29 +390,25 @@ impl BlobSize {
         Self::Max(megabytes * MB)
     }
 
-    /// Approximate maximum size of the file in bytes
-    pub(crate) fn approx_max(&self) -> u64 {
+    /// Maximum size of the file in bytes if known, otherwise zero
+    pub(crate) fn to_max_or_zero(&self) -> u64 {
         match self {
-            Self::Approx(bytes) | Self::Max(bytes) | Self::ApproxMax(bytes) => *bytes,
+            Self::Max(bytes) => *bytes,
+            Self::Unknown => 0,
         }
-    }
-
-    pub(crate) fn approx_max_direct_photo_url() -> Self {
-        Self::ApproxMax(MAX_DIRECT_URL_PHOTO_SIZE)
-    }
-
-    pub(crate) fn approx_max_direct_file_url() -> Self {
-        Self::Approx(MAX_DIRECT_URL_FILE_SIZE)
     }
 }
 
 impl BlobKind {
-    fn file_extension(&self) -> &'static str {
+    /// Extension of the file after it was processed by us. For example, if
+    /// the original [`BlobKind`] was [`BlobKind::AnimationGif`], then we
+    /// convert it to soundless MP4, because Telegram's GIF support is bad.
+    fn processed_file_extension(&self) -> &'static str {
         match self {
             BlobKind::ImageJpeg => "jpg",
             BlobKind::ImagePng => "png",
             BlobKind::ImageSvg => "svg",
-            BlobKind::VideoMp4 | BlobKind::AnimationMp4 => "mp4",
+            BlobKind::VideoMp4 | BlobKind::AnimationMp4 | BlobKind::AnimationGif => "mp4",
         }
     }
 }
@@ -355,7 +434,10 @@ where
 }
 
 impl<Service: PlatformTypes> BasePost<Service> {
-    pub(crate) fn with_cached_blobs(self, blobs: Vec<CachedBlob<Service>>) -> CachedPost<Service> {
+    pub(crate) fn with_cached_blobs(
+        self,
+        blobs: Vec<CachedBlobId<Service>>,
+    ) -> CachedPost<Service> {
         CachedPost { base: self, blobs }
     }
 }

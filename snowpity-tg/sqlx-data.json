@@ -47,6 +47,20 @@
     },
     "query": "insert into tg_twitter_blob_cache (\n                tweet_id,\n                media_key,\n                tg_file_id,\n                tg_file_kind\n            )\n            values ($1, $2, $3, $4)"
   },
+  "c61aa9fb3695bb9c56454cb9fd8a54131b9240519695f0becae463cb05733442": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Varchar",
+          "Int2"
+        ]
+      }
+    },
+    "query": "insert into tg_deviant_art_blob_cache (deviation_numeric_id, tg_file_id, tg_file_kind)\n            values ($1, $2, $3)"
+  },
   "c9e557f08c7b42fce54e0025ed466fd8e246a6226f317e4a37db4a5ac5c83aef": {
     "describe": {
       "columns": [
@@ -104,5 +118,31 @@
       }
     },
     "query": "select tg_file_id, tg_file_kind from tg_derpibooru_blob_cache\n            where derpibooru_id = $1"
+  },
+  "e2001624889ad63304364a1d7b6fb16b9b04117b4a0abdb8549e8e0964e4c423": {
+    "describe": {
+      "columns": [
+        {
+          "name": "tg_file_id",
+          "ordinal": 0,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "tg_file_kind",
+          "ordinal": 1,
+          "type_info": "Int2"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "select tg_file_id, tg_file_kind from tg_deviant_art_blob_cache\n            where deviation_numeric_id = $1"
   }
 }

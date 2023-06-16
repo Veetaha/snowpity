@@ -4,8 +4,8 @@ use crate::posting::derpibooru::Config;
 use crate::prelude::*;
 use crate::Result;
 
-http::def_url_base!(pub(crate) derpibooru_api, "https://derpibooru.org/api/v1/json");
-http::def_url_base!(pub(crate) derpibooru, "https://derpibooru.org");
+crate::url::def!(pub(crate) derpibooru_api, "https://derpibooru.org/api/v1/json");
+crate::url::def!(pub(crate) derpibooru, "https://derpibooru.org");
 
 pub(crate) struct Client {
     http: http::Client,

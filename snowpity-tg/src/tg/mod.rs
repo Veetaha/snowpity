@@ -62,7 +62,7 @@ impl Ctx {
             db: opts.db.clone(),
         };
 
-        let ctx = posting::Context::new(bot.clone(), tg_cfg.clone(), posting_params);
+        let ctx = posting::PostingContext::new(bot.clone(), tg_cfg.clone(), posting_params);
 
         Ctx {
             tg_chats: db::TgChatRepo::new(opts.db),

@@ -1,5 +1,7 @@
 use crate::Result;
+use darling::ast::NestedMeta;
 use darling::FromMeta;
+use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 
@@ -16,8 +18,9 @@ struct TestOpts {
     labels: Option<syn::Expr>,
 }
 
-pub(crate) fn generate(opts: syn::AttributeArgs, mut func: syn::ItemFn) -> Result<TokenStream2> {
-    let opts = TestOpts::from_list(&opts)?;
+pub(crate) fn generate(opts: TokenStream, item: TokenStream) -> Result<TokenStream2> {
+    let opts = TestOpts::from_list(&NestedMeta::parse_meta_list(opts.into())?)?;
+    let mut func: syn::ItemFn = syn::parse(item)?;
 
     let home_crate = quote!(::metrics_bat);
     let imp = quote!(#home_crate::imp::proc_macros);

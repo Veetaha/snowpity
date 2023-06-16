@@ -35,8 +35,8 @@ pub(crate) mod rpc {
     }
 }
 
-http::def_url_base!(ftai_api, "https://api.15.ai/app");
-http::def_url_base!(ftai_cdn, "https://cdn.15.ai");
+crate::url::def!(ftai_api, "https://api.15.ai/app");
+crate::url::def!(ftai_cdn, "https://cdn.15.ai");
 
 pub(crate) struct FtaiService {
     http_client: http::Client,
