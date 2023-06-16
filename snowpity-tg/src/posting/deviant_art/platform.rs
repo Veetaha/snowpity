@@ -115,49 +115,61 @@ impl PlatformTrait for Platform {
             }
         };
 
+        // TODO:
+        // Latest thinking:
+        // Take this as an example
+        // https://backend.deviantart.com/oembed?url=https://www.deviantart.com/vinilyart/art/Coco-pommel-Fashion-965921340
+        // The returned URL in the oembed response contains a token with the max width and heigh (it there isn't that's even better).
+        // We could decode the JWT (if present, if not - event better), and use the max width and height to get the image
+        // with the `fit/w_2560,h_2560,q_100` in the URL falling back to the original URL in the oembed for safety.
+
+        // Old thinking:
+
+        // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/19028192-11ac-4c82-a0eb-d3491a319677/dforc14-2936d279-3f9d-4a00-b82f-a37173292f45.png/v1/fill/w_956,h_836,q_70,strp/snowy_day_by_vinilyart_dforc14-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTEyMCIsInBhdGgiOiJcL2ZcLzE5MDI4MTkyLTExYWMtNGM4Mi1hMGViLWQzNDkxYTMxOTY3N1wvZGZvcmMxNC0yOTM2ZDI3OS0zZjlkLTRhMDAtYjgyZi1hMzcxNzMyOTJmNDUucG5nIiwid2lkdGgiOiI8PTEyODAifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.WjgY1dlY68TO2u7JbiSBHERuu7mM7YuA33nwN4fBVPU
+
+        // 1436x1256px
+        // original:
+        // https://wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/19028192-11ac-4c82-a0eb-d3491a319677/dforc14-2936d279-3f9d-4a00-b82f-a37173292f45.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsImV4cCI6MTY3NTgyMDY2OCwiaWF0IjoxNjc1ODIwMDU4LCJqdGkiOiI2M2UyZmMyNDgzYTFkIiwib2JqIjpbW3sicGF0aCI6IlwvZlwvMTkwMjgxOTItMTFhYy00YzgyLWEwZWItZDM0OTFhMzE5Njc3XC9kZm9yYzE0LTI5MzZkMjc5LTNmOWQtNGEwMC1iODJmLWEzNzE3MzI5MmY0NS5wbmcifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6ZmlsZS5kb3dubG9hZCJdfQ.FOQqUhYP8F8o-rfexgLhLwaQUkITAG-oLFASm1EI_UU&filename=snowy_day_by_vinilyart_dforc14.png
+
+        // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/19028192-11ac-4c82-a0eb-d3491a319677/dforc14-2936d279-3f9d-4a00-b82f-a37173292f45.png/v1/fit/w_1280,h_1120,q_100/snowy_day_by_vinilyart_dforc14-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTEyMCIsInBhdGgiOiJcL2ZcLzE5MDI4MTkyLTExYWMtNGM4Mi1hMGViLWQzNDkxYTMxOTY3N1wvZGZvcmMxNC0yOTM2ZDI3OS0zZjlkLTRhMDAtYjgyZi1hMzcxNzMyOTJmNDUucG5nIiwid2lkdGgiOiI8PTEyODAifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.WjgY1dlY68TO2u7JbiSBHERuu7mM7YuA33nwN4fBVPU
+
+        // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/19028192-11ac-4c82-a0eb-d3491a319677/dforc14-2936d279-3f9d-4a00-b82f-a37173292f45.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTEyMCIsInBhdGgiOiJcL2ZcLzE5MDI4MTkyLTExYWMtNGM4Mi1hMGViLWQzNDkxYTMxOTY3N1wvZGZvcmMxNC0yOTM2ZDI3OS0zZjlkLTRhMDAtYjgyZi1hMzcxNzMyOTJmNDUucG5nIiwid2lkdGgiOiI8PTEyODAifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.WjgY1dlY68TO2u7JbiSBHERuu7mM7YuA33nwN4fBVPU
+
+        // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/aa14a22e-70c1-4301-b452-36b07958ef14/dcnz8bf-d2eb40a7-f56d-43c7-b3f1-f14e0f970380.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcL2FhMTRhMjJlLTcwYzEtNDMwMS1iNDUyLTM2YjA3OTU4ZWYxNFwvZGNuejhiZi1kMmViNDBhNy1mNTZkLTQzYzctYjNmMS1mMTRlMGY5NzAzODAucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.IEdXedrPOPybdU96M1JbNggjOePbFISSvItHam-F2Zg
+
+        // TODO: select best URL
+        // Example of the image that displays in original size in browser:
+        // https://www.deviantart.com/freeedon/art/Cloudsdale-765869019
+        // Example of this image that fits into 2560 square:
+        //
+        // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/intermediary/f/
+        // aa14a22e-70c1-4301-b452-36b07958ef14/dcnz8bf-d2eb40a7-f56d-43c7-b3f1-f14e0f970380.png
+        // /v1/fit/w_2560,h_2560,bl,q_100/cloudsdale_by_freeedon_dcnz8bf.jpg
+        //
+        // See https://gist.github.com/micycle1/735006a338e4bea1a9c06377610886e7
+        // for instructions from someone who reverse-engineered this
+        //
+        // GIF that is returned directly with .gif URL:
+        // https://www.deviantart.com/negasun/art/Colgate-animated-gif-suggestive-655281025
+        //
+        // GIF that is returned directly with .gif/.jpg URL:
+        // https://www.deviantart.com/yoshigreenwater/art/Door-Dash-Animated-854611048
+        //
+        // GIF that is not returned with a direct image URL:
+        // https://www.deviantart.com/deannart/art/Re-upload-INNOCENCE-MOV-350237566
+
+        // Example:
+        // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/i/
+        // 10be6721-6c5e-4882-abce-c8ef4ec121f7/d5sit1a-ddf43555-a931-4bf1-a900-32bdde99097d.jpg/
+        // v1/fit/w_300,h_720,q_70,strp/_re_upload__innocence_mov_by_deannart_d5sit1a-300w.jpg
+
+        // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/i/10be6721-6c5e-4882-abce-c8ef4ec121f7/d5sit1a-ddf43555-a931-4bf1-a900-32bdde99097d.jpg/v1/fit/w_300,h_720,q_70,strp/_re_upload__innocence_mov_by_deannart_d5sit1a-300w.jpg
+
+        // https://wixmp-ed30a86b8c4ca887773594c2.wixmp.com/v/mp4/10be6721-6c5e-4882-abce-c8ef4ec121f7/d5sit1a-4f096690-c76d-4f63-8337-b67b978ac5cd.700p.3abd6dff632b4fb2a16dcd8aa8cb48e5.mp4
+
+
         let blob = MultiBlob::from_single(BlobRepr {
             dimensions,
-            // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/19028192-11ac-4c82-a0eb-d3491a319677/dforc14-2936d279-3f9d-4a00-b82f-a37173292f45.png/v1/fill/w_956,h_836,q_70,strp/snowy_day_by_vinilyart_dforc14-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTEyMCIsInBhdGgiOiJcL2ZcLzE5MDI4MTkyLTExYWMtNGM4Mi1hMGViLWQzNDkxYTMxOTY3N1wvZGZvcmMxNC0yOTM2ZDI3OS0zZjlkLTRhMDAtYjgyZi1hMzcxNzMyOTJmNDUucG5nIiwid2lkdGgiOiI8PTEyODAifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.WjgY1dlY68TO2u7JbiSBHERuu7mM7YuA33nwN4fBVPU
-
-            // 1436x1256px
-            // original:
-            // https://wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/19028192-11ac-4c82-a0eb-d3491a319677/dforc14-2936d279-3f9d-4a00-b82f-a37173292f45.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsImV4cCI6MTY3NTgyMDY2OCwiaWF0IjoxNjc1ODIwMDU4LCJqdGkiOiI2M2UyZmMyNDgzYTFkIiwib2JqIjpbW3sicGF0aCI6IlwvZlwvMTkwMjgxOTItMTFhYy00YzgyLWEwZWItZDM0OTFhMzE5Njc3XC9kZm9yYzE0LTI5MzZkMjc5LTNmOWQtNGEwMC1iODJmLWEzNzE3MzI5MmY0NS5wbmcifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6ZmlsZS5kb3dubG9hZCJdfQ.FOQqUhYP8F8o-rfexgLhLwaQUkITAG-oLFASm1EI_UU&filename=snowy_day_by_vinilyart_dforc14.png
-
-            // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/19028192-11ac-4c82-a0eb-d3491a319677/dforc14-2936d279-3f9d-4a00-b82f-a37173292f45.png/v1/fit/w_1280,h_1120,q_100/snowy_day_by_vinilyart_dforc14-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTEyMCIsInBhdGgiOiJcL2ZcLzE5MDI4MTkyLTExYWMtNGM4Mi1hMGViLWQzNDkxYTMxOTY3N1wvZGZvcmMxNC0yOTM2ZDI3OS0zZjlkLTRhMDAtYjgyZi1hMzcxNzMyOTJmNDUucG5nIiwid2lkdGgiOiI8PTEyODAifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.WjgY1dlY68TO2u7JbiSBHERuu7mM7YuA33nwN4fBVPU
-
-            // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/19028192-11ac-4c82-a0eb-d3491a319677/dforc14-2936d279-3f9d-4a00-b82f-a37173292f45.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTEyMCIsInBhdGgiOiJcL2ZcLzE5MDI4MTkyLTExYWMtNGM4Mi1hMGViLWQzNDkxYTMxOTY3N1wvZGZvcmMxNC0yOTM2ZDI3OS0zZjlkLTRhMDAtYjgyZi1hMzcxNzMyOTJmNDUucG5nIiwid2lkdGgiOiI8PTEyODAifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.WjgY1dlY68TO2u7JbiSBHERuu7mM7YuA33nwN4fBVPU
-
-            // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/aa14a22e-70c1-4301-b452-36b07958ef14/dcnz8bf-d2eb40a7-f56d-43c7-b3f1-f14e0f970380.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcL2FhMTRhMjJlLTcwYzEtNDMwMS1iNDUyLTM2YjA3OTU4ZWYxNFwvZGNuejhiZi1kMmViNDBhNy1mNTZkLTQzYzctYjNmMS1mMTRlMGY5NzAzODAucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.IEdXedrPOPybdU96M1JbNggjOePbFISSvItHam-F2Zg
-
-            // TODO: select best URL
-            // Example of the image that displays in original size in browser:
-            // https://www.deviantart.com/freeedon/art/Cloudsdale-765869019
-            // Example of this image that fits into 2560 square:
-            //
-            // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/intermediary/f/
-            // aa14a22e-70c1-4301-b452-36b07958ef14/dcnz8bf-d2eb40a7-f56d-43c7-b3f1-f14e0f970380.png
-            // /v1/fit/w_2560,h_2560,bl,q_100/cloudsdale_by_freeedon_dcnz8bf.jpg
-            //
-            // See https://gist.github.com/micycle1/735006a338e4bea1a9c06377610886e7
-            // for instructions from someone who reverse-engineered this
-            //
-            // GIF that is returned directly with .gif URL:
-            // https://www.deviantart.com/negasun/art/Colgate-animated-gif-suggestive-655281025
-            //
-            // GIF that is returned directly with .gif/.jpg URL:
-            // https://www.deviantart.com/yoshigreenwater/art/Door-Dash-Animated-854611048
-            //
-            // GIF that is not returned with a direct image URL:
-            // https://www.deviantart.com/deannart/art/Re-upload-INNOCENCE-MOV-350237566
-
-            // Example:
-            // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/i/
-            // 10be6721-6c5e-4882-abce-c8ef4ec121f7/d5sit1a-ddf43555-a931-4bf1-a900-32bdde99097d.jpg/
-            // v1/fit/w_300,h_720,q_70,strp/_re_upload__innocence_mov_by_deannart_d5sit1a-300w.jpg
-
-            // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/i/10be6721-6c5e-4882-abce-c8ef4ec121f7/d5sit1a-ddf43555-a931-4bf1-a900-32bdde99097d.jpg/v1/fit/w_300,h_720,q_70,strp/_re_upload__innocence_mov_by_deannart_d5sit1a-300w.jpg
-
-            // https://wixmp-ed30a86b8c4ca887773594c2.wixmp.com/v/mp4/10be6721-6c5e-4882-abce-c8ef4ec121f7/d5sit1a-4f096690-c76d-4f63-8337-b67b978ac5cd.700p.3abd6dff632b4fb2a16dcd8aa8cb48e5.mp4
             download_url: oembed.url,
             kind,
             // Sizes for images are ~good enough, although not always accurate,

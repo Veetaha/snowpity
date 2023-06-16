@@ -15,4 +15,6 @@ file_stem=ffmpeg-$version-amd64-static
 
 url=https://johnvansickle.com/ffmpeg/releases/$file_stem.tar.xz
 
+# FIXME: use `md5sum` to verify the integrity of the downloaded file
+# See https://www.johnvansickle.com/ffmpeg/faq/
 curl_and_decompress $url --strip-components 1 $file_stem/ffmpeg

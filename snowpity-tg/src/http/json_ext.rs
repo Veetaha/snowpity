@@ -18,17 +18,22 @@ pub(crate) impl RequestBuilder {
 
     async fn read_json<Res: DeserializeOwned>(self) -> Result<Res> {
         let bytes = self.read_bytes().await?;
+        let err = match serde_json::from_slice(&bytes) {
+            Ok(res) => return Ok(res),
+            Err(err) => err,
+        };
 
-        serde_json::from_slice(&bytes).map_err(|err| {
-            match std::str::from_utf8(&bytes) {
-                Ok(response_body) => warn!(%response_body, "Bad JSON response"),
-                Err(utf8_decode_err) => warn!(
-                    response_body = ?bytes,
-                    ?utf8_decode_err,
-                    "Bad JSON response"
-                ),
-            };
-            err!(HttpClientError::UnexpectedResponseJsonShape { source: err })
-        })
+        match std::str::from_utf8(&bytes) {
+            Ok(response_body) => warn!(%response_body, "Bad JSON response"),
+            Err(utf8_decode_err) => warn!(
+                response_body = ?bytes,
+                ?utf8_decode_err,
+                "Bad JSON response (invalid UTF-8)"
+            ),
+        }
+
+        Err(err!(HttpClientError::UnexpectedResponseJsonShape {
+            source: err
+        }))
     }
 }
