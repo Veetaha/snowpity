@@ -119,7 +119,7 @@ impl PlatformTrait for Platform {
         // Latest thinking:
         // Take this as an example
         // https://backend.deviantart.com/oembed?url=https://www.deviantart.com/vinilyart/art/Coco-pommel-Fashion-965921340
-        // The returned URL in the oembed response contains a token with the max width and heigh (it there isn't that's even better).
+        // The returned URL in the oembed response contains a token with the max width and height (it there isn't that's even better).
         // We could decode the JWT (if present, if not - event better), and use the max width and height to get the image
         // with the `fit/w_2560,h_2560,q_100` in the URL falling back to the original URL in the oembed for safety.
 
@@ -166,7 +166,6 @@ impl PlatformTrait for Platform {
         // https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/i/10be6721-6c5e-4882-abce-c8ef4ec121f7/d5sit1a-ddf43555-a931-4bf1-a900-32bdde99097d.jpg/v1/fit/w_300,h_720,q_70,strp/_re_upload__innocence_mov_by_deannart_d5sit1a-300w.jpg
 
         // https://wixmp-ed30a86b8c4ca887773594c2.wixmp.com/v/mp4/10be6721-6c5e-4882-abce-c8ef4ec121f7/d5sit1a-4f096690-c76d-4f63-8337-b67b978ac5cd.700p.3abd6dff632b4fb2a16dcd8aa8cb48e5.mp4
-
 
         let blob = MultiBlob::from_single(BlobRepr {
             dimensions,
