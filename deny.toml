@@ -130,3 +130,9 @@ license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 expression    = "ISC"
 license-files = [{ path = "LICENSE", hash = 0x001c7e6c }]
 name          = "webpki"
+
+[[licenses.clarify]]
+expression    = "ISC"
+license-files = [{ path = "LICENSE", hash = 0x001c7e6c }]
+# This seems like a fork of `webpki` crate higher
+name          = "rustls-webpki"
