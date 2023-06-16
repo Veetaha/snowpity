@@ -43,24 +43,7 @@ async fn main() -> ExitCode {
         }
     };
 
-    // Let's await for three seconds heuristically to let the logging task
-    // flush some data to the logging backend.
-    //
-    // Unfortunately, we can't guarantee the flush happens because no such
-    // API exists in `tracing_loki`: https://github.com/hrxi/tracing-loki/issues/9
-    if !cfg!(debug_assertions) {
-        info!("Waiting for the logging task to finish nicely...");
-        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-    } else {
-        info!(
-            "Forcefully shutting down logging task \
-            (some logs may not be pushed to the backend)..."
-        );
-    }
-
-    logging_task.abort();
-
-    eprintln!("Stopped logging task: {:?}", logging_task.await);
+    logging_task.shutdown().await;
 
     exit_code
 }

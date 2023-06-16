@@ -144,7 +144,7 @@ pub(crate) async fn handle_new_chat_members(
     users: Vec<User>,
 ) -> DynResult {
     async move {
-        let image_url: &Url = &GREETING_ANIMATION_URL.parse().unwrapx();
+        let image_url: &Url = &GREETING_ANIMATION_URL.parse().unwrap();
 
         let bot_id = ctx.bot.get_me().await?.id;
 
@@ -317,7 +317,7 @@ pub(crate) async fn handle_new_chat_members(
 
 #[instrument(skip_all)]
 async fn kick_user_due_to_captcha(bot: &Bot, chat_id: ChatId, user_id: UserId) -> Result {
-    let ban_timeout = Utc::now() + chrono::Duration::from_std(CAPTCHA_BAN_DURATION).unwrapx();
+    let ban_timeout = Utc::now() + chrono::Duration::from_std(CAPTCHA_BAN_DURATION).unwrap();
 
     info!(until = %ban_timeout.to_human_readable(), "Kicking the user due to captcha...");
 

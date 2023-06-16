@@ -8,7 +8,7 @@ pub(crate) use std_ext::*;
 pub(crate) use tokio_ext::*;
 
 pub(crate) mod prelude {
-    pub(crate) use super::chrono_ext::DateTimeExt as _;
+    pub(crate) use super::chrono_ext::DateTimeExt;
     pub(crate) use super::std_ext::prelude::*;
     pub(crate) use super::teloxide_ext::prelude::*;
 }
