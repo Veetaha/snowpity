@@ -16,6 +16,6 @@ pub(crate) mod prelude {
     #[allow(unused_imports)]
     pub(crate) use tracing::{
         debug, debug_span, error, error_span, info, info_span, instrument, trace, trace_span, warn,
-        warn_span, Instrument,
+        warn_span, Instrument as _,
     };
 }
