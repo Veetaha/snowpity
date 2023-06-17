@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use crate::tg::{self, Bot};
-use crate::util::DynResult;
-use crate::{db, encoding, err, Error, ErrorKind, Result};
+use crate::util::{encoding, DynResult};
+use crate::{db, err, Error, ErrorKind, Result};
 use chrono::prelude::*;
 use futures::prelude::*;
 use itertools::Itertools;

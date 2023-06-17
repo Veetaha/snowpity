@@ -1,6 +1,6 @@
 use super::HttpClientError;
 use crate::prelude::*;
-use crate::temp_file::create_temp_file;
+use crate::util::temp_file::create_temp_file;
 use crate::{err, err_ctx, Result};
 use async_trait::async_trait;
 use bytes::Bytes;

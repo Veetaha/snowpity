@@ -1,8 +1,9 @@
 use reqwest::Url;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr, PickFirst};
+use crate::util;
 
-crate::url::def!(www_deviantart_com, "https://www.deviantart.com");
+util::url::def!(www_deviantart_com, "https://www.deviantart.com");
 
 /// Numeric ID of the deviation. It is not the UUID from the API, but some (probably incremental)
 /// number that appears in the suffix of URLs. No documentation exists on this, but let's suppose

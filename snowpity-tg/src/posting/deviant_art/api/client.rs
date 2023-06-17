@@ -1,10 +1,10 @@
-use crate::http;
+use crate::{http, util};
 use crate::posting::deviant_art::api::model::*;
 use crate::posting::deviant_art::Config;
 use crate::prelude::*;
 use crate::Result;
 
-crate::url::def!(backend_deviantart_com, "https://backend.deviantart.com");
+util::url::def!(backend_deviantart_com, "https://backend.deviantart.com");
 
 pub(crate) struct Client {
     http: http::Client,

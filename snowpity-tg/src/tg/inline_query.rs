@@ -1,7 +1,7 @@
 use crate::posting::{self, TgFileKind};
 use crate::prelude::*;
-use crate::util::DynResult;
-use crate::{encoding, err, tg, Error, ErrorKind};
+use crate::util::{DynResult, encoding};
+use crate::{err, tg, Error, ErrorKind};
 use futures::prelude::*;
 use itertools::Itertools;
 use metrics_bat::prelude::*;

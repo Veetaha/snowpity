@@ -1,7 +1,6 @@
 use crate::prelude::*;
-use crate::{fatal, Result};
+use crate::Result;
 use std::path::Path;
-use std::process::Stdio;
 
 // TODO: we need these dependencies to resize images to fit into telegram's limits
 // Adding `use` statements to make sure `cargo-machete` doesn't mark them as unused
@@ -82,28 +81,5 @@ pub(crate) async fn gif_to_mp4(input: &Path) -> Result<tempfile::TempPath> {
 }
 
 async fn ffmpeg(args: &[&str]) -> Result<Vec<u8>> {
-    let cmd = shlex::join(args.iter().copied());
-    debug!(
-        %cmd,
-        "Running ffmpeg"
-    );
-
-    let output = tokio::process::Command::new("ffmpeg")
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .kill_on_drop(true)
-        .output()
-        .await
-        .fatal_ctx(|| format!("ffmpeg invocation failed. Command: `{cmd}`"))?;
-
-    let status = output.status;
-
-    if !status.success() {
-        return Err(fatal!(
-            "ffmpeg invocation failed with status {status}.\nCommand: `{cmd}`"
-        ));
-    }
-
-    Ok(output.stdout)
+    crate::util::process::run("ffmpeg", args).await
 }

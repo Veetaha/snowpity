@@ -1,4 +1,4 @@
-use crate::display::human_size;
+use crate::util::display::human_size;
 use crate::posting::BlobKind;
 
 /// The error messages here will be displayed directly to the user in
