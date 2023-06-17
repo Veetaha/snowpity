@@ -7,7 +7,26 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use tracing_subscriber::prelude::*;
 
-pub fn init_logging() -> tokio::task::JoinHandle<()> {
+pub struct LoggingTask {
+    task: tokio::task::JoinHandle<()>,
+    controller: tracing_loki::BackgroundTaskController,
+}
+
+impl LoggingTask {
+    pub async fn shutdown(self) {
+        info!("Waiting for the logging task to finish nicely...");
+
+        let ((), duration) = self.controller.shutdown().with_duration().await;
+
+        eprintln!(
+            "Stopped logging task in {:.2?}: {:?}",
+            duration,
+            self.task.await
+        );
+    }
+}
+
+pub fn init_logging() -> LoggingTask {
     LoggingConfig::load_or_panic().init_logging()
 }
 
@@ -24,7 +43,7 @@ impl LoggingConfig {
         from_env_or_panic("")
     }
 
-    fn init_logging(self) -> tokio::task::JoinHandle<()> {
+    fn init_logging(self) -> LoggingTask {
         let env_filter = tracing_subscriber::EnvFilter::from_env("TG_BOT_LOG");
 
         let fmt = tracing_subscriber::fmt::layer()
@@ -37,9 +56,15 @@ impl LoggingConfig {
         let mut labels = self.tg_bot_log_labels;
         labels.extend(additional_labels.map(|(k, v)| ((*k).to_owned(), (*v).to_owned())));
 
-        let (loki, task) = tracing_loki::layer(self.loki_url, labels, HashMap::new()).unwrap();
+        let (loki, controller, task) = labels
+            .into_iter()
+            .fold(tracing_loki::builder(), |builder, (key, value)| {
+                builder.label(key, value).unwrap()
+            })
+            .build_controller_url(self.loki_url)
+            .unwrap();
 
-        let join_handle = tokio::spawn(task);
+        let task = tokio::spawn(task);
 
         tracing_subscriber::registry()
             .with(fmt)
@@ -50,7 +75,7 @@ impl LoggingConfig {
 
         init_panic_hook();
 
-        join_handle
+        LoggingTask { task, controller }
     }
 }
 

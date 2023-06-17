@@ -6,6 +6,20 @@ use std::time::Duration;
 
 #[ext(FutureExt)]
 #[async_trait]
+pub(crate) impl<T, F> F
+where
+    F: Future<Output = T> + Send,
+{
+    async fn with_duration(self) -> (F::Output, Duration) {
+        let start = std::time::Instant::now();
+        let result = self.await;
+        let elapsed = start.elapsed();
+        (result, elapsed)
+    }
+}
+
+#[ext(TryFutureExt)]
+#[async_trait]
 pub(crate) impl<T, E, F> F
 where
     F: Future<Output = Result<T, E>> + Send,
@@ -18,13 +32,6 @@ where
             Err(_) => warn!(result = "err", duration, "{msg}"),
         }
         result
-    }
-
-    async fn with_duration(self) -> (F::Output, Duration) {
-        let start = std::time::Instant::now();
-        let result = self.await;
-        let elapsed = start.elapsed();
-        (result, elapsed)
     }
 
     async fn with_duration_ok(self) -> Result<(T, Duration), E> {
