@@ -1,14 +1,7 @@
 [workspace]
-members = [
-  "metrics-bat-macros",
-  "metrics-bat",
-  "snowpity-tg-macros",
-  "snowpity-tg",
-  "sqlx-bat",
-  "test-bat",
-]
+members = ["crates/*"]
 
-default-members = ["snowpity-tg"]
+default-members = ["crates/snowpity-tg"]
 
 [profile.dev]
 debug = 0
@@ -90,8 +83,8 @@ tracing-subscriber          = { version = "0.3", features = ["env-filter"] }
 vergen                      = { version = "8.2", features = ["build", "rustc", "git", "gix", "cargo"] }
 
 # Path deps
-metrics-bat        = { path = "metrics-bat" }
-metrics-bat-macros = { path = "metrics-bat-macros" }
-snowpity-tg-macros = { path = "snowpity-tg-macros" }
-sqlx-bat           = { path = "sqlx-bat" }
-test-bat           = { path = "test-bat" }
+metrics-bat        = { path = "crates/metrics-bat" }
+metrics-bat-macros = { path = "crates/metrics-bat-macros" }
+snowpity-tg-macros = { path = "crates/snowpity-tg-macros" }
+sqlx-bat           = { path = "crates/sqlx-bat" }
+test-bat           = { path = "crates/test-bat" }
