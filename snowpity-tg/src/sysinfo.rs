@@ -1,6 +1,6 @@
+use crate::prelude::*;
 use crate::util::display::{human_duration, human_size};
 use crate::util::encoding;
-use crate::prelude::*;
 use chrono::prelude::*;
 use parking_lot::Mutex as SyncMutex;
 use serde::Serialize;

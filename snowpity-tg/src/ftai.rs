@@ -1,8 +1,8 @@
 //! Symbols related to communicating with the 15.ai API
 
-use crate::{http, util};
 use crate::prelude::*;
 use crate::{err, err_ctx, Result};
+use crate::{http, util};
 
 /// Limit of the text length that can be passed to 15.ai for voice generation
 pub(crate) const MAX_TEXT_LENGTH: usize = 200;

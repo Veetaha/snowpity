@@ -1,8 +1,8 @@
-use crate::{http, util};
 use crate::posting::deviant_art::api::model::*;
 use crate::posting::deviant_art::Config;
 use crate::prelude::*;
 use crate::Result;
+use crate::{http, util};
 
 util::url::def!(backend_deviantart_com, "https://backend.deviantart.com");
 

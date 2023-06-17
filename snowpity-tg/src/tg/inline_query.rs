@@ -1,6 +1,6 @@
 use crate::posting::{self, TgFileKind};
 use crate::prelude::*;
-use crate::util::{DynResult, encoding};
+use crate::util::{encoding, DynResult};
 use crate::{err, tg, Error, ErrorKind};
 use futures::prelude::*;
 use itertools::Itertools;
