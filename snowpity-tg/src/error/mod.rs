@@ -77,7 +77,7 @@ pub(crate) enum ErrorKind {
     #[error(transparent)]
     Deserialize {
         #[from]
-        source: crate::encoding::DeserializeError,
+        source: crate::util::encoding::DeserializeError,
     },
 
     // FIXME: display chain using human-readable format

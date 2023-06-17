@@ -1,11 +1,11 @@
-use crate::fatal;
 use crate::http;
 use crate::posting::twitter::api::model::*;
 use crate::posting::twitter::Config;
 use crate::prelude::*;
 use crate::Result;
+use crate::{fatal, util};
 
-crate::url::def!(twitter_api, "https://api.twitter.com/2");
+util::url::def!(twitter_api, "https://api.twitter.com/2");
 
 pub(crate) struct Client {
     http: http::Client,

@@ -4,6 +4,13 @@ mod std_ext;
 mod teloxide_ext;
 mod tokio_ext;
 
+pub mod display;
+pub mod encoding;
+pub mod media_conv;
+pub mod process;
+pub mod temp_file;
+pub mod url;
+
 pub(crate) use std_ext::*;
 pub(crate) use tokio_ext::*;
 

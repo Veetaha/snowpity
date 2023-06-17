@@ -1,5 +1,6 @@
 use crate::prelude::*;
-use crate::{encoding, err, tg, Result};
+use crate::util::encoding;
+use crate::{err, tg, Result};
 use async_trait::async_trait;
 use futures::prelude::*;
 use itertools::Itertools;

@@ -1,5 +1,5 @@
-use crate::display::human_size;
 use crate::posting::BlobKind;
+use crate::util::display::human_size;
 
 /// The error messages here will be displayed directly to the user in
 /// the inline query results, so keep them extremely short!

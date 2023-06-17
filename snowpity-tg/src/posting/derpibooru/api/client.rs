@@ -1,11 +1,11 @@
-use crate::http;
 use crate::posting::derpibooru::api::model::*;
 use crate::posting::derpibooru::Config;
 use crate::prelude::*;
 use crate::Result;
+use crate::{http, util};
 
-crate::url::def!(pub(crate) derpibooru_api, "https://derpibooru.org/api/v1/json");
-crate::url::def!(pub(crate) derpibooru, "https://derpibooru.org");
+util::url::def!(pub(crate) derpibooru_api, "https://derpibooru.org/api/v1/json");
+util::url::def!(pub(crate) derpibooru, "https://derpibooru.org");
 
 pub(crate) struct Client {
     http: http::Client,

@@ -1,17 +1,12 @@
 mod config;
 mod db;
-mod display;
-mod encoding;
 mod error;
 mod ftai;
 mod http;
-mod media_conv;
 mod observability;
 mod posting;
 mod sysinfo;
-mod temp_file;
 mod tg;
-mod url;
 
 pub mod util;
 
@@ -24,9 +19,9 @@ mod prelude {
     pub(crate) use crate::error::prelude::*;
     pub(crate) use crate::http::prelude::*;
     pub(crate) use crate::observability::logging::prelude::*;
-    pub(crate) use crate::temp_file::NamedTempFileExt;
-    pub(crate) use crate::url::UrlExt;
     pub(crate) use crate::util::prelude::*;
+    pub(crate) use crate::util::temp_file::NamedTempFileExt;
+    pub(crate) use crate::util::url::UrlExt;
     pub(crate) use snowpity_tg_macros::metered_db;
 }
 
