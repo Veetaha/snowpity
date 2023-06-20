@@ -72,6 +72,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn smoke() {
         let _ = dotenvy::dotenv();
 
