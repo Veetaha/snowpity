@@ -138,8 +138,6 @@ impl PlatformTrait for Platform {
 impl DisplayInFileNameViaToString for api::TweetId {}
 impl DisplayInFileNameViaToString for api::MediaKey {}
 
-
-
 /// URL of the media that best suits Telegram.
 ///
 /// The images will fit into `4096x4096` bounding box.

@@ -1,6 +1,6 @@
+use crate::{Error, Result};
 use std::ffi::{c_void, CStr, CString};
 use std::os::raw::c_char;
-use crate::{Result, Error};
 
 type FfiFunction = unsafe extern "C" fn(*mut c_char) -> OutPtr;
 

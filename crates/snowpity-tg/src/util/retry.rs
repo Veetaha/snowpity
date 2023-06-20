@@ -1,13 +1,16 @@
 use crate::prelude::*;
 use crate::Result;
+use chrono::prelude::*;
 use retry_policies::{RetryDecision, RetryPolicy};
 use std::future::Future;
-use chrono::prelude::*;
 
 /// We already have an existing http client with retries set up in this crate.
 /// However, this function is required to retry the HTTP operations that are
 /// done outside of Rust (e.g. in the Go code of `twitter-scraper`).
-pub(crate) async fn retry_http<T, E, Fut>(f: impl Fn() -> Fut, is_retryable: impl Fn(&E) -> bool) -> Fut::Output
+pub(crate) async fn retry_http<T, E, Fut>(
+    f: impl Fn() -> Fut,
+    is_retryable: impl Fn(&E) -> bool,
+) -> Fut::Output
 where
     Fut: Future<Output = Result<T, E>>,
     E: std::error::Error,
@@ -20,7 +23,7 @@ where
                 if attempt > 0 {
                     warn!(%attempt, "HTTP request succceded after a retry");
                 }
-                return Ok(output)
+                return Ok(output);
             }
             Err(err) => err,
         };

@@ -7,10 +7,10 @@ pub mod display;
 pub mod encoding;
 pub mod media_conv;
 pub mod process;
+pub mod retry;
 pub mod temp_file;
 pub mod tokio;
 pub mod url;
-pub mod retry;
 
 pub(crate) use std_ext::*;
 

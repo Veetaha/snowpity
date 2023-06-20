@@ -1,6 +1,6 @@
-use std::fmt;
 use super::{SnapshotFormat, Style};
 use expect_test::Expect;
+use std::fmt;
 
 struct Imp;
 

@@ -1,6 +1,6 @@
-use serde::Serialize;
 use super::{SnapshotFormat, Style};
 use expect_test::Expect;
+use serde::Serialize;
 
 struct Imp;
 
