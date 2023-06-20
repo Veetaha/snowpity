@@ -21,7 +21,7 @@ pub fn assert_eq<T: fmt::Debug>(actual: T, expected: &Expect) {
     Imp::assert_eq(&actual, expected)
 }
 
-/// Same as [`assert_eq`], but specialized for [`Result`].
+/// Same as [`self::assert_eq`], but specialized for [`Result`].
 /// If the result is an [`Err`], then the snapshot will be prefixed
 /// with `Err:` and the error will be formatted using [`make_snapshot`].
 #[track_caller]
