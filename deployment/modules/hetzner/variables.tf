@@ -59,7 +59,7 @@ variable "docker_password" {
   type      = string
 }
 
-variable "twitter_bearer_token" {
+variable "twitter_cookies" {
   nullable  = false
   sensitive = true
   type      = string

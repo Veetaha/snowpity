@@ -72,7 +72,7 @@ variable "allowed_ssh_ips" {
   sensitive = true
 }
 
-variable "twitter_bearer_token" {
+variable "twitter_cookies" {
   nullable  = false
   sensitive = true
   type      = string

@@ -91,7 +91,7 @@ pub(crate) mod tests {
     #[track_caller]
     pub(crate) fn assert_parse_query(query: &str, expected: Expect) {
         let actual = if let Some((platform, id)) = all_platforms::parse_query(query) {
-            let id = test_bat::debug::make_snapshot(&id);
+            let id = test_bat::debug::make_snapshot(id);
             format!("{platform}:{id}")
         } else {
             "None".to_owned()

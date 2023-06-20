@@ -4,8 +4,6 @@ use crate::prelude::*;
 use crate::Result;
 use crate::{err_ctx, util};
 
-util::url::def!(twitter_api, "https://api.twitter.com/2");
-
 pub(crate) struct Client {}
 
 impl Client {
