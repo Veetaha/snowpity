@@ -273,7 +273,7 @@ def-env server-ip [] {
 }
 
 def-env ssh-str [] {
-    let tf_output = tf-output
+    let tf_output = (tf-output)
     let ip = $tf_output.server.value.ip
     let os_user = $tf_output.server.value.os_user
 
