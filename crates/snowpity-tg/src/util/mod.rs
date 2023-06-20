@@ -2,17 +2,17 @@
 mod chrono_ext;
 mod std_ext;
 mod teloxide_ext;
-mod tokio_ext;
 
 pub mod display;
 pub mod encoding;
 pub mod media_conv;
 pub mod process;
 pub mod temp_file;
+pub mod tokio;
 pub mod url;
+pub mod retry;
 
 pub(crate) use std_ext::*;
-pub(crate) use tokio_ext::*;
 
 pub(crate) mod prelude {
     pub(crate) use super::chrono_ext::DateTimeExt;

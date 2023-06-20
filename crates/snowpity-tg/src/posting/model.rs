@@ -1,5 +1,6 @@
 use super::platform::prelude::*;
 use super::AllPlatforms;
+use crate::prelude::*;
 use crate::tg;
 use derivative::Derivative;
 use itertools::Itertools;
@@ -197,8 +198,9 @@ pub(crate) struct BlobRepr {
     /// Describes whether this is an image, video, or an animation
     pub(crate) kind: BlobKind,
 
-    /// The dimensions of the blob, if it is a visual kind of blob (which it always is today)
-    pub(crate) dimensions: MediaDimensions,
+    /// The dimensions of the blob, if it is a visual kind of blob (which it always is today).
+    /// May be `None` if the dimensions are unknown.
+    pub(crate) dimensions: Option<MediaDimensions>,
 
     /// Size of the blob in bytes if known. It should not be considered
     /// as a reliable source of information. It may be inaccurate.
@@ -256,18 +258,14 @@ pub(crate) enum AuthorKind {
 impl BasePost {
     pub(crate) fn caption(&self) -> String {
         // FIXME: ensure the caption doesn't overflow 1024 characters
-        let authors: Vec<_> = self
-            .authors
-            .iter()
-            .map(|author| {
-                let author_entry = if matches!(author.kind, Some(AuthorKind::Editor)) {
-                    format!("{} (editor)", author.name)
-                } else {
-                    author.name.clone()
-                };
-                markdown::link(author.web_url.as_str(), &markdown::escape(&author_entry))
-            })
-            .collect();
+        let authors: Vec<_> = self.authors.iter().map_collect(|author| {
+            let author_entry = if matches!(author.kind, Some(AuthorKind::Editor)) {
+                format!("{} (editor)", author.name)
+            } else {
+                author.name.clone()
+            };
+            markdown::link(author.web_url.as_str(), &markdown::escape(&author_entry))
+        });
 
         let authors = match authors.as_slice() {
             [] => "".to_owned(),

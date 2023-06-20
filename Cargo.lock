@@ -234,6 +234,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "cgo"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4b8012aab0c85e1e643347a38b712cb9f6e927985a98d01b5f54b8ceb073f39"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3133,6 +3142,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
+ "retry-policies",
  "sea-query",
  "serde",
  "serde_json",
@@ -3157,6 +3167,7 @@ dependencies = [
  "tracing-error",
  "tracing-loki",
  "tracing-subscriber",
+ "twitter-scraper",
  "url",
  "vergen",
  "wav_io",
@@ -3514,6 +3525,8 @@ name = "test-bat"
 version = "0.8.0"
 dependencies = [
  "expect-test",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3839,6 +3852,21 @@ name = "try-lock"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3528ecfd12c466c6f163363caf2d02a71161dd5e1cc6ae7b34207ea2d42d81ed"
+
+[[package]]
+name = "twitter-scraper"
+version = "0.8.0"
+dependencies = [
+ "cgo",
+ "dotenvy",
+ "expect-test",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "test-bat",
+ "thiserror",
+ "url",
+]
 
 [[package]]
 name = "typenum"

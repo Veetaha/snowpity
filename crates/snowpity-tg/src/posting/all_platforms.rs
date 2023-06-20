@@ -1,5 +1,6 @@
 use super::platform::prelude::*;
 use super::{derpibooru, deviant_art, twitter};
+use crate::prelude::*;
 use crate::Result;
 use assert_matches::assert_matches;
 
@@ -48,7 +49,7 @@ macro_rules! def_all_platforms {
         }
 
         pub(crate) struct Config {
-            $( $platform: <$platform::Platform as PlatformTrait>::Config, )*
+            $( pub(crate) $platform: <$platform::Platform as PlatformTrait>::Config, )*
         }
 
         impl Config {
@@ -85,14 +86,10 @@ macro_rules! def_all_platforms {
                     $(
                         RequestId::$Platform(id) => {
                             let post = self.$platform.get_post(id).await?;
-                            let blobs = post
-                                .blobs
-                                .into_iter()
-                                .map(|blob| {
-                                    let MultiBlob { repr, id } = blob;
-                                    MultiBlob { repr, id: BlobId::$Platform(id) }
-                                })
-                                .collect();
+                            let blobs = post.blobs.map_collect(|blob| {
+                                let MultiBlob { repr, id } = blob;
+                                MultiBlob { repr, id: BlobId::$Platform(id) }
+                            });
 
                             let BasePost {
                                 id,
@@ -123,13 +120,12 @@ macro_rules! def_all_platforms {
                         RequestId::$Platform(request) => {
                             self
                                 .$platform
-                                .get_cached_blobs(request).await?
-                                .into_iter()
-                                .map(|blob| CachedBlobId {
+                                .get_cached_blobs(request)
+                                .await?
+                                .map_collect(|blob| CachedBlobId {
                                     id: BlobId::$Platform(blob.id),
                                     tg_file: blob.tg_file,
                                 })
-                                .collect()
                         }
                     )*
                 })

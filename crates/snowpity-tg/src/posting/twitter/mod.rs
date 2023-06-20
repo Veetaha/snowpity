@@ -10,7 +10,7 @@ use serde::Deserialize;
 
 #[derive(Clone, Deserialize)]
 pub(crate) struct Config {
-    bearer_token: String,
+    pub(crate) cookies: String,
 }
 
 impl ConfigTrait for Config {

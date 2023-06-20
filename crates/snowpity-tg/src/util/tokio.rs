@@ -20,7 +20,7 @@ pub(crate) fn block_in_place(join_handle: tokio::task::JoinHandle<()>) {
 
 /// Same as [`tokio::spawn_blocking`], but propagates panics in the spawned task
 /// to the caller that will await the returned future.
-pub(crate) async fn _spawn_blocking<F, R>(f: F) -> R
+pub(crate) async fn spawn_blocking<F, R>(f: F) -> R
 where
     F: FnOnce() -> R + Send + 'static,
     R: Send + 'static,
