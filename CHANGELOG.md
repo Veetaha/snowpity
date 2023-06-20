@@ -1,5 +1,24 @@
 # Unreleased
 
+# 0.8.0
+
+## Added
+
+- Added MPV support for DeviantArt 🎉
+- Resurrected support for Twitter by switching to `twitter-scraper` golang implementation
+
+## Fixed
+
+- Very old GIFs from derpibooru that don't have an MP4 representation yet are now supported. We generate an MP4 representation for them on the fly.
+
+## Internal
+
+- Fixed the ever-growing JSON logs files for containers in docker. Now we there are explicit retention settings in `docker-daemon.json` and `log-driver` is set to `local`
+- Retention in Victoria Metrics was set to 1 year
+- Retention in Loki was set to 180 days
+- Moved all crates under `/crates` directory for easier navigation
+- Added the initial continuous integration pipeline
+
 # 0.7.1
 
 ## Added

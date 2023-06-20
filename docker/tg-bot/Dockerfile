@@ -10,6 +10,16 @@ ENV CARGO_TERM_COLOR=always
 
 WORKDIR /app
 
+COPY ./scripts /app/scripts
+
+# Don't clean the apt cache (see the reason on for the same command in the runtime stage)
+RUN rm -f /etc/apt/apt.conf.d/docker-clean
+RUN --mount=type=cache,target=/var/cache/apt scripts/install-build-deps.sh
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+# Build application
+COPY . .
+
 # Conditional block for compilation in either debug or release mode
 FROM build_base as build_debug
 ENV RUST_RELEASE_FLAG=""
@@ -20,9 +30,6 @@ ENV RUST_RELEASE_FLAG="--release"
 FROM build_${RUST_BUILD_MODE} as build
 
 ARG RUST_BUILD_MODE
-
-# Build application
-COPY . .
 
 RUN --mount=type=cache,sharing=private,target=/usr/local/cargo/git \
     --mount=type=cache,sharing=private,target=/usr/local/cargo/registry \

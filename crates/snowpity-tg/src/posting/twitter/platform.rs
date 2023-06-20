@@ -4,6 +4,7 @@ use crate::posting::twitter::{db, Config};
 use crate::prelude::*;
 use crate::Result;
 use async_trait::async_trait;
+use url::Url;
 
 pub(crate) struct Platform {
     api: api::Client,
@@ -24,7 +25,7 @@ impl PlatformTrait for Platform {
 
     fn new(params: PlatformParams<Config>) -> Self {
         Self {
-            api: api::Client::new(params.config, params.http),
+            api: api::Client::new(params.config),
             db: db::BlobCacheRepo::new(params.db),
         }
     }
@@ -41,57 +42,77 @@ impl PlatformTrait for Platform {
     }
 
     async fn get_post(&self, tweet_id: TweetId) -> Result<Post<Self>> {
-        let api::GetTweetResponse {
-            author,
-            media,
-            tweet,
-        } = self
+        let tweet = self
             .api
             .get_tweet(tweet_id)
             .instrument(info_span!("Fetching media meta from Twitter"))
             .await?;
 
-        let blobs = media
-            .into_iter()
-            .map(|media| {
-                let download_url = media.best_tg_url()?;
-                let size = match media.kind {
-                    // The size limits were taken from here:
-                    // https://developer.twitter.com/en/docs/twitter-api/v1/media/upload-media/uploading-media/media-best-practices
-                    api::MediaKind::Photo(_) => BlobSize::max_mb(5),
-                    api::MediaKind::AnimatedGif(_) => BlobSize::max_mb(15),
+        let web_url = tweet.tweet_url(tweet.id);
+        let author = Author {
+            web_url: tweet.author_web_url(),
+            kind: None,
+            name: tweet.name,
+        };
 
+        // TODO: the dimensions are not available in the API right now,
+        // however this we could potentially modify the twitter-scraper
+        // code to return them. The author of that go library accepts PRs
+        //
+        // The size limits were taken from here:
+        // https://developer.twitter.com/en/docs/twitter-api/v1/media/upload-media/uploading-media/media-best-practices
+
+        let blobs = tweet.photos.into_iter().map(|media| {
+            (
+                media.id,
+                BlobRepr {
+                    kind: BlobKind::ImageJpeg,
+                    size: BlobSize::max_mb(5),
+                    download_url: best_tg_url_for_photo(media.url),
+                    dimensions: None,
+                },
+            )
+        });
+
+        let gifs = tweet.gifs.into_iter().map(|media| {
+            (
+                media.id,
+                BlobRepr {
+                    kind: BlobKind::AnimationMp4,
+                    download_url: media.url,
+                    size: BlobSize::max_mb(15),
+                    dimensions: None,
+                },
+            )
+        });
+
+        let videos = tweet.videos.into_iter().map(|media| {
+            (
+                media.id,
+                BlobRepr {
+                    kind: BlobKind::VideoMp4,
                     // Technically the video can be up to 512MB
-                    api::MediaKind::Video(_) => BlobSize::Unknown,
-                };
+                    size: BlobSize::Unknown,
+                    download_url: media.url,
+                    dimensions: None,
+                },
+            )
+        });
 
-                let repr = BlobRepr {
-                    kind: (&media.kind).into(),
-                    // XXX: the dimensions are not always correct. They are for `orig`
-                    // representation, but we use `large` one. However this is a
-                    // good enough hint for aspect ratio checks in telegram uploads.
-                    // Either way orig's largest resolution 4096x4096 fits into the tg limits.
-                    dimensions: MediaDimensions {
-                        width: media.width,
-                        height: media.height,
-                    },
-                    size,
-                    download_url,
-                };
-
-                Ok(MultiBlob {
-                    id: media.media_key,
-                    repr: vec![repr],
-                })
-            })
-            .collect::<Result<_>>()?;
+        let blobs = blobs
+            .chain(gifs)
+            .chain(videos)
+            .map_collect(|(id, repr)| MultiBlob {
+                id: MediaKey::from_raw(id),
+                repr: vec![repr],
+            });
 
         Ok(Post {
             base: BasePost {
                 id: tweet.id,
-                web_url: author.tweet_url(tweet.id),
-                authors: <_>::from_iter([author.into()]),
-                safety: SafetyRating::sfw_if(!tweet.possibly_sensitive),
+                web_url,
+                authors: <_>::from_iter([author]),
+                safety: SafetyRating::sfw_if(!tweet.sensitive_content),
             },
             blobs,
         })
@@ -103,12 +124,10 @@ impl PlatformTrait for Platform {
             .get(tweet)
             .with_duration_log("Reading the cache from the database")
             .await?
-            .into_iter()
-            .map(|record| CachedBlobId {
+            .map_collect(|record| CachedBlobId {
                 id: record.media_key,
                 tg_file: record.tg_file,
-            })
-            .collect())
+            }))
     }
 
     async fn set_cached_blob(&self, tweet: TweetId, blob: CachedBlobId<Self>) -> Result {
@@ -119,24 +138,22 @@ impl PlatformTrait for Platform {
 impl DisplayInFileNameViaToString for api::TweetId {}
 impl DisplayInFileNameViaToString for api::MediaKey {}
 
-impl From<api::User> for Author {
-    fn from(user: api::User) -> Self {
-        Self {
-            web_url: user.web_url(),
-            kind: None,
-            name: user.name,
-        }
-    }
-}
-
-impl From<&api::MediaKind> for BlobKind {
-    fn from(kind: &api::MediaKind) -> Self {
-        match kind {
-            api::MediaKind::Photo(_) => BlobKind::ImageJpeg,
-            api::MediaKind::AnimatedGif(_) => BlobKind::AnimationMp4,
-            api::MediaKind::Video(_) => BlobKind::VideoMp4,
-        }
-    }
+/// URL of the media that best suits Telegram.
+///
+/// The images will fit into `4096x4096` bounding box.
+/// This doesn't however guarantee the images will have top-notch quality (see [wiki]).
+///
+/// For videos and gifs the format is `video/mp4` with the highest bitrate.
+///
+/// Media URL formatting is described in twitter [API v1.1 docs].
+/// See also this [community thread] that refers to the same docs.
+///
+/// [API v1.1 docs]: https://developer.twitter.com/en/docs/twitter-api/v1/data-dictionary/object-model/entities#photo_format
+/// [wiki]: https://github.com/Veetaha/snowpity/wiki/Telegram-images-compression
+/// [community thread]: https://twittercommunity.com/t/retrieving-full-size-images-media-fields-url-points-to-resized-version/160494/2
+fn best_tg_url_for_photo(mut url: Url) -> Url {
+    url.query_pairs_mut().append_pair("name", "orig");
+    url
 }
 
 #[cfg(test)]

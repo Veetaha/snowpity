@@ -47,17 +47,14 @@ impl PlatformTrait for Platform {
             .instrument(info_span!("Fetching media meta from Derpibooru"))
             .await?;
 
-        let authors = media
-            .authors()
-            .map(|author| Author {
-                web_url: author.web_url(),
-                kind: match author.kind {
-                    api::AuthorKind::Artist => None,
-                    api::AuthorKind::Editor => Some(AuthorKind::Editor),
-                },
-                name: author.name,
-            })
-            .collect();
+        let authors = media.authors().map_collect(|author| Author {
+            web_url: author.web_url(),
+            kind: match author.kind {
+                api::AuthorKind::Artist => None,
+                api::AuthorKind::Editor => Some(AuthorKind::Editor),
+            },
+            name: author.name,
+        });
 
         let safety = media.safety_rating_tags().map(ToOwned::to_owned).collect();
         let safety = if safety == ["safe"] {
@@ -71,21 +68,18 @@ impl PlatformTrait for Platform {
             height: media.height,
         };
 
-        let repr = best_tg_reprs(&media)
-            .into_iter()
-            .map(|(download_url, kind)| {
-                BlobRepr {
-                    dimensions,
-                    download_url,
-                    kind,
-                    // Sizes for images are ~good enough, although not always accurate,
-                    // but we don't know the size of MP4 equivalent for GIF or WEBM,
-                    // however those will often fit into the limit of uploading via direct URL.
-                    // Anyway, this is all not precise, so be it this way for now.
-                    size: BlobSize::Unknown,
-                }
-            })
-            .collect();
+        let repr = best_tg_reprs(&media).map_collect(|(download_url, kind)| {
+            BlobRepr {
+                dimensions: Some(dimensions),
+                download_url,
+                kind,
+                // Sizes for images are ~good enough, although not always accurate,
+                // but we don't know the size of MP4 equivalent for GIF or WEBM,
+                // however those will often fit into the limit of uploading via direct URL.
+                // Anyway, this is all not precise, so be it this way for now.
+                size: BlobSize::Unknown,
+            }
+        });
 
         let blob = MultiBlob { id: (), repr };
 

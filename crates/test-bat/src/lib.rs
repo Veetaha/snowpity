@@ -1,37 +1,46 @@
+pub mod debug;
+pub mod json;
+
 use expect_test::Expect;
-use std::fmt;
 
 /// Approximate number of characters that can fit on a single screen
 const COMMON_SCREEN_CHARS_WIDTH: usize = 60;
 
-/// Asserts that the debug representation of `actual` is equal to the
-/// given expected snapshot. Uses [`make_debug_snapshot`] to make the
-/// snapshot fit into a common width of a single screen.
-#[track_caller]
-pub fn assert_debug_eq(actual: &dyn fmt::Debug, expected: &Expect) {
-    let mut actual_snapshot = format!("{actual:?}");
-
-    if actual_snapshot.len() >= COMMON_SCREEN_CHARS_WIDTH {
-        actual_snapshot = format!("{actual:#?}");
-    }
-
-    expected.assert_eq(&actual_snapshot)
+enum Style {
+    Terse,
+    Verbose,
 }
 
-/// Formats `actual` to string using [`fmt::Debug`] implementation of `actual`.
-/// If its string length exceeds approximately a single-screen amount of characters,
-/// it will be pretty-formatted with the `#` formatting specifier to fit its width
-/// into a single screen.
-pub fn make_debug_snapshot(actual: &dyn fmt::Debug) -> String {
-    let terse = format!("{actual:?}");
+trait SnapshotFormat<T> {
+    fn make_snapshot_imp(style: Style, actual: &T) -> String;
 
-    let Some(width) = terse.lines().map(|line| line.len()).max() else {
-        return terse;
-    };
+    fn make_snapshot(actual: &T) -> String {
+        let terse = Self::make_snapshot_imp(Style::Terse, actual);
 
-    if width >= COMMON_SCREEN_CHARS_WIDTH {
-        return format!("{actual:#?}");
+        let Some(width) = terse.lines().map(|line| line.len()).max() else {
+            return terse;
+        };
+
+        if width < COMMON_SCREEN_CHARS_WIDTH {
+            return terse;
+        }
+
+        Self::make_snapshot_imp(Style::Verbose, actual)
     }
 
-    terse
+    #[track_caller]
+    fn assert_eq(actual: &T, expected: &Expect) {
+        expected.assert_eq(&Self::make_snapshot(actual))
+    }
+
+    #[track_caller]
+    fn assert_result_eq<E: std::error::Error>(actual: &Result<T, E>, expected: &Expect) {
+        let err = match actual {
+            Ok(value) => return Self::assert_eq(value, expected),
+            Err(err) => err,
+        };
+
+        let err = debug::make_snapshot(err);
+        expected.assert_eq(&format!("Err:{err}"));
+    }
 }

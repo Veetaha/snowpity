@@ -1,72 +1,36 @@
-use crate::http;
 use crate::posting::twitter::api::model::*;
 use crate::posting::twitter::Config;
 use crate::prelude::*;
 use crate::Result;
-use crate::{fatal, util};
+use crate::{err_ctx, util};
 
-util::url::def!(twitter_api, "https://api.twitter.com/2");
-
-pub(crate) struct Client {
-    http: http::Client,
-    cfg: Config,
-}
+pub(crate) struct Client {}
 
 impl Client {
-    pub(crate) fn new(cfg: Config, http: http::Client) -> Self {
-        Self { http, cfg }
+    // The config is used at the start of the program to initialize twitter_scraper lib
+    pub(crate) fn new(_: Config) -> Self {
+        Self {}
     }
 
-    pub(crate) async fn get_tweet(&self, id: TweetId) -> Result<GetTweetResponse> {
-        let query = [
-            ("expansions", "attachments.media_keys,author_id"),
-            ("media.fields", "height,url,width,variants"),
-            ("tweet.fields", "possibly_sensitive"),
-        ];
+    pub(crate) async fn get_tweet(&self, id: TweetId) -> Result<Tweet> {
+        let task = || async {
+            util::tokio::spawn_blocking(move || twitter_scraper::get_tweet(&id.to_string()))
+                .await
+                .map(|tweet| Tweet::from_raw(id, tweet))
+        };
 
-        let mut response = self
-            .http
-            .get(twitter_api(["tweets", &id.to_string()]))
-            .bearer_auth(&self.cfg.bearer_token)
-            .query(&query)
-            .read_json::<ResponseResult<Tweet, GetTweetIncludes>>()
-            .await?
-            .into_std_result()?;
-
-        let author = std::mem::take(&mut response.includes.users)
-            .into_iter()
-            .next()
-            .ok_or_else(|| fatal!("No user in response: {response:#?}"))?;
-
-        Ok(GetTweetResponse {
-            author,
-            tweet: response.data,
-            media: response.includes.media,
-        })
+        // TODO: figure out how to properly differentiate between retryable
+        // and non-retryable errors here
+        util::retry::retry_http(task, |_err| true)
+            .await
+            .map_err(err_ctx!(TwitterError::Service {}))
     }
-}
-
-#[derive(Debug)]
-pub(crate) struct GetTweetResponse {
-    pub(crate) author: User,
-    pub(crate) tweet: Tweet,
-    pub(crate) media: Vec<Media>,
 }
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum TwitterError {
-    #[error(
-        "Error getting tweet. {}: {}",
-        raw.title,
-        raw.detail.as_deref().unwrap_or("{details are unknown}")
-    )]
-    Service { raw: Error },
-
-    #[error("Several errors occurred: {raw_errors:#?}")]
-    ServiceMany { raw_errors: Vec<Error> },
-
-    #[error("The media is missing MP4 format (media_key: {})", media.media_key)]
-    MissingMp4Variant { media: Media },
+    #[error("Error getting tweet.")]
+    Service { source: twitter_scraper::Error },
 }
 
 #[cfg(test)]
@@ -76,11 +40,13 @@ mod tests {
     #[test_log::test(tokio::test)]
     #[ignore]
     async fn manual_sandbox() {
-        dotenvy::dotenv().ok();
+        let _ = dotenvy::dotenv();
 
-        let cfg = crate::config::from_env_or_panic("TWITTER_");
+        let cfg: Config = crate::config::from_env_or_panic("TWITTER_");
 
-        let client = Client::new(cfg, http::create_client());
+        twitter_scraper::initialize(&cfg.cookies);
+
+        let client = Client::new(cfg);
 
         let tweet = client
             .get_tweet(TweetId::from_raw(1609634286050623492))

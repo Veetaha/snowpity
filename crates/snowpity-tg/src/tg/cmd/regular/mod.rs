@@ -14,6 +14,8 @@ pub(crate) use ftai::FtaiCommandError;
 const HELP_ANIMATION_URL: &str = "https://user-images.githubusercontent.com/36276403/209577979-b0ace368-4bea-4a10-a687-d3f24cbed6a2.mp4";
 const EXAMPLE_DERPIBOORU_MEDIA_URL: &str = "https://derpibooru.org/1975357";
 const EXAMPLE_TWITTER_MEDIA_URL: &str = "https://twitter.com/Sethisto/status/1558884492190035968";
+const EXAMPLE_DEVIANT_ART_MEDIA_URL: &str =
+    "https://www.deviantart.com/mandumustbasukanemen/art/hay-station-895499143";
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(rename_rule = "snake_case", description = "Commands:")]
@@ -61,6 +63,7 @@ impl tg::cmd::Command for Cmd {
                 let examples = [
                     (EXAMPLE_DERPIBOORU_MEDIA_URL, "Derpibooru"),
                     (EXAMPLE_TWITTER_MEDIA_URL, "Twitter"),
+                    (EXAMPLE_DEVIANT_ART_MEDIA_URL, "DeviantArt"),
                 ];
 
                 let buttons = examples.map(|(url, platform)| {

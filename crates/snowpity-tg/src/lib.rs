@@ -27,6 +27,8 @@ mod prelude {
 
 /// Run the telegram bot processing loop
 pub async fn run(config: Config) -> Result<()> {
+    twitter_scraper::initialize(&config.posting.twitter.cookies);
+
     let db = db::init(config.db).await?;
 
     let opts = tg::RunBotOptions {

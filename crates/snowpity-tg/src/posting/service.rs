@@ -122,7 +122,7 @@ impl Drop for PostingServiceHandle {
     fn drop(&mut self) {
         // Drop the sender to signal the service to exit.
         self.send = None;
-        util::block_in_place(self.join_handle.take().unwrap());
+        util::tokio::block_in_place(self.join_handle.take().unwrap());
     }
 }
 

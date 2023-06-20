@@ -19,7 +19,7 @@ module "hetzner" {
   tg_bot_blob_cache_chat = local.tg_bot_blob_cache_chat
   tg_bot_token           = local.tg_bot_token
 
-  twitter_bearer_token = var.twitter_bearer_token
+  twitter_cookies = var.twitter_cookies
 
   pg_password      = var.pg_password
   pgadmin_password = var.pgadmin_password

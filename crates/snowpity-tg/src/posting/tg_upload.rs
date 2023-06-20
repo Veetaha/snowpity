@@ -136,9 +136,11 @@ impl TgUploadContext<'_> {
     async fn upload_image(&self) -> Result<TgFileMeta> {
         let dim = &self.blob.repr.dimensions;
 
-        // FIXME: resize the image if it doesn't fit into telegram's limit
-        if dim.aspect_ratio() > 20.0 || dim.height + dim.width > 10000 {
-            return self.upload_document(MaybeLocalBlob::None).await;
+        if let Some(dim) = dim {
+            // FIXME: resize the image if it doesn't fit into telegram's limit
+            if dim.aspect_ratio() > 20.0 || dim.height + dim.width > 10000 {
+                return self.upload_document(MaybeLocalBlob::None).await;
+            }
         }
 
         // /// The images must fit into a box with the side of this size.

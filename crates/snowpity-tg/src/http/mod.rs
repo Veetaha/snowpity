@@ -30,16 +30,20 @@ metrics_bat::histograms! {
 
 pub type Client = reqwest_middleware::ClientWithMiddleware;
 
-pub(crate) fn create_client() -> Client {
-    // Retry up to 3 times with increasing intervals between attempts.
-    let retry_policy = ExponentialBackoff::builder()
+pub(crate) fn default_retry_policy() -> ExponentialBackoff {
+    // Retry exponentially increasing intervals between attempts.
+    ExponentialBackoff::builder()
         .backoff_exponent(2)
-        .retry_bounds(Duration::from_millis(100), Duration::from_secs(3))
-        .build_with_total_retry_duration(Duration::from_secs(60));
+        .retry_bounds(Duration::from_millis(100), Duration::from_secs(2))
+        .build_with_total_retry_duration(Duration::from_secs(10))
+}
 
+pub(crate) fn create_client() -> Client {
     reqwest_middleware::ClientBuilder::new(teloxide::net::client_from_env())
         .with(OutermostObservingMiddleware)
-        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .with(RetryTransientMiddleware::new_with_policy(
+            default_retry_policy(),
+        ))
         .with(InnermostObservingMiddleware)
         .with_init(|request_builder: RequestBuilder| {
             request_builder.header(

@@ -28,7 +28,7 @@ jobs:
         with:
           terraform_wrapper: false
           # Make sure to keep it in sync with the version requirement in tf project
-          teraform_version: ">=1.3"
+          terraform_version: ">=1.3"
 
       - run: terraform fmt -check -recursive
 

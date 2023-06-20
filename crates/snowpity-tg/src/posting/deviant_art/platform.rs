@@ -168,7 +168,7 @@ impl PlatformTrait for Platform {
         // https://wixmp-ed30a86b8c4ca887773594c2.wixmp.com/v/mp4/10be6721-6c5e-4882-abce-c8ef4ec121f7/d5sit1a-4f096690-c76d-4f63-8337-b67b978ac5cd.700p.3abd6dff632b4fb2a16dcd8aa8cb48e5.mp4
 
         let blob = MultiBlob::from_single(BlobRepr {
-            dimensions,
+            dimensions: Some(dimensions),
             download_url: oembed.url,
             kind,
             // Sizes for images are ~good enough, although not always accurate,

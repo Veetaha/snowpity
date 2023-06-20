@@ -92,10 +92,7 @@ impl FtaiService {
 
         let data = wav_io::resample::linear(data, header.channels, header.sample_rate, SAMPLE_RATE);
 
-        let wav_data: Vec<_> = data
-            .into_iter()
-            .map(|f32| (f32 * i16::MAX as f32) as i16)
-            .collect();
+        let wav_data: Vec<_> = data.map_collect(|f32| (f32 * i16::MAX as f32) as i16);
 
         let opus = ogg_opus::encode::<SAMPLE_RATE, 1>(&wav_data)
             .map_err(err_ctx!(FtAiError::EncodeWavToOpus))?;
