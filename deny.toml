@@ -41,6 +41,7 @@ skip = [
 
   # The ecosystem migration with `itertools` breaking changes seems to never end
   { name = "itertools", version = "=0.9.0" },
+    { name = "itertools", version = "=0.10.5" },
 
   # Comes deeply from `futures-intrusive`
   { name = "parking_lot", version = "=0.11.2" },
@@ -75,6 +76,9 @@ skip = [
   # I wish to witness the day when the ecosystem actually transitions to syn v2.
   # I guess this won't ever happen, so be this line a memorial for syn v1!
   { name = "syn", version = "=1.0.109" },
+
+  # Comes from `sqlx-core`, `metrics-exporter-prometheus`, `h2` (from `hyper`)
+  { name = "indexmap", version = "=1.9.3" },
 ]
 skip-tree = []
 

@@ -19,7 +19,7 @@ assert_matches        = "1.5"
 async-trait           = "0.1"
 base64                = "0.21"
 bytes                 = "1.1"
-cgo                   = "0.2"
+cgo                   = "0.3"
 darling               = "0.20"
 derivative            = "2.2"
 derive_more           = "0.99"
@@ -36,7 +36,7 @@ futures               = "0.3"
 humansize             = "2.1"
 image                 = "0.24"
 inventory             = "0.3"
-itertools             = "0.10"
+itertools             = "0.11"
 lazy-regex            = "2.3"
 log                   = "0.4"
 metrics               = "0.21"
@@ -75,7 +75,7 @@ sea-query-binder            = { version = "0.3", features = ["sqlx-postgres"], d
 serde                       = { version = "1.0", features = ["derive"] }
 serde_with                  = { version = "3.0", features = ["json"] }
 sqlx                        = { version = "0.6", features = ["runtime-tokio-rustls", "postgres", "macros", "chrono", "offline"] }
-strum                       = { version = "0.24", features = ["derive"] }
+strum                       = { version = "0.25", features = ["derive"] }
 teloxide                    = { version = "0.12", features = ["rustls"], default-features = false }
 test-log                    = { version = "0.2", features = ["trace"], default-features = false }
 timeago                     = { version = "0.4", features = ["chrono"] }

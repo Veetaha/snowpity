@@ -37,7 +37,5 @@ pub async fn run(config: Config) -> Result<()> {
         db,
     };
 
-    tg::run_bot(opts).await?;
-
-    Ok(())
+    tg::run_bot(opts).await
 }
