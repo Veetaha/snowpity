@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: docker/tg-bot/Dockerfile
+      args:
+        RUST_BUILD_MODE: ${RUST_BUILD_MODE:-debug}
 
     # We are listening only for Ctrl-C
     stop_signal: SIGINT

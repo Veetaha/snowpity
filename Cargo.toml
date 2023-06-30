@@ -6,6 +6,9 @@ default-members = ["crates/snowpity-tg"]
 [profile.dev]
 debug = 0
 
+[profile.bench]
+debug = 1
+
 [workspace.package]
 version = "0.8.0"
 
@@ -20,6 +23,7 @@ async-trait           = "0.1"
 base64                = "0.21"
 bytes                 = "1.1"
 cgo                   = "0.3"
+criterion             = "0.5"
 darling               = "0.20"
 derivative            = "2.2"
 derive_more           = "0.99"

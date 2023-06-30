@@ -4,7 +4,7 @@ function curl_and_decompress {
     local url="$1"
     shift
 
-    if [[ $url == *.tar.gz ]]
+    if [[ $url == *.tar.gz || $url == *.tgz ]]
     then
         curl_with_retry $url | tar --extract --gzip "$@"
     elif [[ $url == *.tar.xz ]]

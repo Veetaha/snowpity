@@ -78,14 +78,9 @@ def "main docker build" [
     let release = ($release | into int)
 
     info $"Building in ($build_mode) mode..."
-    (
-        docker-build tg-bot --push $push --release $release
-            --context . --build-args [[RUST_BUILD_MODE $build_mode]]
-    )
-    (
-        docker-build grafana --push $push --release $release
-            --context ./docker/grafana
-    )
+
+    docker-build tg-bot --push $push --context . --build-args [[RUST_BUILD_MODE $build_mode]]
+    docker-build grafana --push $push --context ./docker/grafana
 }
 
 # Start all services locally using `docker compose`
@@ -93,15 +88,18 @@ def "main up" [
     --no-tg-bot        # Don't start the tg_bot service
     --no-observability # Don't start the pgadmin and observability services
     --fresh (-f)       # Executes `drop-data` before starting the database (run `db drop --help` for details)
+    --release (-r) # Build in release mode
 ] {
     cd (repo)
+
+    let build_mode = if $release { "release" } else { "debug" }
 
     if $fresh {
         info "--fresh was specified, so deleting the data volumes..."
         main down --drop-data
     }
 
-    mut args = (
+    let args = (
         [up --remove-orphans --build --wait postgres pgadmin]
         | append-if (not $no_tg_bot) tg-bot
         | append-if (not $no_observability) [
@@ -112,10 +110,10 @@ def "main up" [
         ]
     )
 
-    docker-compose $args
+    RUST_BUILD_MODE=$build_mode docker-compose $args
 
     if $no_tg_bot {
-        with-debug sqlx migrate run '--source' snowpity-tg/migrations
+        with-debug sqlx migrate run '--source' crates/snowpity-tg/migrations
     }
 
     let args = (
@@ -416,12 +414,10 @@ def-env wait-for-db [] {
 def-env docker-build [
     component: string
     --push: int = 0
-    --release: int = 0
     --build-args: list = []
     --context: string
 ] {
     let push = ($push | into bool)
-    let release = ($release | into bool)
 
     cd (repo)
 

@@ -27,7 +27,7 @@ const MAX_DOWNLOAD_SIZE: u64 = 200 * MB;
 /// and IOS apps use this value, but Android app displays images
 /// with the side of 1280 at the time of this writing, even when
 /// a higher resolution is available.
-const _MAX_LOSSLESS_TG_IMAGE_RESOLUTION: u64 = 2560;
+const MAX_LOSSLESS_TG_IMAGE_RESOLUTION: u32 = 2560;
 
 metrics_bat::labels! {
     DownloadLabels {
@@ -148,18 +148,19 @@ impl TgUploadContext<'_> {
         let dim = &self.blob.repr.dimensions;
 
         if let Some(dim) = dim {
-            // if dim.height + dim.width > 10000 {
-            //     self.resize_and_upload_image().await
-            // }
+            let span = info_span!("image_dimensions", height = dim.height, width = dim.width);
 
-            if dim.aspect_ratio() > 20.0 || dim.height + dim.width > 10000 {
-                return self.upload_document(MaybeLocalBlob::None).await;
+            if dim.aspect_ratio() > 20.0 {
+                return self
+                    .upload_document(MaybeLocalBlob::None)
+                    .instrument(span)
+                    .await;
+            }
+
+            if dim.height + dim.width > 10000 {
+                return self.resize_and_upload_image().instrument(span).await;
             }
         }
-
-        // if dim.width > MAX_TG_IMAGE_RESOLUTION || dim.height > MAX_TG_IMAGE_RESOLUTION {
-        //     // resize the image to fit
-        // }
 
         let ctx = self.file_kind(TgFileKind::Photo);
 
@@ -178,25 +179,40 @@ impl TgUploadContext<'_> {
             .await?
             .upcast();
 
-        if local_blob.size < MAX_TG_PHOTO_SIZE.by_multipart {
-            try_return_upload!(ctx.by_multipart(&local_blob));
-        }
-
-        self.upload_document(MaybeLocalBlob::Some(local_blob)).await
+        self.upload_local_image(local_blob).await
     }
 
-    // async fn resize_and_upload_image(&self) -> Result<TgFileMeta> {
-    //     let ctx = self.file_kind(TgFileKind::Photo);
+    async fn upload_local_image(&self, image: LocalBlob<LocalBlobKind>) -> Result<TgFileMeta> {
+        let ctx = self.file_kind(TgFileKind::Photo);
 
-    //     let image = ctx.download_blob_to_ram(MAX_DOWNLOAD_SIZE).await?;
+        // FIXME: try resizing the image to a smaller if it's too big
+        if image.size < MAX_TG_PHOTO_SIZE.by_multipart {
+            try_return_upload!(ctx.by_multipart(&image));
+        }
 
-    //     let image = media_conv::resize_image_to_bounding_box(
-    //         &image.blob,
-    //         MAX_LOSSLESS_TG_IMAGE_RESOLUTION,
-    //     ).await;
+        self.upload_document(MaybeLocalBlob::Some(image)).await
+    }
 
-    //     self.upload_document(MaybeLocalBlob::Some(image.into())).await
-    // }
+    async fn resize_and_upload_image(&self) -> Result<TgFileMeta> {
+        let ctx = self.file_kind(TgFileKind::Photo);
+
+        let image = ctx.download_blob_to_ram(MAX_DOWNLOAD_SIZE).await?;
+
+        // FIXME: send too large images as documents (check width * height)
+        // We don't want to allocate a lot of memory for resizing
+        let image =
+            media_conv::resize_image_to_bounding_box_sync(&image.blob, MAX_LOSSLESS_TG_IMAGE_RESOLUTION)?;
+                // .with_duration_log("Resize image to bounding box")
+                // .await?;
+
+        let image = LocalBlob {
+            size: u64::try_from(image.len()).unwrap(),
+            blob: image,
+        }
+        .upcast();
+
+        self.upload_local_image(image).await
+    }
 
     async fn upload_gif_as_mpeg4_gif(&self) -> Result<TgFileMeta> {
         let ctx = self.file_kind(TgFileKind::Mpeg4Gif);
