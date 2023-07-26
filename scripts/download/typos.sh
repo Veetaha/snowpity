@@ -10,6 +10,6 @@ version=v1.13.6
 
 base_url="https://github.com/crate-ci/typos/releases/download/$version"
 
-file_stem="typos-$version-x86_64-unknown-linux-musl"
+file_stem="typos-$version-$arch_rust-unknown-linux-musl"
 
 curl_and_decompress $base_url/$file_stem.tar.gz ./typos

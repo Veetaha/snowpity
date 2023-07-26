@@ -2,7 +2,8 @@ use crate::observability::logging::prelude::*;
 use crate::posting::platform::prelude::*;
 use crate::posting::{PostingContext, PostingError};
 use crate::prelude::*;
-use crate::util::{media_conv, DynError};
+use crate::util::units::MB;
+use crate::util::{display, media_conv, DynError};
 use crate::{err, fatal, Result};
 use assert_matches::assert_matches;
 use derive_more::Deref;
@@ -12,9 +13,6 @@ use futures::prelude::*;
 use metrics_bat::prelude::*;
 use teloxide::prelude::*;
 use teloxide::types::{FileMeta, InputFile, MessageKind};
-
-const KB_F: f64 = KB as f64;
-const MB_F: f64 = MB as f64;
 
 /// If the blob is larger than this, then we will refuse to download it, because
 /// it's too big for us to handle, or it could be a malicious blob.
@@ -47,21 +45,6 @@ enum TgUploadMethod<'a> {
     Multipart(LocalBlob<&'a LocalBlobKind>),
 }
 
-const BLOB_SIZE_BUCKETS: &[f64] = &[
-    KB_F * 4.,
-    KB_F * 16.,
-    KB_F * 64.,
-    KB_F * 256.,
-    MB_F * 1.,
-    MB_F * 2.,
-    MB_F * 4.,
-    MB_F * 6.,
-    MB_F * 8.,
-    MB_F * 10.,
-    MB_F * 20.,
-    MB_F * 50.,
-];
-
 metrics_bat::histograms! {
     /// Number of seconds it took to upload a blob to Telegram.
     /// It doensn't include the time to query the blob from the posting platform
@@ -72,10 +55,10 @@ metrics_bat::histograms! {
     blob_download_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 
     /// Size of the blob originally downloaded from the posting platform.
-    blob_original_size_bytes = BLOB_SIZE_BUCKETS;
+    blob_original_size_bytes = crate::metrics::DEFAULT_BLOB_SIZE_BUCKETS;
 
     /// Size of blob to be uploaded to Telegram after intermediate processing (if any)
-    blob_uploaded_size_bytes = BLOB_SIZE_BUCKETS;
+    blob_uploaded_size_bytes = crate::metrics::DEFAULT_BLOB_SIZE_BUCKETS;
 }
 
 pub(crate) async fn upload(
@@ -198,12 +181,32 @@ impl TgUploadContext<'_> {
 
         let image = ctx.download_blob_to_ram(MAX_DOWNLOAD_SIZE).await?;
 
+        /*
+        if image.dim.aspect_ratio() > 20.0 {
+            return self.upload_document(MaybeLocalBlob::None).await;
+        }
+
+        if image.dim.height + image.dim.width > 10000 {
+            if resize fails with OOM {
+                return self.upload_document(MaybeLocalBlob::None).await;
+            }
+
+            self.resize_and_upload_image().await
+        }
+
+        if image.size > MAX_TG_PHOTO_SIZE.by_multipart && image.dim > MAX_LOSSLESS_TG_IMAGE_RESOLUTION {
+            return self.resize_and_upload_image().await;
+        }
+
+        self.upload_local_image(image).await
+        */
+
+
         // FIXME: send too large images as documents (check width * height)
         // We don't want to allocate a lot of memory for resizing
         let image =
-            media_conv::resize_image_to_bounding_box_sync(&image.blob, MAX_LOSSLESS_TG_IMAGE_RESOLUTION)?;
-                // .with_duration_log("Resize image to bounding box")
-                // .await?;
+            media_conv::resize_image_to_bounding_box(image.blob, MAX_LOSSLESS_TG_IMAGE_RESOLUTION)
+                .await?;
 
         let image = LocalBlob {
             size: u64::try_from(image.len()).unwrap(),
@@ -404,7 +407,7 @@ impl TgUploadKindContext<'_> {
         blob_original_size_bytes(vec![]).record(downloaded.size as f64);
 
         info!(
-            actual_size = downloaded.size,
+            actual_size = %display::human_size(downloaded.size),
             duration = tracing_duration(duration),
             "Downloaded file"
         );

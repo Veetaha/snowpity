@@ -9,8 +9,15 @@ debug = 0
 [profile.bench]
 debug = 1
 
+[profile.release]
+debug         = 1
+lto           = "fat"
+opt-level     = 3
+# The less parallel the build is, the more context the compiler has to optimizes
+codegen-units = 1
+
 [workspace.package]
-version = "0.8.0"
+version = "0.8.1"
 
 authors = ["Veetaha <veetaha2@gmail.com>"]
 edition = "2021"
@@ -95,3 +102,6 @@ snowpity-tg-macros = { path = "crates/snowpity-tg-macros" }
 sqlx-bat           = { path = "crates/sqlx-bat" }
 test-bat           = { path = "crates/test-bat" }
 twitter-scraper    = { path = "crates/twitter-scraper" }
+
+# [patch.crates-io]
+# audiopus_sys = { path = "../audiopus_sys" }

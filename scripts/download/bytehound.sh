@@ -10,4 +10,4 @@ version=0.11.0
 
 base_url="https://github.com/koute/bytehound/releases/download/$version"
 
-curl_and_decompress $base_url/bytehound-x86_64-unknown-linux-gnu.tgz
+curl_and_decompress $base_url/bytehound-$arch_rust-unknown-linux-gnu.tgz bytehound libbytehound.so

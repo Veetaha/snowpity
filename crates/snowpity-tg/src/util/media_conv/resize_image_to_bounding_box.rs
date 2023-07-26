@@ -3,32 +3,31 @@ use crate::{fatal, Result};
 use bytes::Bytes;
 use fast_image_resize as fr;
 use image::ColorType;
+use metrics_bat::prelude::*;
 use std::num::NonZeroU32;
 use std::sync::OnceLock;
 
-// TODO: add metrics
-// metrics_bat::labels! {
-//     MediaResizeLabels {
-//         /// The type of the media that's being converted
-//         media_type: MediaType,
-
-//         /// The type of the media that's being converted
-//         output_type: MediaType,
-//     }
-// }
-
-// metrics_bat::counters! {
-//     /// Total number of media resize operations
-//     media_resize_total {  };
-// }
+metrics_bat::histograms! {
+    /// Number of seconds it took to resize the image to bounding box
+    resize_image_to_boundig_box_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
+}
 
 // https://derpibooru.org/images/2561187
-pub fn resize_image_to_bounding_box_sync(bytes: &Bytes, box_side: u32) -> Result<Bytes> {
+pub async fn resize_image_to_bounding_box(bytes: Bytes, box_side: u32) -> Result<Bytes> {
+    crate::util::tokio::spawn_blocking(move || resize_image_to_bounding_box_sync(bytes, box_side))
+        .record_duration(resize_image_to_boundig_box_duration_seconds, vec![])
+        .with_duration_log("Resize image to bounding box")
+        .await
+}
+
+pub fn resize_image_to_bounding_box_sync(bytes: Bytes, box_side: u32) -> Result<Bytes> {
     let format =
-        image::guess_format(bytes).fatal_ctx(|| "Couldn't guess the format of the image")?;
+        image::guess_format(&bytes).fatal_ctx(|| "Couldn't guess the format of the image")?;
 
     let src = image::load_from_memory_with_format(&bytes, format)
         .fatal_ctx(|| "Failed to load the image from the memory buffer")?;
+
+    drop(bytes);
 
     let color = src.color();
 
@@ -43,6 +42,7 @@ pub fn resize_image_to_bounding_box_sync(bytes: &Bytes, box_side: u32) -> Result
             (src_height * factor).floor() as u32,
         )
     };
+
     let mut src = get_image_with_linear_colorspace(src)?;
 
     let mut dest = fr::Image::new(
@@ -56,7 +56,7 @@ pub fn resize_image_to_bounding_box_sync(bytes: &Bytes, box_side: u32) -> Result
     // Lanczos3 is the best algorithm for downsampling
     // https://en.wikipedia.org/wiki/Lanczos_resampling
     // Also apply antialiasing by using super sampling
-    let algorithm = fr::ResizeAlg::SuperSampling(fr::FilterType::Lanczos3, 2);
+    let algorithm = fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3);
     let mut resizer = fr::Resizer::new(algorithm);
 
     if color.has_alpha() {
@@ -68,6 +68,8 @@ pub fn resize_image_to_bounding_box_sync(bytes: &Bytes, box_side: u32) -> Result
     resizer
         .resize(&src.view(), &mut dest.view_mut())
         .fatal_ctx(|| "Failed to resize image")?;
+
+    drop(src);
 
     if color.has_alpha() {
         mul_div
@@ -110,16 +112,16 @@ fn get_image_with_linear_colorspace(image: image::DynamicImage) -> Result<fr::Im
 
     let color = image.color();
 
-    let (pixel_type, buffer) = match color {
-        ColorType::L8 => (fr::PixelType::U8, image.into_luma8().into_raw()),
-        ColorType::La8 => (fr::PixelType::U8x2, image.into_luma_alpha8().into_raw()),
-        ColorType::Rgb8 => (fr::PixelType::U8x3, image.into_rgb8().into_raw()),
-        ColorType::Rgba8 => (fr::PixelType::U8x4, image.into_rgba8().into_raw()),
-        ColorType::L16 => (fr::PixelType::U16, u16_to_u8(image.into_luma16())),
-        ColorType::La16 => (fr::PixelType::U16x2, u16_to_u8(image.into_luma_alpha16())),
-        ColorType::Rgb16 => (fr::PixelType::U16x3, u16_to_u8(image.into_rgb16())),
-        ColorType::Rgba16 => (fr::PixelType::U16x4, u16_to_u8(image.into_rgba16())),
-        ColorType::Rgb32F | ColorType::Rgba32F | _ => {
+    let (pixel_type, buffer) = match image {
+        image::DynamicImage::ImageLuma8(image) => (fr::PixelType::U8, image.into_raw()),
+        image::DynamicImage::ImageLumaA8(image) => (fr::PixelType::U8x2, image.into_raw()),
+        image::DynamicImage::ImageRgb8(image) => (fr::PixelType::U8x3, image.into_raw()),
+        image::DynamicImage::ImageRgba8(image) => (fr::PixelType::U8x4, image.into_raw()),
+        image::DynamicImage::ImageLuma16(image) => (fr::PixelType::U16, u16_to_u8(image)),
+        image::DynamicImage::ImageLumaA16(image) => (fr::PixelType::U16x2, u16_to_u8(image)),
+        image::DynamicImage::ImageRgb16(image) => (fr::PixelType::U16x3, u16_to_u8(image)),
+        image::DynamicImage::ImageRgba16(image) => (fr::PixelType::U16x4, u16_to_u8(image)),
+        image::DynamicImage::ImageRgb32F(_) | image::DynamicImage::ImageRgba32F(_) | _ => {
             return Err(fatal!("Unsupported pixel's format of image: {color:?}"))
         }
     };

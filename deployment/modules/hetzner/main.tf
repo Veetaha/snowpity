@@ -18,7 +18,7 @@ module "workspace" {
 resource "hcloud_server" "master" {
   name         = local.hostname
   image        = "ubuntu-22.04"
-  server_type  = module.workspace.kind == "prod" ? "cpx21" : "cx11"
+  server_type  = "cax21"
   location     = local.location
   user_data    = data.cloudinit_config.master.rendered
   firewall_ids = [hcloud_firewall.allow_only_ssh.id]
@@ -47,19 +47,19 @@ resource "hcloud_volume_attachment" "master" {
   automount = false
 }
 
-# # HACK: we need to gracefully shutdown our systemd service with the database
-# # docker container before the data volume is detached. This null resource
-# # depends on the volume attachment resource, so the remote-exec provisioner
-# # teardown script will be run before the attachment is destroyed.
-# #
-# # Unfortunately, it's not possible to do this with `systemd`. The volume detach
-# # sequence is undocumented in Hetzner docs. One would expect that all `systemd`
-# # services dependent upon the volume's mount are stopped before the volume
-# # is detached but this isn't true.
-# #
-# # The reality is cruel. It was experimentally found that the volume is
-# # detached abruptly. Therefore the database doesn't have time to
-# # flush its data to the disk, which means potential data loss.
+# HACK: we need to gracefully shutdown our systemd service with the database
+# docker container before the data volume is detached. This null resource
+# depends on the volume attachment resource, so the remote-exec provisioner
+# teardown script will be run before the attachment is destroyed.
+#
+# Unfortunately, it's not possible to do this with `systemd`. The volume detach
+# sequence is undocumented in Hetzner docs. One would expect that all `systemd`
+# services dependent upon the volume's mount are stopped before the volume
+# is detached but this isn't true.
+#
+# The reality is cruel. It was experimentally found that the volume is
+# detached abruptly. Therefore the database doesn't have time to
+# flush its data to the disk, which means potential data loss.
 resource "null_resource" "teardown" {
   triggers = {
     data_volume_attachment_id = hcloud_volume_attachment.master.id

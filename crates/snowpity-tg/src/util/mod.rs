@@ -11,6 +11,7 @@ pub mod retry;
 pub mod temp_file;
 pub mod tokio;
 pub mod url;
+pub mod units;
 
 pub(crate) use std_ext::*;
 

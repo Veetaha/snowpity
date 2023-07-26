@@ -11,7 +11,7 @@ script_dir=$(readlink -f $(dirname $0))
 
 version=6.0
 
-file_stem=ffmpeg-$version-amd64-static
+file_stem=ffmpeg-$version-$arch_go-static
 
 url=https://johnvansickle.com/ffmpeg/releases/$file_stem.tar.xz
 

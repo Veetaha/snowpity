@@ -440,15 +440,14 @@ def-env docker-build [
             --file $"docker/($component)/Dockerfile"
             --tag $version_tag
             --tag $latest_tag
+            # We use ARM-propelled server in production, so doing AMD builds isn't critical
+            '--platform' linux/arm64/v8
             $output_flag
         ]
-        | append ($build_args | each { |it| ['--build-arg', $"($it.0)=($it.1)"] } | flatten)
-
+        | append ($build_args | each { |arg| ['--build-arg', $"($arg.0)=($arg.1)"] } | flatten)
     )
 
-    (
-        with-debug docker $args
-    )
+    with-debug docker $args
 }
 
 # Retry a closure until it succeeds or retry attempts are exhausted.
