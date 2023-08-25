@@ -229,7 +229,7 @@ def "main tg chat-id" [
 }
 
 def "main sqlx prepare" [] {
-    cd $"(repo)/snowpity-tg"
+    cd $"(repo)/crates/snowpity-tg"
     with-debug cargo sqlx prepare
 }
 

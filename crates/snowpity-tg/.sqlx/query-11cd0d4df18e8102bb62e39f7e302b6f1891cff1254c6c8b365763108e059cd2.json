@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into tg_derpibooru_blob_cache (derpibooru_id, tg_file_id, tg_file_kind)\n            values ($1, $2, $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Varchar",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "11cd0d4df18e8102bb62e39f7e302b6f1891cff1254c6c8b365763108e059cd2"
+}

@@ -37,7 +37,7 @@ services:
     networks: [postgres]
 
   pgadmin:
-    image: dpage/pgadmin4:6.19
+    image: dpage/pgadmin4:7.6
     environment:
       PGADMIN_DEFAULT_EMAIL: snowpity@snowpity.com
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-snowpity}

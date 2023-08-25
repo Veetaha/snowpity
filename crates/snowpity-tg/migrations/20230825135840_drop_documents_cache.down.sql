@@ -1,0 +1,1 @@
+-- Nothing to rollback because the data was deleted during `up` migration.

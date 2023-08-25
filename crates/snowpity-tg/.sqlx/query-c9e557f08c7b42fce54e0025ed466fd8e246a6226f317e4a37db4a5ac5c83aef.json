@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select media_key, tg_file_id, tg_file_kind\n            from tg_twitter_blob_cache\n            where tweet_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "media_key",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "tg_file_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "tg_file_kind",
+        "type_info": "Int2"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c9e557f08c7b42fce54e0025ed466fd8e246a6226f317e4a37db4a5ac5c83aef"
+}
