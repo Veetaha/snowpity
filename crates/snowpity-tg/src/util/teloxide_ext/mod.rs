@@ -21,7 +21,7 @@ pub(crate) impl User {
         let mention_text = markdown::escape(&self.full_name());
 
         // We are using `preferably_tme_url` instead of user ID style `tg://user?id={}`
-        // because links to of this form to users with the restricted
+        // because links of this form to users with the restricted
         // 'Forwarded Messages' privacy setting won't be clickable in telegram
         // messages.
         markdown::link(self.preferably_tme_url().as_str(), &mention_text)

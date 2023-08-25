@@ -10,7 +10,7 @@ version=0.8.0
 
 base_url="https://github.com/tamasfe/taplo/releases/download/$version"
 
-file_name=taplo-full-linux-x86_64
+file_name=taplo-full-linux-$arch_rust
 
 curl_and_decompress $base_url/$file_name.gz
 

@@ -67,8 +67,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 
         info!("Skipping inline query");
 
-        bot
-            .answer_inline_query(inline_query_id, [])
+        bot.answer_inline_query(inline_query_id, [])
             .switch_pm_text("Help")
             .switch_pm_parameter("help")
             .cache_time(CACHE_TIME_SECS)

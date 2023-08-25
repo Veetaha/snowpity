@@ -86,7 +86,7 @@ impl FtaiService {
             .get_samples_f32()
             .map_err(|message| err!(FtAiError::ReadWavSamples { message }))?;
 
-        // This seems to give the best quality. The original samle rate
+        // This seems to give the best quality. The original sample rate
         // of 15.ai is 44_100.
         const SAMPLE_RATE: u32 = 48_000;
 
@@ -94,10 +94,10 @@ impl FtaiService {
 
         let wav_data: Vec<_> = data.map_collect(|f32| (f32 * i16::MAX as f32) as i16);
 
-        let opus = ogg_opus::encode::<SAMPLE_RATE, 1>(&wav_data)
+        let ogg = ogg_opus::encode::<SAMPLE_RATE, 1>(&wav_data)
             .map_err(err_ctx!(FtAiError::EncodeWavToOpus))?;
 
-        Ok(Ogg { data: opus.into() })
+        Ok(Ogg { data: ogg.into() })
     }
 }
 

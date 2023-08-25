@@ -17,9 +17,11 @@ metrics_bat::histograms! {
 }
 
 pub(crate) async fn init(config: Config) -> Result<sqlx::PgPool> {
-    let mut connect_options = config.url.as_str().parse::<PgConnectOptions>()?;
-
-    connect_options.log_statements(log::LevelFilter::Debug);
+    let connect_options = config
+        .url
+        .as_str()
+        .parse::<PgConnectOptions>()?
+        .log_statements(log::LevelFilter::Debug);
 
     let db = PgPoolOptions::new()
         .max_connections(config.pool_size)

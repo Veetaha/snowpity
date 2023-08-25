@@ -2,22 +2,8 @@ use crate::prelude::*;
 use crate::Result;
 use std::path::Path;
 
-// TODO: we need these dependencies to resize images to fit into telegram's limits
-// Adding `use` statements to make sure `cargo-machete` doesn't mark them as unused
-#[allow(clippy::single_component_path_imports, unused_imports)]
-use fast_image_resize;
-#[allow(clippy::single_component_path_imports, unused_imports)]
-use image;
-
-// pub(crate) async fn resize_image(data: bytes::Bytes) -> Result<tempfile::TempPath> {
-//     // fast_image_resize::Image::from_slice_u8(width, height, buffer, fast_image_resize::PixelType::)
-//     // use image::
-//     // use fast_image_resize::
-//     todo!()
-// }
-
 #[instrument]
-pub(crate) async fn gif_to_mp4(input: &Path) -> Result<tempfile::TempPath> {
+pub async fn gif_to_mp4(input: &Path) -> Result<tempfile::TempPath> {
     let output = std::env::temp_dir().join(format!("{}.mp4", nanoid::nanoid!()));
     let log_message = format!("Converting GIF to mp4 with output at {output:?}");
 

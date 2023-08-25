@@ -78,7 +78,7 @@ fn is_result(return_type: &syn::ReturnType) -> bool {
     };
 
     let syn::Type::Path(ty) = discard_type_group(ty) else {
-        return false
+        return false;
     };
 
     ty.path

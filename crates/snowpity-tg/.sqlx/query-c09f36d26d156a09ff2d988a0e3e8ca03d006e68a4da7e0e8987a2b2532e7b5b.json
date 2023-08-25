@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into tg_twitter_blob_cache (\n                tweet_id,\n                media_key,\n                tg_file_id,\n                tg_file_kind\n            )\n            values ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Varchar",
+        "Varchar",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c09f36d26d156a09ff2d988a0e3e8ca03d006e68a4da7e0e8987a2b2532e7b5b"
+}

@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: docker/tg-bot/Dockerfile
+      args:
+        RUST_BUILD_MODE: ${RUST_BUILD_MODE:-debug}
 
     # We are listening only for Ctrl-C
     stop_signal: SIGINT
@@ -35,7 +37,7 @@ services:
     networks: [postgres]
 
   pgadmin:
-    image: dpage/pgadmin4:6.19
+    image: dpage/pgadmin4:7.6
     environment:
       PGADMIN_DEFAULT_EMAIL: snowpity@snowpity.com
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-snowpity}

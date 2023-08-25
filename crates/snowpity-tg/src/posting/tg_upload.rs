@@ -2,7 +2,8 @@ use crate::observability::logging::prelude::*;
 use crate::posting::platform::prelude::*;
 use crate::posting::{PostingContext, PostingError};
 use crate::prelude::*;
-use crate::util::{media_conv, DynError};
+use crate::util::units::MB;
+use crate::util::{display, media_conv, DynError};
 use crate::{err, fatal, Result};
 use assert_matches::assert_matches;
 use derive_more::Deref;
@@ -13,10 +14,18 @@ use metrics_bat::prelude::*;
 use teloxide::prelude::*;
 use teloxide::types::{FileMeta, InputFile, MessageKind};
 
-const KB_F: f64 = KB as f64;
-const MB_F: f64 = MB as f64;
-
+/// If the blob is larger than this, then we will refuse to download it, because
+/// it's too big for us to handle, or it could be a malicious blob.
 const MAX_DOWNLOAD_SIZE: u64 = 200 * MB;
+
+/// The images must fit into a box with the side of this size.
+/// If they don't, then Telegram resizes them to fit.
+///
+/// This value was inferred from experiments. Telegram Desktop
+/// and IOS apps use this value, but Android app displays images
+/// with the side of 1280 at the time of this writing, even when
+/// a higher resolution is available.
+const MAX_LOSSLESS_TG_IMAGE_RESOLUTION: u32 = 2560;
 
 metrics_bat::labels! {
     DownloadLabels {
@@ -36,21 +45,6 @@ enum TgUploadMethod<'a> {
     Multipart(LocalBlob<&'a LocalBlobKind>),
 }
 
-const BLOB_SIZE_BUCKETS: &[f64] = &[
-    KB_F * 4.,
-    KB_F * 16.,
-    KB_F * 64.,
-    KB_F * 256.,
-    MB_F * 1.,
-    MB_F * 2.,
-    MB_F * 4.,
-    MB_F * 6.,
-    MB_F * 8.,
-    MB_F * 10.,
-    MB_F * 20.,
-    MB_F * 50.,
-];
-
 metrics_bat::histograms! {
     /// Number of seconds it took to upload a blob to Telegram.
     /// It doensn't include the time to query the blob from the posting platform
@@ -61,10 +55,10 @@ metrics_bat::histograms! {
     blob_download_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 
     /// Size of the blob originally downloaded from the posting platform.
-    blob_original_size_bytes = BLOB_SIZE_BUCKETS;
+    blob_original_size_bytes = crate::metrics::DEFAULT_BLOB_SIZE_BUCKETS;
 
     /// Size of blob to be uploaded to Telegram after intermediate processing (if any)
-    blob_uploaded_size_bytes = BLOB_SIZE_BUCKETS;
+    blob_uploaded_size_bytes = crate::metrics::DEFAULT_BLOB_SIZE_BUCKETS;
 }
 
 pub(crate) async fn upload(
@@ -137,24 +131,19 @@ impl TgUploadContext<'_> {
         let dim = &self.blob.repr.dimensions;
 
         if let Some(dim) = dim {
-            // FIXME: resize the image if it doesn't fit into telegram's limit
-            if dim.aspect_ratio() > 20.0 || dim.height + dim.width > 10000 {
-                return self.upload_document(MaybeLocalBlob::None).await;
+            let span = info_span!("image_dimensions", height = dim.height, width = dim.width);
+
+            if dim.aspect_ratio() > 20.0 {
+                return self
+                    .upload_document(MaybeLocalBlob::None)
+                    .instrument(span)
+                    .await;
+            }
+
+            if dim.height + dim.width > 10000 {
+                return self.resize_and_upload_image().instrument(span).await;
             }
         }
-
-        // /// The images must fit into a box with the side of this size.
-        // /// If they don't, then Telegram resizes them to fit.
-        // ///
-        // /// This value was inferred from experiments. Telegram Desktop
-        // /// and IOS apps use this value, but Android app displays images
-        // /// with the side of 1280 at the time of this writing, even when
-        // /// a higher resolution is available.
-        // const MAX_TG_IMAGE_RESOLUTION: u64 = 2560;
-
-        // if dim.width > MAX_TG_IMAGE_RESOLUTION || dim.height > MAX_TG_IMAGE_RESOLUTION {
-        //     // resize the image to fit
-        // }
 
         let ctx = self.file_kind(TgFileKind::Photo);
 
@@ -173,11 +162,50 @@ impl TgUploadContext<'_> {
             .await?
             .upcast();
 
-        if local_blob.size < MAX_TG_PHOTO_SIZE.by_multipart {
-            try_return_upload!(ctx.by_multipart(&local_blob));
+        self.upload_local_image(local_blob).await
+    }
+
+    async fn upload_local_image(&self, image: LocalBlob<LocalBlobKind>) -> Result<TgFileMeta> {
+        let ctx = self.file_kind(TgFileKind::Photo);
+
+        // FIXME: try resizing the image to a smaller if it's too big
+        if image.size < MAX_TG_PHOTO_SIZE.by_multipart {
+            try_return_upload!(ctx.by_multipart(&image));
         }
 
-        self.upload_document(MaybeLocalBlob::Some(local_blob)).await
+        self.upload_document(MaybeLocalBlob::Some(image)).await
+    }
+
+    async fn resize_and_upload_image(&self) -> Result<TgFileMeta> {
+        let ctx = self.file_kind(TgFileKind::Photo);
+
+        let image = ctx.download_blob_to_ram(MAX_DOWNLOAD_SIZE).await?;
+
+        // FIXME: send too large images as documents (check width * height)
+        // We don't want to allocate a lot of memory for resizing
+        let result = media_conv::resize_image_to_bounding_box(
+            image.blob.clone(),
+            MAX_LOSSLESS_TG_IMAGE_RESOLUTION,
+        )
+        .await;
+
+        let image = match result {
+            Ok(image) => image,
+            Err(err) => {
+                warn!(err = tracing_err(&err), "Failed to resize image");
+                return ctx
+                    .upload_document(MaybeLocalBlob::Some(image.upcast()))
+                    .await;
+            }
+        };
+
+        let image = LocalBlob {
+            size: u64::try_from(image.len()).unwrap(),
+            blob: image,
+        }
+        .upcast();
+
+        self.upload_local_image(image).await
     }
 
     async fn upload_gif_as_mpeg4_gif(&self) -> Result<TgFileMeta> {
@@ -370,7 +398,7 @@ impl TgUploadKindContext<'_> {
         blob_original_size_bytes(vec![]).record(downloaded.size as f64);
 
         info!(
-            actual_size = downloaded.size,
+            actual_size = %display::human_size(downloaded.size),
             duration = tracing_duration(duration),
             "Downloaded file"
         );

@@ -74,18 +74,10 @@ def "main docker build" [
 
     let build_mode = if $release { "release" } else { "debug" }
 
-    let push = ($push | into int)
-    let release = ($release | into int)
-
     info $"Building in ($build_mode) mode..."
-    (
-        docker-build tg-bot --push $push --release $release
-            --context . --build-args [[RUST_BUILD_MODE $build_mode]]
-    )
-    (
-        docker-build grafana --push $push --release $release
-            --context ./docker/grafana
-    )
+
+    docker-build tg-bot --push $push --context . --build-args [[RUST_BUILD_MODE $build_mode]]
+    docker-build grafana --push $push --context ./docker/grafana
 }
 
 # Start all services locally using `docker compose`
@@ -93,15 +85,18 @@ def "main up" [
     --no-tg-bot        # Don't start the tg_bot service
     --no-observability # Don't start the pgadmin and observability services
     --fresh (-f)       # Executes `drop-data` before starting the database (run `db drop --help` for details)
+    --release (-r)     # Build in release mode
 ] {
     cd (repo)
+
+    let build_mode = if $release { "release" } else { "debug" }
 
     if $fresh {
         info "--fresh was specified, so deleting the data volumes..."
         main down --drop-data
     }
 
-    mut args = (
+    let args = (
         [up --remove-orphans --build --wait postgres pgadmin]
         | append-if (not $no_tg_bot) tg-bot
         | append-if (not $no_observability) [
@@ -112,10 +107,10 @@ def "main up" [
         ]
     )
 
-    docker-compose $args
+    RUST_BUILD_MODE=$build_mode docker-compose $args
 
     if $no_tg_bot {
-        with-debug sqlx migrate run '--source' snowpity-tg/migrations
+        with-debug sqlx migrate run '--source' crates/snowpity-tg/migrations
     }
 
     let args = (
@@ -231,14 +226,14 @@ def "main tg chat-id" [
 }
 
 def "main sqlx prepare" [] {
-    cd $"(repo)/snowpity-tg"
+    cd $"(repo)/crates/snowpity-tg"
     with-debug cargo sqlx prepare
 }
 
 # Invoke `cargo test` with logging enabled
 def "main test" [...args: string] {
     cd (repo)
-    let args = ([test '--'] | append $args)
+    let args = [test '--'] | append $args
     RUST_LOG="debug,h2=info,hyper=info" with-debug cargo $args
 }
 
@@ -273,7 +268,7 @@ def-env server-ip [] {
 }
 
 def-env ssh-str [] {
-    let tf_output = (tf-output)
+    let tf_output = tf-output
     let ip = $tf_output.server.value.ip
     let os_user = $tf_output.server.value.os_user
 
@@ -301,7 +296,7 @@ def-env ssh [
 def tf [--no-debug, ...args: string] {
     cd $"(repo)/deployment/project"
 
-    let args = ($args | flatten-list)
+    let args = $args | flatten-list
 
     if $no_debug {
         return (terraform $args)
@@ -313,7 +308,7 @@ def tf [--no-debug, ...args: string] {
 def docker-compose [--no-debug, ...args: any] {
     cd (repo)
     let current_uid = $"(id --user | str trim):(id --group | str trim)"
-    let args = ($args | flatten-list | prepend compose)
+    let args = $args | flatten-list | prepend compose
 
     if $no_debug {
         return (CURRENT_UID=$current_uid docker $args)
@@ -338,8 +333,8 @@ def append-if [condition: bool, ...values: any] {
     if $condition { $in | append ($values | flatten-list) } else { $in }
 }
 
-def with-debug [cmd: string, ...args: string] {
-    let args = ($args | flatten-list)
+def with-debug [cmd: string, ...args: any] {
+    let args = $args | flatten-list
     let invocation = $"($cmd) ($args | str join ' ')"
 
     debug $invocation
@@ -348,7 +343,7 @@ def with-debug [cmd: string, ...args: string] {
     let span = (metadata $cmd).span;
 
     if $result.exit_code != 0 {
-        let invocation = ([$invocation] | table --collapse)
+        let invocation = [$invocation] | table --collapse
         error make --unspanned {
             msg: $"Command exited with code ($result.exit_code)\n($invocation)"
         }
@@ -367,13 +362,15 @@ def flatten-list [] {
 # their output.
 #
 # This is `def-env` because it's the only way to mutate state in nushell.
-def-env cached [cache_id: string, imp: block] {
+def-env cached [cache_id: string, imp: closure] {
     let cache_id = $'__cache_($cache_id)'
 
-    let-env $cache_id = if $cache_id in $env {
-        $env | get $cache_id
-    } else {
-        do $imp
+    load-env {
+        $cache_id: (if $cache_id in $env {
+            $env | get $cache_id
+        } else {
+            do $imp
+        })
     }
 
     $env | get $cache_id
@@ -392,13 +389,13 @@ def-env wait-for-db [] {
         | url parse
     )
 
-    let db_name = ($db_url.path | parse "/{name}").0.name
+    let db_name = $db_url.path | parse "/{name}").0.name
 
     let postgres_image = (docker-compose-config).services.postgres.image
 
     let wait_time = 1min
     let delay = 200ms
-    let max_retries = ($wait_time / $delay)
+    let max_retries = $wait_time / $delay
 
     with-retry --fixed --max-retries $max_retries --delay $delay {(
         with-debug docker run
@@ -415,14 +412,10 @@ def-env wait-for-db [] {
 # Returns a pair of tags with the exact version and "latest" tag
 def-env docker-build [
     component: string
-    --push: int = 0
-    --release: int = 0
+    --push: bool = false
     --build-args: list = []
     --context: string
 ] {
-    let push = ($push | into bool)
-    let release = ($release | into bool)
-
     cd (repo)
 
     let pushing_msg = if $push { " and pushing it to the remote registry" } else { "" }
@@ -444,15 +437,14 @@ def-env docker-build [
             --file $"docker/($component)/Dockerfile"
             --tag $version_tag
             --tag $latest_tag
+            # We use ARM-propelled server in production, so doing AMD builds isn't critical
+            '--platform' linux/arm64/v8
             $output_flag
         ]
-        | append ($build_args | each { |it| ['--build-arg', $"($it.0)=($it.1)"] } | flatten)
-
+        | append ($build_args | each { |arg| ['--build-arg', $"($arg.0)=($arg.1)"] } | flatten)
     )
 
-    (
-        with-debug docker $args
-    )
+    with-debug docker $args
 }
 
 # Retry a closure until it succeeds or retry attempts are exhausted.

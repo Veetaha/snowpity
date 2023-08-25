@@ -18,13 +18,13 @@ async fn main() -> ExitCode {
         let result = try_main().await;
 
         result.map(|()| ExitCode::SUCCESS).unwrap_or_else(|err| {
-            error!(err = tracing_err(&err), "Exitting with an error...");
+            error!(err = tracing_err(&err), "Exiting with an error...");
             ExitCode::FAILURE
         })
     })
     .catch_unwind()
     .unwrap_or_else(|_| {
-        error!("Exitting due to a panic...");
+        error!("Exiting due to a panic...");
         ExitCode::FAILURE
     });
 

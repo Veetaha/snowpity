@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            select conname\n            from pg_catalog.pg_constraint\n            inner join pg_catalog.pg_namespace nsp\n            on nsp.oid = connamespace and nsp.nspname = 'public'\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "conname",
+        "type_info": "Name"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "393eb8482138bb60e3fbd9aecf7bd6119fb29ec7c890bc606e1b3e0fc38a8049"
+}

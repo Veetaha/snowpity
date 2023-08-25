@@ -1,5 +1,16 @@
 # Unreleased
 
+# 0.8.1
+
+## Changed
+
+- Added support for `x.com` domain as an alias for `twitter.com`
+- Images that exceed the telegram's `width * height` limit will be automatically resized to fit into that limit instead of sent as documents
+
+## Internal
+
+- Switched to ARM architecture on the server side. It is more cost efficient and provides more RAM for a lower cost, although the per-CPU core efficiency was decreased, but the number of cores was increased from 3 to 4. This has a tradeoff, because resizing the images is single-threaded and thus a bit slower, but re-muxing with `ffmpeg` is faster due to the increased parallelism.
+
 # 0.8.0
 
 ## Added

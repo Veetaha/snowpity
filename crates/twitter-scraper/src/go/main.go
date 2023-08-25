@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 
 	twitterscraper "github.com/n0madic/twitter-scraper"
 )
 
 var scraper *twitterscraper.Scraper
+var scraperMutex sync.Mutex
 
 //export Initialize
 func Initialize(ffiCookies *C.char) *C.char {
@@ -17,6 +19,9 @@ func Initialize(ffiCookies *C.char) *C.char {
 	if err != nil {
 		return ffiError(err)
 	}
+
+	scraperMutex.Lock()
+	defer scraperMutex.Unlock()
 
 	if scraper != nil {
 		return ffiError(fmt.Errorf("already initialized in (Initialize was called twice)"))
@@ -36,6 +41,9 @@ func Initialize(ffiCookies *C.char) *C.char {
 
 //export GetTweet
 func GetTweet(ffiTweetId *C.char) *C.char {
+	scraperMutex.Lock()
+	defer scraperMutex.Unlock()
+
 	if scraper == nil {
 		return ffiError(fmt.Errorf(
 			"not logged in (Login was not called successfully before GetTweet)",

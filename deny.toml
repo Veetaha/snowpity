@@ -27,10 +27,6 @@ wildcards = "allow"
 
 multiple-versions = "deny"
 skip = [
-  # There were a bunch of breaking changes in `base64`. Now a lot of crates
-  # in the ecosystem depend on the older version
-  { name = "base64", version = "=0.13.1" },
-
   # `serde_with` depends on older version of `darling`
   { name = "darling", version = "=0.13.4" },
   { name = "darling_core", version = "=0.13.4" },
@@ -41,10 +37,7 @@ skip = [
 
   # The ecosystem migration with `itertools` breaking changes seems to never end
   { name = "itertools", version = "=0.9.0" },
-
-  # Comes deeply from `futures-intrusive`
-  { name = "parking_lot", version = "=0.11.2" },
-  { name = "parking_lot_core", version = "=0.8.6" },
+  { name = "itertools", version = "=0.10.5" },
 
   # Comes from `teloxide`, hopefully new updates will upgrade this dependency
   { name = "serde_with_macros", version = "=1.5.2" },
@@ -53,21 +46,14 @@ skip = [
   # people don't read docs and don't disable it explicitly 🥲
   { name = "time", version = "=0.1.45" },
 
-  # Comes from `sqlx-core`
-  { name = "ahash", version = "=0.7.6" },
-  { name = "rustls", version = "=0.20.8" },
-  { name = "tokio-rustls", version = "=0.23.4" },
-
   # Comes from `ring`
   { name = "spin", version = "=0.5.2" },
-
 
   # Comes from `png`
   { name = "bitflags", version = "=1.3.2" },
 
   # Comes from `imara-diff` and `indexmap`
   { name = "hashbrown", version = "0.12.3" },
-  { name = "hashbrown", version = "0.13.2" },
 
   # Comes through `bstr`
   { name = "regex-syntax", version = "0.6.29" },
@@ -75,8 +61,24 @@ skip = [
   # I wish to witness the day when the ecosystem actually transitions to syn v2.
   # I guess this won't ever happen, so be this line a memorial for syn v1!
   { name = "syn", version = "=1.0.109" },
+
+  # Comes from `sqlx-core`, `metrics-exporter-prometheus`, `h2` (from `hyper`)
+  { name = "indexmap", version = "=1.9.3" },
+
+  # Comes from `criterion`
+  { name = "half", version = "=1.8.2" },
+
+  # Comes from `metrics-util`
+  { name = "hashbrown", version = "=0.13.1" },
+
+  # Comes from `tracing-subscriber`
+  { name = "regex-automata", version = "=0.1.10" },
+
+  # Comes from `reqwest-retry`
+  { name = "socket2", version = "=0.4.9" },
+
 ]
-skip-tree = []
+skip-tree = [{ name = "gix-fs", version = "=0.3.0" }]
 
 deny = [
   # Using only `rustls` relives us from linking to openssl

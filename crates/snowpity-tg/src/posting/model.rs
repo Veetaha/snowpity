@@ -2,6 +2,7 @@ use super::platform::prelude::*;
 use super::AllPlatforms;
 use crate::prelude::*;
 use crate::tg;
+use crate::util::units::MB;
 use derivative::Derivative;
 use itertools::Itertools;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -10,9 +11,6 @@ use std::collections::BTreeSet;
 use teloxide::prelude::*;
 use teloxide::types::{ChatId, InputFile, Message};
 use teloxide::utils::markdown;
-
-pub(crate) const KB: u64 = 1024;
-pub(crate) const MB: u64 = 1024 * KB;
 
 pub(crate) struct UploadMethodSizeRestriction {
     /// Maximum size of the blob that is possible to upload via passing a URL to Telegram.
