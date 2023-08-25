@@ -74,8 +74,8 @@ def "main docker build" [
 
     let build_mode = if $release { "release" } else { "debug" }
 
-    let push = ($push | into int)
-    let release = ($release | into int)
+    let push = $push | into int
+    let release = $release | into int
 
     info $"Building in ($build_mode) mode..."
 
@@ -236,7 +236,7 @@ def "main sqlx prepare" [] {
 # Invoke `cargo test` with logging enabled
 def "main test" [...args: string] {
     cd (repo)
-    let args = ([test '--'] | append $args)
+    let args = [test '--'] | append $args
     RUST_LOG="debug,h2=info,hyper=info" with-debug cargo $args
 }
 
@@ -271,7 +271,7 @@ def-env server-ip [] {
 }
 
 def-env ssh-str [] {
-    let tf_output = (tf-output)
+    let tf_output = tf-output
     let ip = $tf_output.server.value.ip
     let os_user = $tf_output.server.value.os_user
 
@@ -299,7 +299,7 @@ def-env ssh [
 def tf [--no-debug, ...args: string] {
     cd $"(repo)/deployment/project"
 
-    let args = ($args | flatten-list)
+    let args = $args | flatten-list
 
     if $no_debug {
         return (terraform $args)
@@ -311,7 +311,7 @@ def tf [--no-debug, ...args: string] {
 def docker-compose [--no-debug, ...args: any] {
     cd (repo)
     let current_uid = $"(id --user | str trim):(id --group | str trim)"
-    let args = ($args | flatten-list | prepend compose)
+    let args = $args | flatten-list | prepend compose
 
     if $no_debug {
         return (CURRENT_UID=$current_uid docker $args)
@@ -336,17 +336,17 @@ def append-if [condition: bool, ...values: any] {
     if $condition { $in | append ($values | flatten-list) } else { $in }
 }
 
-def with-debug [cmd: string, ...args: string] {
-    let args = ($args | flatten-list)
+def with-debug [cmd: string, ...args: any] {
+    let args = $args | flatten-list
     let invocation = $"($cmd) ($args | str join ' ')"
 
     debug $invocation
 
-    let result = (run-external $cmd $args | complete)
+    let result = run-external $cmd $args | complete
     let span = (metadata $cmd).span;
 
     if $result.exit_code != 0 {
-        let invocation = ([$invocation] | table --collapse)
+        let invocation = [$invocation] | table --collapse
         error make --unspanned {
             msg: $"Command exited with code ($result.exit_code)\n($invocation)"
         }
@@ -365,13 +365,15 @@ def flatten-list [] {
 # their output.
 #
 # This is `def-env` because it's the only way to mutate state in nushell.
-def-env cached [cache_id: string, imp: block] {
+def-env cached [cache_id: string, imp: closure] {
     let cache_id = $'__cache_($cache_id)'
 
-    let-env $cache_id = if $cache_id in $env {
-        $env | get $cache_id
-    } else {
-        do $imp
+    load-env {
+        $cache_id: (if $cache_id in $env {
+            $env | get $cache_id
+        } else {
+            do $imp
+        })
     }
 
     $env | get $cache_id
@@ -390,13 +392,13 @@ def-env wait-for-db [] {
         | url parse
     )
 
-    let db_name = ($db_url.path | parse "/{name}").0.name
+    let db_name = $db_url.path | parse "/{name}").0.name
 
     let postgres_image = (docker-compose-config).services.postgres.image
 
     let wait_time = 1min
     let delay = 200ms
-    let max_retries = ($wait_time / $delay)
+    let max_retries = $wait_time / $delay
 
     with-retry --fixed --max-retries $max_retries --delay $delay {(
         with-debug docker run
@@ -417,7 +419,7 @@ def-env docker-build [
     --build-args: list = []
     --context: string
 ] {
-    let push = ($push | into bool)
+    let push = $push | into bool
 
     cd (repo)
 
@@ -495,10 +497,14 @@ def with-retry [
             continue
         }
 
-        $delay = (
-            [$max_delay, ((random integer ($base_delay / 1ms)..($delay / 1ms * $exp)) * 1ms)]
-            | math min
-        )
+        let next_delay = (random integer ($base_delay / 1ms)..($delay / 1ms * $exp)) * 1ms
+
+        # FIXME(https://github.com/nushell/nushell/issues/9813): use math min here
+        $delay = if $max_delay <= $next_delay {
+            $max_delay
+        } else {
+            $next_delay
+        }
     }
 
     do $imp

@@ -31,8 +31,6 @@ function curl_with_retry {
     local url="$1"
     shift
 
-    echo "Downloading $url $@"
-
     curl \
         --retry 5 \
         --retry-connrefused \
