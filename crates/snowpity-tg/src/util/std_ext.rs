@@ -10,7 +10,7 @@ pub(crate) impl<E> E
 where
     E: std::error::Error + ?Sized,
 {
-    fn display_chain(&self) -> display_error_chain::DisplayErrorChain<'_, Self> {
+    fn display_chain(&self) -> display_error_chain::DisplayErrorChain<&Self> {
         display_error_chain::DisplayErrorChain::new(self)
     }
 }

@@ -36,7 +36,7 @@ criterion             = "0.5"
 darling               = "0.20"
 derivative            = "2.2"
 derive_more           = "0.99"
-display-error-chain   = "=0.1.1"
+display-error-chain   = "=0.2.0"
 dotenvy               = "0.15"
 dptree                = "0.3"
 easy-ext              = "1.0"
@@ -50,11 +50,11 @@ humansize             = "2.1"
 image                 = "0.24"
 inventory             = "0.3"
 itertools             = "0.11"
-lazy-regex            = "2.3"
+lazy-regex            = "3.0"
 log                   = "0.4"
 metrics               = "0.21"
 nanoid                = "0.4"
-num_enum              = "0.6"
+num_enum              = "0.7"
 ogg-opus              = "0.1"
 parking_lot           = "0.12"
 pin-project-lite      = "0.2"
@@ -83,11 +83,11 @@ chrono                      = { version = "0.4", features = ["clock", "std"], de
 clap                        = { version = "4.0", features = ["derive"] }
 metrics-exporter-prometheus = { version = "0.12", default-features = false }
 reqwest                     = { version = "0.11", features = ["rustls-tls"], default-features = false }
-sea-query                   = { version = "0.28", features = ["attr"], default-features = false }
-sea-query-binder            = { version = "0.3", features = ["sqlx-postgres"], default-features = false }
+sea-query                   = { version = "0.30", features = ["attr", "derive", "backend-postgres"], default-features = false }
+sea-query-binder            = { version = "0.5", features = ["sqlx-postgres"], default-features = false }
 serde                       = { version = "1.0", features = ["derive"] }
 serde_with                  = { version = "3.0", features = ["json"] }
-sqlx                        = { version = "0.6", features = ["runtime-tokio-rustls", "postgres", "macros", "chrono", "offline"] }
+sqlx                        = { version = "0.7", features = ["runtime-tokio", "postgres", "macros", "chrono"] }
 strum                       = { version = "0.25", features = ["derive"] }
 teloxide                    = { version = "0.12", features = ["rustls"], default-features = false }
 test-log                    = { version = "0.2", features = ["trace"], default-features = false }
