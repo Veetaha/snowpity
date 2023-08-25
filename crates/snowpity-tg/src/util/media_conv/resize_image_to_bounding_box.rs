@@ -98,7 +98,7 @@ pub fn resize_image_to_bounding_box_sync(bytes: Bytes, box_side: u32) -> Result<
 }
 
 fn non_zero_dimension(dimension: u32) -> Result<NonZeroU32> {
-    NonZeroU32::new(dimension).fatal_ctx(|| format!("The dimension must be greater than zero"))
+    NonZeroU32::new(dimension).fatal_ctx(|| "The dimension must be greater than zero")
 }
 
 // This code was based on https://github.com/Cykooz/fast_image_resize/blob/24edd65eef20596e51c23f84db79474a900e2d18/resizer/src/main.rs#L105-L225
@@ -111,6 +111,9 @@ fn get_image_with_linear_colorspace(image: image::DynamicImage) -> Result<fr::Im
 
     let color = image.color();
 
+    // Explicitly spelling the match arms to make it easier to see what new formats
+    // should be handled
+    #[allow(clippy::wildcard_in_or_patterns)]
     let (pixel_type, buffer) = match image {
         image::DynamicImage::ImageLuma8(image) => (fr::PixelType::U8, image.into_raw()),
         image::DynamicImage::ImageLumaA8(image) => (fr::PixelType::U8x2, image.into_raw()),

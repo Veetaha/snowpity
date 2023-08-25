@@ -3,6 +3,8 @@ members = ["crates/*"]
 
 default-members = ["crates/snowpity-tg"]
 
+resolver = "2"
+
 [profile.dev]
 debug = 0
 

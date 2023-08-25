@@ -5,7 +5,7 @@ set -euo pipefail
 script_dir=$(readlink -f $(dirname $0))
 
 deps=(
-    # TLS requires trusted the trusted root certificates. They are not present by default in our
+    # TLS requires the trusted root certificates. They are not present by default in our
     # debian image that we in docker. This was also motivated by the following issue:
     # https://github.com/debuerreotype/docker-debian-artifacts/issues/15#issuecomment-634423712
     ca-certificates

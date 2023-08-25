@@ -10,11 +10,10 @@
 #
 # See a detailed cross-compilation guide here:
 # https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
-FROM rust:1.70.0-bookworm as build
+FROM rust:1.72.0-bookworm as build
 
 # Possible values: debug or release
 ARG RUST_BUILD_MODE="debug"
-ARG TARGETARCH
 ENV CARGO_NET_RETRY=50
 ENV CARGO_TERM_COLOR=always
 

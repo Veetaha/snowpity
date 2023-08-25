@@ -35,7 +35,7 @@ impl PlatformTrait for Platform {
         // https://github.com/booru/scraper/blob/095771b28521b49ae67e30db2764406a68b74395/src/scraper/twitter.rs#L16
         let (_, host, id) = parse_with_regexes!(
             query,
-            r"((?:(?:mobile\.)|vx)?twitter.com)/[A-Za-z\d_]+/status/(\d+)",
+            r"((?:(?:mobile\.)|vx)?(twitter|x).com)/[A-Za-z\d_]+/status/(\d+)",
         )?;
 
         Some((host.into(), id.parse().ok()?))
@@ -168,11 +168,19 @@ mod tests {
             expect!["twitter.com:Twitter(TweetId(1607191066318454791))"],
         );
         test(
+            "https://x.com/NORDING34/status/1607191066318454791",
+            expect!["twitter.com:Twitter(TweetId(1607191066318454791))"],
+        );
+        test(
             "https://vxtwitter.com/NORDING34/status/1607191066318454791",
             expect!["vxtwitter.com:Twitter(TweetId(1607191066318454791))"],
         );
         test(
             "https://mobile.twitter.com/NORDING34/status/1607191066318454791",
+            expect!["mobile.twitter.com:Twitter(TweetId(1607191066318454791))"],
+        );
+        test(
+            "https://mobile.x.com/NORDING34/status/1607191066318454791",
             expect!["mobile.twitter.com:Twitter(TweetId(1607191066318454791))"],
         );
     }

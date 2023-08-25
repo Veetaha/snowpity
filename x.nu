@@ -88,7 +88,7 @@ def "main up" [
     --no-tg-bot        # Don't start the tg_bot service
     --no-observability # Don't start the pgadmin and observability services
     --fresh (-f)       # Executes `drop-data` before starting the database (run `db drop --help` for details)
-    --release (-r) # Build in release mode
+    --release (-r)     # Build in release mode
 ] {
     cd (repo)
 
@@ -342,7 +342,7 @@ def with-debug [cmd: string, ...args: any] {
 
     debug $invocation
 
-    let result = run-external $cmd $args | complete
+    let result = (run-external $cmd $args | complete)
     let span = (metadata $cmd).span;
 
     if $result.exit_code != 0 {
@@ -497,14 +497,10 @@ def with-retry [
             continue
         }
 
-        let next_delay = (random integer ($base_delay / 1ms)..($delay / 1ms * $exp)) * 1ms
-
-        # FIXME(https://github.com/nushell/nushell/issues/9813): use math min here
-        $delay = if $max_delay <= $next_delay {
-            $max_delay
-        } else {
-            $next_delay
-        }
+        $delay = (
+            [$max_delay, ((random integer ($base_delay / 1ms)..($delay / 1ms * $exp)) * 1ms)]
+            | math min
+        )
     }
 
     do $imp
