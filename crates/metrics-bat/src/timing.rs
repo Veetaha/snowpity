@@ -17,7 +17,7 @@ pub impl Histogram {
     }
 }
 
-// The following code was copied and adpated from:
+// The following code was copied and adapted from:
 // https://github.com/tikv/rust-prometheus/blob/8b462b194565d35e84def2d27ca8efd4d395a7c9/src/histogram.rs#L574-L650
 
 /// Timer to measure and record the duration of an event.

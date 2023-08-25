@@ -352,7 +352,7 @@
           "editorMode": "code",
           "expr": "sum(\r\n    increase(\r\n        (\r\n            (snowpity_tg_tg_updates_total unless snowpity_tg_tg_updates_skipped_total) \r\n            or\r\n            (snowpity_tg_tg_updates_total - snowpity_tg_tg_updates_skipped_total)\r\n        )\r\n        [8i]\r\n    )\r\n)",
           "hide": false,
-          "legendFormat": "(proccesed) All updates",
+          "legendFormat": "(processed) All updates",
           "range": true,
           "refId": "C"
         }

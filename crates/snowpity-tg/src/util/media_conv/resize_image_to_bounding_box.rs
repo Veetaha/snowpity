@@ -9,12 +9,12 @@ use std::sync::OnceLock;
 
 metrics_bat::histograms! {
     /// Number of seconds it took to resize the image to bounding box
-    resize_image_to_boundig_box_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
+    resize_image_to_bounding_box_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 }
 
 pub async fn resize_image_to_bounding_box(bytes: Bytes, box_side: u32) -> Result<Bytes> {
     crate::util::tokio::spawn_blocking(move || resize_image_to_bounding_box_sync(bytes, box_side))
-        .record_duration(resize_image_to_boundig_box_duration_seconds, vec![])
+        .record_duration(resize_image_to_bounding_box_duration_seconds, vec![])
         .with_duration_log("Resize image to bounding box")
         .await
 }

@@ -86,7 +86,7 @@ impl FtaiService {
             .get_samples_f32()
             .map_err(|message| err!(FtAiError::ReadWavSamples { message }))?;
 
-        // This seems to give the best quality. The original samle rate
+        // This seems to give the best quality. The original sample rate
         // of 15.ai is 44_100.
         const SAMPLE_RATE: u32 = 48_000;
 
