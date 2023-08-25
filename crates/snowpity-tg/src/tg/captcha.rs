@@ -551,7 +551,7 @@ impl CaptchaCtx {
         let unverified_users = std::mem::take(&mut *self.unverified_users.lock());
         for mut unverified in unverified_users.into_values() {
             let Some(cancel) = unverified.captcha_timeout_cancel.take() else {
-                continue
+                continue;
             };
             if let Err(()) = cancel.send(()) {
                 let user = unverified.member.user.debug_id();
