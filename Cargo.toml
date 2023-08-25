@@ -12,9 +12,9 @@ debug = 0
 debug = 1
 
 [profile.release]
-debug         = 1
-lto           = "fat"
-opt-level     = 3
+debug     = 1
+lto       = "fat"
+opt-level = 3
 # The less parallel the build is, the more context the compiler has to optimize
 codegen-units = 1
 
