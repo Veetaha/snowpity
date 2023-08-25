@@ -41,7 +41,7 @@ skip = [
 
   # The ecosystem migration with `itertools` breaking changes seems to never end
   { name = "itertools", version = "=0.9.0" },
-    { name = "itertools", version = "=0.10.5" },
+  { name = "itertools", version = "=0.10.5" },
 
   # Comes deeply from `futures-intrusive`
   { name = "parking_lot", version = "=0.11.2" },

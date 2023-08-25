@@ -181,27 +181,6 @@ impl TgUploadContext<'_> {
 
         let image = ctx.download_blob_to_ram(MAX_DOWNLOAD_SIZE).await?;
 
-        /*
-        if image.dim.aspect_ratio() > 20.0 {
-            return self.upload_document(MaybeLocalBlob::None).await;
-        }
-
-        if image.dim.height + image.dim.width > 10000 {
-            if resize fails with OOM {
-                return self.upload_document(MaybeLocalBlob::None).await;
-            }
-
-            self.resize_and_upload_image().await
-        }
-
-        if image.size > MAX_TG_PHOTO_SIZE.by_multipart && image.dim > MAX_LOSSLESS_TG_IMAGE_RESOLUTION {
-            return self.resize_and_upload_image().await;
-        }
-
-        self.upload_local_image(image).await
-        */
-
-
         // FIXME: send too large images as documents (check width * height)
         // We don't want to allocate a lot of memory for resizing
         let image =

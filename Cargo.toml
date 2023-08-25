@@ -13,7 +13,7 @@ debug = 1
 debug         = 1
 lto           = "fat"
 opt-level     = 3
-# The less parallel the build is, the more context the compiler has to optimizes
+# The less parallel the build is, the more context the compiler has to optimize
 codegen-units = 1
 
 [workspace.package]
@@ -102,6 +102,3 @@ snowpity-tg-macros = { path = "crates/snowpity-tg-macros" }
 sqlx-bat           = { path = "crates/sqlx-bat" }
 test-bat           = { path = "crates/test-bat" }
 twitter-scraper    = { path = "crates/twitter-scraper" }
-
-# [patch.crates-io]
-# audiopus_sys = { path = "../audiopus_sys" }

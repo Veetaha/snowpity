@@ -12,7 +12,6 @@ metrics_bat::histograms! {
     resize_image_to_boundig_box_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 }
 
-// https://derpibooru.org/images/2561187
 pub async fn resize_image_to_bounding_box(bytes: Bytes, box_side: u32) -> Result<Bytes> {
     crate::util::tokio::spawn_blocking(move || resize_image_to_bounding_box_sync(bytes, box_side))
         .record_duration(resize_image_to_boundig_box_duration_seconds, vec![])
