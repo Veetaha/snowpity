@@ -9,7 +9,7 @@
 
 ## Internal
 
-- Switched to ARM architecture on the server side. It is more cost efficient and provides more RAM for a lower cost, although the per-CPU core efficiency was decreased, but the number of cores was increased from 2 to 4. This has a tradeoff, because resizing the images is single-threaded and thus a bit slower, but re-muxing with `ffmpeg` is faster due to the increased parallelism.
+- Switched to ARM architecture on the server side. It is more cost efficient and provides more RAM for a lower cost, although the per-CPU core efficiency was decreased, but the number of cores was increased from 3 to 4. This has a tradeoff, because resizing the images is single-threaded and thus a bit slower, but re-muxing with `ffmpeg` is faster due to the increased parallelism.
 
 # 0.8.0
 

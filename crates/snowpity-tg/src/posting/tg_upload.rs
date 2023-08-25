@@ -183,9 +183,21 @@ impl TgUploadContext<'_> {
 
         // FIXME: send too large images as documents (check width * height)
         // We don't want to allocate a lot of memory for resizing
-        let image =
-            media_conv::resize_image_to_bounding_box(image.blob, MAX_LOSSLESS_TG_IMAGE_RESOLUTION)
-                .await?;
+        let result = media_conv::resize_image_to_bounding_box(
+            image.blob.clone(),
+            MAX_LOSSLESS_TG_IMAGE_RESOLUTION,
+        )
+        .await;
+
+        let image = match result {
+            Ok(image) => image,
+            Err(err) => {
+                warn!(err = tracing_err(&err), "Failed to resize image");
+                return ctx
+                    .upload_document(MaybeLocalBlob::Some(image.upcast()))
+                    .await;
+            }
+        };
 
         let image = LocalBlob {
             size: u64::try_from(image.len()).unwrap(),

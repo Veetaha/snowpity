@@ -74,9 +74,6 @@ def "main docker build" [
 
     let build_mode = if $release { "release" } else { "debug" }
 
-    let push = $push | into int
-    let release = $release | into int
-
     info $"Building in ($build_mode) mode..."
 
     docker-build tg-bot --push $push --context . --build-args [[RUST_BUILD_MODE $build_mode]]
@@ -415,12 +412,10 @@ def-env wait-for-db [] {
 # Returns a pair of tags with the exact version and "latest" tag
 def-env docker-build [
     component: string
-    --push: int = 0
+    --push: bool = false
     --build-args: list = []
     --context: string
 ] {
-    let push = $push | into bool
-
     cd (repo)
 
     let pushing_msg = if $push { " and pushing it to the remote registry" } else { "" }
