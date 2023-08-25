@@ -78,9 +78,7 @@ skip = [
   { name = "socket2", version = "=0.4.9" },
 
 ]
-skip-tree = [
-    { name = "gix-fs", version = "=0.3.0" }
-]
+skip-tree = [{ name = "gix-fs", version = "=0.3.0" }]
 
 deny = [
   # Using only `rustls` relives us from linking to openssl
