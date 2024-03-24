@@ -76,8 +76,8 @@ def "main docker build" [
 
     info $"Building in ($build_mode) mode..."
 
-    docker-build tg-bot --push $push --context . --build-args [[RUST_BUILD_MODE $build_mode]]
-    docker-build grafana --push $push --context ./docker/grafana
+    docker-build tg-bot --push=$push --context . --build-args [[RUST_BUILD_MODE $build_mode]]
+    docker-build grafana --push=$push --context ./docker/grafana
 }
 
 # Start all services locally using `docker compose`
@@ -241,33 +241,33 @@ def "main test" [...args: string] {
 ############ Implementation details ############
 ################################################
 
-def-env tf-vars [] {
+def --env tf-vars [] {
     ['-var' $'tg_bot_image_tag=(project-version)']
 }
 
-def-env repo [] {
+def --env repo [] {
     cached repo { git rev-parse --show-toplevel | str trim }
 }
 
-def-env tf-output [] {
+def --env tf-output [] {
     cached tf-output { tf --no-debug output '--json' | from json }
 }
 
-def-env cargo-metadata [] {
+def --env cargo-metadata [] {
     # XXX: Caching cargo metadata causes a performance bug in nushell:
     # https://github.com/nushell/nushell/issues/6979#issuecomment-1343650021
     cargo metadata --format-version 1 | from json
 }
 
-def-env project-version [] {
+def --env project-version [] {
     cargo-metadata | get packages | where name == snowpity-tg | get 0.version
 }
 
-def-env server-ip [] {
+def --env server-ip [] {
     (tf-output).server.value.ip
 }
 
-def-env ssh-str [] {
+def --env ssh-str [] {
     let tf_output = tf-output
     let ip = $tf_output.server.value.ip
     let os_user = $tf_output.server.value.os_user
@@ -275,7 +275,7 @@ def-env ssh-str [] {
     $"($os_user)@($ip)"
 }
 
-def-env ssh [
+def --env ssh [
     --forward-ports (-f) # Forward grafana and pgadmin4 ports to localhost
     ...args: string
 ] {
@@ -361,8 +361,8 @@ def flatten-list [] {
 # Some commands are expensive to run, and this utility may be used to cache
 # their output.
 #
-# This is `def-env` because it's the only way to mutate state in nushell.
-def-env cached [cache_id: string, imp: closure] {
+# This is `def --env` because it's the only way to mutate state in nushell.
+def --env cached [cache_id: string, imp: closure] {
     let cache_id = $'__cache_($cache_id)'
 
     load-env {
@@ -376,13 +376,13 @@ def-env cached [cache_id: string, imp: closure] {
     $env | get $cache_id
 }
 
-def-env docker-compose-config [] {
+def --env docker-compose-config [] {
     cached docker-compose-config {
         docker-compose --no-debug config '--format' json | from json
     }
 }
 
-def-env wait-for-db [] {
+def --env wait-for-db [] {
     let db_url = (
         docker-compose-config
         | get services.tg-bot.environment.DATABASE_URL
@@ -395,7 +395,7 @@ def-env wait-for-db [] {
 
     let wait_time = 1min
     let delay = 200ms
-    let max_retries = $wait_time / $delay
+    let max_retries = $wait_time / $delay | into int
 
     with-retry --fixed --max-retries $max_retries --delay $delay {(
         with-debug docker run
@@ -410,9 +410,9 @@ def-env wait-for-db [] {
 }
 
 # Returns a pair of tags with the exact version and "latest" tag
-def-env docker-build [
+def --env docker-build [
     component: string
-    --push: bool = false
+    --push
     --build-args: list = []
     --context: string
 ] {
@@ -493,7 +493,7 @@ def with-retry [
         }
 
         $delay = (
-            [$max_delay, ((random integer ($base_delay / 1ms)..($delay / 1ms * $exp)) * 1ms)]
+            [$max_delay, ((random int ($base_delay / 1ms)..($delay / 1ms * $exp)) * 1ms)]
             | math min
         )
     }
