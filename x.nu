@@ -76,8 +76,8 @@ def "main docker build" [
 
     info $"Building in ($build_mode) mode..."
 
-    docker-build tg-bot --push $push --context . --build-args [[RUST_BUILD_MODE $build_mode]]
-    docker-build grafana --push $push --context ./docker/grafana
+    docker-build tg-bot --push=$push --context . --build-args [[RUST_BUILD_MODE $build_mode]]
+    docker-build grafana --push=$push --context ./docker/grafana
 }
 
 # Start all services locally using `docker compose`
@@ -395,7 +395,7 @@ def --env wait-for-db [] {
 
     let wait_time = 1min
     let delay = 200ms
-    let max_retries = $wait_time / $delay
+    let max_retries = $wait_time / $delay | into int
 
     with-retry --fixed --max-retries $max_retries --delay $delay {(
         with-debug docker run
@@ -412,7 +412,7 @@ def --env wait-for-db [] {
 # Returns a pair of tags with the exact version and "latest" tag
 def --env docker-build [
     component: string
-    --push: bool = false
+    --push
     --build-args: list = []
     --context: string
 ] {
