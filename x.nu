@@ -339,11 +339,10 @@ def with-debug [cmd: string, ...args: any] {
 
     debug $invocation
 
-    let result = (run-external $cmd $args | complete)
+    let result = (run-external --trim-end-newline $cmd $args | complete)
     let span = (metadata $cmd).span;
 
     if $result.exit_code != 0 {
-        let invocation = [$invocation] | table --collapse
         error make --unspanned {
             msg: $"Command exited with code ($result.exit_code)\n($invocation)"
         }
