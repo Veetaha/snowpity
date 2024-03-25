@@ -33,7 +33,8 @@ func Initialize(ffiCookies *C.char) *C.char {
 
 	// This is required for the scraper to know we are logged in
 	if !scraper.IsLoggedIn() {
-		return ffiError(fmt.Errorf("failed to initialize (cookies may be invalid)"))
+		// FIXME add twitter cookies!
+		// return ffiError(fmt.Errorf("failed to initialize (cookies may be invalid)"))
 	}
 
 	return ffiOk(nil)

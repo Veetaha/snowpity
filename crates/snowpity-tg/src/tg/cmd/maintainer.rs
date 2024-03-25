@@ -122,7 +122,7 @@ impl tg::cmd::Command for Cmd {
                     sender: sender.as_ref(),
                 });
 
-                let info = markdown::code_block_with_lang(&info, "json");
+                let info = markdown::code_block_with_lang(&info, "yaml");
 
                 ctx.bot.reply_chunked(msg, info).await?;
             }

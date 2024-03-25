@@ -6,7 +6,7 @@ script_dir=$(readlink -f $(dirname $0))
 
 . $script_dir/common.sh
 
-version=v1.13.6
+version=v1.19.0
 
 base_url="https://github.com/crate-ci/typos/releases/download/$version"
 
