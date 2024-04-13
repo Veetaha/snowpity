@@ -15,7 +15,7 @@ impl BlobCacheRepo {
     #[metered_db]
     pub(crate) async fn set(&self, derpibooru_id: MediaId, tg_file: TgFileMeta) -> Result {
         sqlx::query!(
-            "insert into tg_derpibooru_blob_cache (derpibooru_id, tg_file_id, tg_file_kind)
+            "insert into tg_derpibooru_blob_cache (media_id, tg_file_id, tg_file_kind)
             values ($1, $2, $3)",
             derpibooru_id.try_into_db()?,
             tg_file.id,
@@ -31,7 +31,7 @@ impl BlobCacheRepo {
     pub(crate) async fn get(&self, derpibooru_id: MediaId) -> Result<Option<TgFileMeta>> {
         sqlx::query!(
             "select tg_file_id, tg_file_kind from tg_derpibooru_blob_cache
-            where derpibooru_id = $1",
+            where media_id = $1",
             derpibooru_id.try_into_db()?,
         )
         .fetch_optional(&self.db)
