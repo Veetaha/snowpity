@@ -21,14 +21,14 @@ impl Drop for OutPtr {
     fn drop(&mut self) {
         // SAFETY: We know our bindings use CGo's C string allocator, which uses C's malloc
         unsafe {
-            bindings::free(self.0 as *mut c_void);
+            bindings::free(self.0.cast::<c_void>());
         }
     }
 }
 
-/// Same as [`ffi_call_raw_json`], but serializes the input to JSON first.
+/// Same as [`call_raw_json`], but serializes the input to JSON first.
 ///
-/// SAFETY: same as [`ffi_call_raw_json`]
+/// SAFETY: same as [`call_raw_json`]
 pub(crate) unsafe fn call<Input, Output>(
     ffi_fn: FfiFunction,
     fn_name: &'static str,
@@ -58,7 +58,7 @@ where
     // - We know the Go code will never modify the input chars, so we can remove constness
     // - The `ffi_fn` function's invariants must be upheld by the caller
     // - The `OutPtr` will free the memory when it is dropped
-    let output: OutPtr = ffi_fn(input.as_ptr() as *mut c_char);
+    let output: OutPtr = ffi_fn(input.as_ptr().cast_mut());
 
     if output.0.is_null() {
         return Err(Error::Fatal(format!(
@@ -78,7 +78,7 @@ where
         ))
     })?;
 
-    // SAFETY: we use `DeserializeOwned`, which ensures nothing is borrwed
+    // SAFETY: we use `DeserializeOwned`, which ensures nothing is borrowed
     // from the input.
     serde_json::from_str(output).map_err(|err| {
         Error::Fatal(format!(

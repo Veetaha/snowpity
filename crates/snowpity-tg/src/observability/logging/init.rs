@@ -16,13 +16,14 @@ impl LoggingTask {
     pub async fn shutdown(self) {
         info!("Waiting for the logging task to finish nicely...");
 
-        let ((), duration) = self.controller.shutdown().with_duration().await;
+        let ((), duration) = async {
+            self.controller.shutdown().await;
+            self.task.await;
+        }
+        .with_duration()
+        .await;
 
-        eprintln!(
-            "Stopped logging task in {:.2?}: {:?}",
-            duration,
-            self.task.await
-        );
+        eprintln!("Stopped logging task in {duration:.2?}",);
     }
 }
 

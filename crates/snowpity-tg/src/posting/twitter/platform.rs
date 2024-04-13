@@ -33,9 +33,9 @@ impl PlatformTrait for Platform {
     fn parse_query(query: &str) -> ParseQueryResult<TweetId> {
         // The regex was inspired by the one in the booru/scraper repository:
         // https://github.com/booru/scraper/blob/095771b28521b49ae67e30db2764406a68b74395/src/scraper/twitter.rs#L16
-        let (_, host, id) = parse_with_regexes!(
+        let (_, host, id) = x(
             query,
-            r"((?:(?:mobile\.)|vx)?(?:twitter|x).com)/[A-Za-z\d_]+/status/(\d+)",
+            r"((?:mobile\.|vx)?(?:twitter|x)\.com)/[A-Za-z\d_]+/status/(\d+)",
         )?;
 
         Some((host.into(), id.parse().ok()?))
