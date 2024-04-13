@@ -29,7 +29,7 @@ impl DerpiPlatformKind {
     pub(crate) fn base_url(&self, segments: impl IntoIterator<Item = impl AsRef<str>>) -> Url {
         let url = match self {
             DerpiPlatformKind::Derpibooru => "https://derpibooru.org",
-            DerpiPlatformKind::Ponerpics => "https://ponerpics.org/",
+            DerpiPlatformKind::Ponerpics => "https://ponerpics.org",
         };
 
         DerpiPlatformKind::create_url(url, segments)

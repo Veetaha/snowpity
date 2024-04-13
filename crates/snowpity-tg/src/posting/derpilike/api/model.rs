@@ -8,6 +8,7 @@ use crate::posting::{
 use reqwest::Url;
 use serde::Deserialize;
 use strum::IntoEnumIterator;
+use tracing::warn;
 
 const SAFETY_RATING_TAGS: &[&str] = &[
     "safe",
@@ -29,10 +30,46 @@ sqlx_bat::impl_try_into_db_via_newtype!(MediaId(u64));
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct GetImageResponse {
-    pub(crate) image: Media,
+    pub(crate) image: RawMedia,
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub(crate) struct RawMedia {
+    pub(crate) id: MediaId,
+    pub(crate) mime_type: MimeType,
+    pub(crate) tags: Vec<String>,
+
+    // pub(crate) created_at: DateTime<Utc>,
+    // The number of upvotes minus the number of downvotes.
+    // pub(crate) score: i64,
+    // pub(crate) size: u64,
+    pub(crate) view_url: String,
+
+    // Dimensions of the media
+    pub(crate) width: u64,
+    pub(crate) height: u64,
+}
+
+impl RawMedia {
+    pub(crate) fn validate(mut self, platform: &DerpiPlatformKind) -> Media {
+        let view_url = match platform {
+            DerpiPlatformKind::Ponerpics => platform.base_url(self.view_url.split('/')),
+            // TODO
+            DerpiPlatformKind::Derpibooru => self.view_url.parse().unwrap(),
+        };
+
+        Media {
+            id: self.id,
+            mime_type: self.mime_type,
+            tags: self.tags,
+            view_url,
+            width: self.width,
+            height: self.height,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct Media {
     pub(crate) id: MediaId,
     pub(crate) mime_type: MimeType,
@@ -48,6 +85,13 @@ pub(crate) struct Media {
     pub(crate) width: u64,
     pub(crate) height: u64,
 }
+
+// #[derive(Debug, Clone, Deserialize)]
+// #[serde(untagged)]
+// enum UrlOrString {
+//     Url(Url),
+//     String(String),
+// }
 
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MimeType {

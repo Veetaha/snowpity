@@ -36,6 +36,7 @@ impl Client {
             )
             .read_json::<GetImageResponse>()
             .await?
-            .image)
+            .image
+            .validate(&self.derpi_platform))
     }
 }
