@@ -14,7 +14,7 @@ impl BlobCacheRepo {
     }
 
     #[metered_db]
-    pub(crate) async fn set(&self, derpibooru_id: MediaId, tg_file: TgFileMeta) -> Result {
+    pub(crate) async fn set(&self, media_id: MediaId, tg_file: TgFileMeta) -> Result {
         let query = format!(
             "insert into tg_{}_blob_cache (media_id, tg_file_id, tg_file_kind)
             values ($1, $2, $3)",
@@ -22,7 +22,7 @@ impl BlobCacheRepo {
         );
 
         sqlx::query(&query)
-            .bind(derpibooru_id.try_into_db()?)
+            .bind(media_id.try_into_db()?)
             .bind(tg_file.id)
             .bind(tg_file.kind.try_into_db()?)
             .execute(&self.db)
@@ -32,7 +32,7 @@ impl BlobCacheRepo {
     }
 
     #[metered_db]
-    pub(crate) async fn get(&self, derpibooru_id: MediaId) -> Result<Option<TgFileMeta>> {
+    pub(crate) async fn get(&self, media_id: MediaId) -> Result<Option<TgFileMeta>> {
         // https://github.com/sfackler/rust-postgres/issues/925
         // https://github.com/launchbadge/sqlx/discussions/1286
         let query = format!(
@@ -42,7 +42,7 @@ impl BlobCacheRepo {
         );
 
         sqlx::query_as(&query)
-            .bind(derpibooru_id.try_into_db()?)
+            .bind(media_id.try_into_db()?)
             .fetch_optional(&self.db)
             .await?
             .map(|(tg_file_id, tg_file_kind): (String, i16)| {
