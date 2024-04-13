@@ -251,17 +251,25 @@ pub(crate) struct Author {
 pub(crate) enum AuthorKind {
     /// The author is not the original creator, but the editor
     Editor,
+    /// The author used AI to create media
+    Prompter,
 }
 
 impl BasePost {
     pub(crate) fn caption(&self) -> String {
         // FIXME: ensure the caption doesn't overflow 1024 characters
         let authors: Vec<_> = self.authors.iter().map_collect(|author| {
-            let author_entry = if matches!(author.kind, Some(AuthorKind::Editor)) {
-                format!("{} (editor)", author.name)
-            } else {
-                author.name.clone()
+            let author_entry = match author.kind {
+                Some(AuthorKind::Editor) => " (editor)",
+                Some(AuthorKind::Prompter) => " (prompter)",
+                None => "",
             };
+            let author_entry = format!("{}{}", author.name, author_entry);
+            // let author_entry = if matches!(author.kind, Some(AuthorKind::Editor)) {
+            //     format!("{} (editor)", author.name)
+            // } else {
+            //     author.name.clone()
+            // };
             markdown::link(author.web_url.as_str(), &markdown::escape(&author_entry))
         });
 
@@ -368,7 +376,7 @@ impl SafetyRating {
             Self::Nsfw { kinds } => Right(
                 kinds
                     .iter()
-                    .map(|kind| kind.as_str())
+                    .map(String::as_str)
                     .chain(kinds.is_empty().then_some("nsfw")),
             ),
         }

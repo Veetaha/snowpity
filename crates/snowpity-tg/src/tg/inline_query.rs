@@ -89,7 +89,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     .increment(1);
 
     let labels = InlineQueryLabels {
-        posting_platform_host: posting_platform_host.to_owned(),
+        posting_platform_host: posting_platform_host.clone(),
     };
 
     async {
@@ -209,7 +209,7 @@ fn make_inline_query_result(
     match blob.tg_file.kind {
         TgFileKind::Photo => InlineQueryResultCachedPhoto::new(id, file_id)
             .caption(caption)
-            // XXX: title is ignored for photos in in results preview popup.
+            // XXX: title is ignored for photos in results preview popup.
             // That's really surprising, but that's how telegram works -_-
             .title(title)
             .parse_mode(parse_mode)

@@ -52,6 +52,7 @@ impl PlatformTrait for Platform {
             kind: match author.kind {
                 api::AuthorKind::Artist => None,
                 api::AuthorKind::Editor => Some(AuthorKind::Editor),
+                api::AuthorKind::Prompter => Some(AuthorKind::Prompter),
             },
             name: author.name,
         });
