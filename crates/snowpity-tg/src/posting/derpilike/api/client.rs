@@ -28,8 +28,7 @@ impl Client {
     }
 
     pub(crate) async fn get_media(&self, media_id: MediaId) -> Result<Media> {
-        Ok(self
-            .http
+        self.http
             .get(
                 self.derpi_platform
                     .api_url(["images", &media_id.to_string()]),
@@ -37,6 +36,6 @@ impl Client {
             .read_json::<GetImageResponse>()
             .await?
             .image
-            .validate(&self.derpi_platform))
+            .try_into_media(self.derpi_platform)
     }
 }

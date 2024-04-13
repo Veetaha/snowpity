@@ -1,9 +1,7 @@
-use crate::posting::derpilike::api::{self, MediaId};
+use crate::posting::derpilike::api;
 use crate::posting::derpilike::db;
 use crate::posting::platform::prelude::*;
-use crate::prelude::*;
-use crate::Result;
-use async_trait::async_trait;
+use itertools::Either;
 use reqwest::Url;
 use serde::Deserialize;
 
@@ -12,36 +10,49 @@ struct Derpitools {
     db: db::BlobCacheRepo,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum DerpiPlatformKind {
     Derpibooru,
     Ponerpics,
 }
 
 impl DerpiPlatformKind {
-    fn create_url(base: &'static str, segments: impl IntoIterator<Item = impl AsRef<str>>) -> Url {
-        let mut url: Url = base.parse().unwrap();
-
-        url.path_segments_mut().unwrap().extend(segments);
-
-        url
-    }
-
-    pub(crate) fn base_url(&self, segments: impl IntoIterator<Item = impl AsRef<str>>) -> Url {
+    pub(crate) fn base_url(&self) -> Url {
         let url = match self {
             DerpiPlatformKind::Derpibooru => "https://derpibooru.org",
             DerpiPlatformKind::Ponerpics => "https://ponerpics.org",
         };
+        url.parse().unwrap_or_else(|err| {
+            panic!(
+                "Failed to parse base URL.\n\
+                url: {url:?}\n\
+                platform: {self:#?}\n\
+                Error: {err:#?}",
+            );
+        })
+    }
 
-        DerpiPlatformKind::create_url(url, segments)
+    pub(crate) fn url(&self, segments: impl IntoIterator<Item = impl AsRef<str>>) -> Url {
+        let mut url = self.base_url();
+        url.path_segments_mut()
+            .unwrap_or_else(|()| {
+                panic!(
+                    "Base URL can not be a base\n\
+                    url: {}\n\
+                    platform: {self:#?}",
+                    self.base_url(),
+                )
+            })
+            .extend(segments);
+
+        url
     }
 
     pub(crate) fn api_url(&self, segments: impl IntoIterator<Item = impl AsRef<str>>) -> Url {
-        let api_url = match self {
-            DerpiPlatformKind::Derpibooru => "https://derpibooru.org/api/v1/json",
-            DerpiPlatformKind::Ponerpics => "https://ponerpics.org/api/v1/json",
-        };
+        let base = ["api", "v1", "json"].into_iter().map(Either::Left);
+        let segments = segments.into_iter().map(Either::Right);
 
-        DerpiPlatformKind::create_url(api_url, segments)
+        self.url(itertools::chain(base, segments))
     }
 }
 
@@ -122,7 +133,7 @@ mod derpibooru {
                 .await?;
 
             let authors = media.authors().map_collect(|author| Author {
-                web_url: author.web_url(DerpiPlatformKind::Derpibooru),
+                web_url: author.web_url(),
                 kind: match author.kind {
                     api::AuthorKind::Artist => None,
                     api::AuthorKind::Editor => Some(AuthorKind::Editor),
@@ -245,7 +256,7 @@ pub(crate) mod ponerpics {
                 .await?;
 
             let authors = media.authors().map_collect(|author| Author {
-                web_url: author.web_url(DerpiPlatformKind::Ponerpics),
+                web_url: author.web_url(),
                 kind: match author.kind {
                     api::AuthorKind::Artist => None,
                     api::AuthorKind::Editor => Some(AuthorKind::Editor),

@@ -2,13 +2,12 @@
 //! Use [TypeScript declarations] as a reference (though they may go out of date):
 //!
 //! [TypeScript declarations]: https://github.com/octet-stream/dinky/blob/master/lib/Dinky.d.ts
-use crate::posting::{
-    derpilike::platform_3::DerpiPlatformKind, platform::DisplayInFileNameViaToString,
-};
+use crate::posting::derpilike::platform_3::DerpiPlatformKind;
+use crate::prelude::*;
+use crate::Result;
 use reqwest::Url;
 use serde::Deserialize;
 use strum::IntoEnumIterator;
-use tracing::warn;
 
 const SAFETY_RATING_TAGS: &[&str] = &[
     "safe",
@@ -35,37 +34,40 @@ pub(crate) struct GetImageResponse {
 
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct RawMedia {
-    pub(crate) id: MediaId,
-    pub(crate) mime_type: MimeType,
-    pub(crate) tags: Vec<String>,
+    id: MediaId,
+    mime_type: MimeType,
+    tags: Vec<String>,
 
     // pub(crate) created_at: DateTime<Utc>,
     // The number of upvotes minus the number of downvotes.
     // pub(crate) score: i64,
     // pub(crate) size: u64,
-    pub(crate) view_url: String,
+    view_url: MaybeRelativeUrl,
 
     // Dimensions of the media
-    pub(crate) width: u64,
-    pub(crate) height: u64,
+    width: u64,
+    height: u64,
 }
 
 impl RawMedia {
-    pub(crate) fn validate(mut self, platform: &DerpiPlatformKind) -> Media {
-        let view_url = match platform {
-            DerpiPlatformKind::Ponerpics => platform.base_url(self.view_url.split('/')),
-            // TODO
-            DerpiPlatformKind::Derpibooru => self.view_url.parse().unwrap(),
+    pub(crate) fn try_into_media(self, platform: DerpiPlatformKind) -> Result<Media> {
+        let view_url = match self.view_url {
+            MaybeRelativeUrl::Absolute(url) => url,
+            MaybeRelativeUrl::Relative(relative) => platform
+                .base_url()
+                .join(&relative)
+                .fatal_ctx(|| format!("Invalid URL returned from {platform:?}: '{relative}'"))?,
         };
 
-        Media {
+        Ok(Media {
             id: self.id,
             mime_type: self.mime_type,
             tags: self.tags,
             view_url,
             width: self.width,
             height: self.height,
-        }
+            platform,
+        })
     }
 }
 
@@ -74,24 +76,21 @@ pub(crate) struct Media {
     pub(crate) id: MediaId,
     pub(crate) mime_type: MimeType,
     pub(crate) tags: Vec<String>,
-
-    // pub(crate) created_at: DateTime<Utc>,
-    // The number of upvotes minus the number of downvotes.
-    // pub(crate) score: i64,
-    // pub(crate) size: u64,
     pub(crate) view_url: Url,
 
     // Dimensions of the media
     pub(crate) width: u64,
     pub(crate) height: u64,
+
+    pub(crate) platform: DerpiPlatformKind,
 }
 
-// #[derive(Debug, Clone, Deserialize)]
-// #[serde(untagged)]
-// enum UrlOrString {
-//     Url(Url),
-//     String(String),
-// }
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum MaybeRelativeUrl {
+    Absolute(Url),
+    Relative(String),
+}
 
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MimeType {
@@ -135,6 +134,7 @@ impl Media {
                 .map(|kind| Author {
                     kind,
                     name: value.to_owned(),
+                    platform: self.platform,
                 })
         })
     }
@@ -158,11 +158,12 @@ pub(crate) enum AuthorKind {
 pub(crate) struct Author {
     pub(crate) kind: AuthorKind,
     pub(crate) name: String,
+    platform: DerpiPlatformKind,
 }
 
 impl Author {
-    pub(crate) fn web_url(&self, derpi_platform: DerpiPlatformKind) -> Url {
-        let mut url = derpi_platform.base_url(["search"]);
+    pub(crate) fn web_url(&self) -> Url {
+        let mut url = self.platform.url(["search"]);
         let tag = format!("{}:{}", self.kind, self.name);
         url.query_pairs_mut().append_pair("q", &tag);
         url
@@ -171,6 +172,6 @@ impl Author {
 
 impl MediaId {
     pub(crate) fn to_webpage_url(self, derpi_platform: DerpiPlatformKind) -> Url {
-        derpi_platform.base_url(["images", &self.to_string()])
+        derpi_platform.url(["images", &self.to_string()])
     }
 }
