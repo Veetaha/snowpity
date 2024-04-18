@@ -1,4 +1,4 @@
-use super::derpilike::platform_3::ponerpics;
+use super::derpilike::ponerpics;
 use super::platform::prelude::*;
 use super::{derpibooru, deviant_art, twitter};
 use crate::prelude::*;
