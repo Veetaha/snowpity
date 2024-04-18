@@ -2,7 +2,7 @@
 //! Use [TypeScript declarations] as a reference (though they may go out of date):
 //!
 //! [TypeScript declarations]: https://github.com/octet-stream/dinky/blob/master/lib/Dinky.d.ts
-use crate::posting::derpilike::platform_3::DerpiPlatformKind;
+use crate::posting::derpilike::DerpiPlatformKind;
 use crate::prelude::*;
 use crate::Result;
 use reqwest::Url;

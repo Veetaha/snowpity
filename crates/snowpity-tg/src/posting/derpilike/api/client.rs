@@ -1,11 +1,8 @@
-use url::Url;
-
+use crate::http;
 use crate::posting::derpilike::api::model::*;
-use crate::posting::derpilike::platform_3::DerpiPlatformKind;
-use crate::posting::derpilike::Config;
+use crate::posting::derpilike::{Config, DerpiPlatformKind};
 use crate::prelude::*;
 use crate::Result;
-use crate::{http, util};
 
 /*
 TODO: support Derpibooru, Ponerpics, Furbooru...
