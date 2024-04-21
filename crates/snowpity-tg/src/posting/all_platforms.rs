@@ -1,6 +1,6 @@
-use super::derpilike::ponerpics;
+use super::derpilike::{derpibooru, ponerpics};
 use super::platform::prelude::*;
-use super::{derpibooru, deviant_art, twitter};
+use super::{deviant_art, twitter};
 use crate::prelude::*;
 use crate::Result;
 use assert_matches::assert_matches;

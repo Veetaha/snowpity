@@ -8,6 +8,12 @@ pub(crate) struct BlobCacheRepo {
     table_name: &'static str,
 }
 
+#[derive(sqlx::FromRow)]
+struct Record {
+    tg_file_id: String,
+    tg_file_kind: i16,
+}
+
 impl BlobCacheRepo {
     pub(crate) fn new(db: sqlx::PgPool, table_name: &'static str) -> Self {
         Self { db, table_name }
@@ -33,8 +39,6 @@ impl BlobCacheRepo {
 
     #[metered_db]
     pub(crate) async fn get(&self, media_id: MediaId) -> Result<Option<TgFileMeta>> {
-        // https://github.com/sfackler/rust-postgres/issues/925
-        // https://github.com/launchbadge/sqlx/discussions/1286
         let query = format!(
             "select tg_file_id, tg_file_kind from tg_{}_blob_cache
             where media_id = $1",
@@ -45,12 +49,17 @@ impl BlobCacheRepo {
             .bind(media_id.try_into_db()?)
             .fetch_optional(&self.db)
             .await?
-            .map(|(tg_file_id, tg_file_kind): (String, i16)| {
-                Ok(TgFileMeta {
-                    id: tg_file_id,
-                    kind: tg_file_kind.try_into_app()?,
-                })
-            })
+            .map(
+                |Record {
+                     tg_file_id,
+                     tg_file_kind,
+                 }| {
+                    Ok(TgFileMeta {
+                        id: tg_file_id,
+                        kind: tg_file_kind.try_into_app()?,
+                    })
+                },
+            )
             .transpose()
     }
 }
