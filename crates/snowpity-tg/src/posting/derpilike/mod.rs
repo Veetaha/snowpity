@@ -10,6 +10,8 @@ use self::api::MediaId;
 
 mod api;
 mod db;
+
+pub(crate) mod derpibooru;
 pub(crate) mod ponerpics;
 
 #[derive(Clone, Deserialize)]
@@ -38,7 +40,7 @@ struct Derpitools {
 }
 
 impl Derpitools {
-    async fn get_post<Platform: PlatformTrait + PlatformTypes<BlobId = (), PostId = MediaId>>(
+    async fn get_post<Platform: PlatformTrait<BlobId = (), PostId = MediaId>>(
         &self,
         media: MediaId,
     ) -> Result<Post<Platform>> {
@@ -47,7 +49,7 @@ impl Derpitools {
             .get_media(media)
             .instrument(info_span!(
                 "fetching_media",
-                platform = %self.platform.as_ref()
+                platform = %self.platform
             ))
             .await?;
 
@@ -98,7 +100,7 @@ impl Derpitools {
         })
     }
 
-    async fn get_cached_blobs<Platform: PlatformTrait + PlatformTypes<BlobId = ()>>(
+    async fn get_cached_blobs<Platform: PlatformTrait<BlobId = ()>>(
         &self,
         media_id: MediaId,
     ) -> Result<Vec<CachedBlobId<Platform>>> {
@@ -111,7 +113,7 @@ impl Derpitools {
         ))
     }
 
-    async fn set_cached_blob<Platform: PlatformTrait + PlatformTypes<BlobId = ()>>(
+    async fn set_cached_blob<Platform: PlatformTrait<BlobId = ()>>(
         &self,
         media_id: MediaId,
         blob: CachedBlobId<Platform>,
@@ -120,13 +122,20 @@ impl Derpitools {
     }
 }
 
-#[derive(strum::Display, strum::AsRefStr, Debug, Clone, Copy)]
+#[derive(strum::Display, strum::IntoStaticStr, Debug, Clone, Copy)]
 pub(crate) enum DerpiPlatformKind {
     Derpibooru,
     Ponerpics,
 }
 
 impl DerpiPlatformKind {
+    pub(crate) fn db_table_name(self) -> &'static str {
+        match self {
+            DerpiPlatformKind::Derpibooru => "derpibooru",
+            DerpiPlatformKind::Ponerpics => "ponerpics",
+        }
+    }
+
     pub(crate) fn base_url(self) -> Url {
         let url = match self {
             DerpiPlatformKind::Derpibooru => "https://derpibooru.org",

@@ -20,10 +20,10 @@ impl PlatformTypes for Platform {
 impl PlatformTrait for Platform {
     type Config = Config;
 
-    const NAME: &'static str = "Ponerpics";
+    const NAME: &'static str = "Derpibooru";
 
     fn new(params: PlatformParams<Config>) -> Self {
-        let platform = DerpiPlatformKind::Ponerpics;
+        let platform = DerpiPlatformKind::Derpibooru;
 
         Self {
             tools: Derpitools {
@@ -37,9 +37,9 @@ impl PlatformTrait for Platform {
     fn parse_query(query: &str) -> ParseQueryResult<MediaId> {
         let (_, host, id) = parse_with_regexes!(
             query,
-            r"(ponerpics.org(?:/images)?)/(\d+)",
-            r"(ponerpics.org/img)/\d+/\d+/\d+/(\d+)",
-            r"(ponerpics.org/img)/(?:view|download)/\d+/\d+/\d+/(\d+)",
+            r"(derpibooru.org(?:/images)?)/(\d+)",
+            r"(derpicdn.net/img)/\d+/\d+/\d+/(\d+)",
+            r"(derpicdn.net/img/(?:view|download))/\d+/\d+/\d+/(\d+)",
         )?;
         Some((host.into(), id.parse().ok()?))
     }

@@ -381,33 +381,6 @@ def --env docker-compose-config [] {
     }
 }
 
-def --env wait-for-db [] {
-    let db_url = (
-        docker-compose-config
-        | get services.tg-bot.environment.DATABASE_URL
-        | url parse
-    )
-
-    let db_name = $db_url.path | parse "/{name}").0.name
-
-    let postgres_image = (docker-compose-config).services.postgres.image
-
-    let wait_time = 1min
-    let delay = 200ms
-    let max_retries = $wait_time / $delay | into int
-
-    with-retry --fixed --max-retries $max_retries --delay $delay {(
-        with-debug docker run
-            '--network' 'snowpity_postgres'
-            $postgres_image
-            pg_isready
-            '--dbname' $db_name
-            '--host' $db_url.host
-            '--port' $db_url.port
-            '--username' $db_url.username
-    )}
-}
-
 # Returns a pair of tags with the exact version and "latest" tag
 def --env docker-build [
     component: string
