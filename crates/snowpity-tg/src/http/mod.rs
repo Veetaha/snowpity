@@ -39,7 +39,24 @@ pub(crate) fn default_retry_policy() -> ExponentialBackoff {
 }
 
 pub(crate) fn create_client() -> Client {
-    reqwest_middleware::ClientBuilder::new(teloxide::net::client_from_env())
+    let client = std::env::var("PROXY_SERVER")
+        .ok()
+        .map(|proxy| {
+            let proxy = reqwest::Proxy::custom(move |url| match url.host_str() {
+                Some("cdn.twibooru.org") => Some(proxy.clone()),
+                _ => None,
+            });
+
+            reqwest::Client::builder().proxy(proxy)
+        })
+        .unwrap_or_else(reqwest::Client::builder)
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(17))
+        .tcp_nodelay(true)
+        .build()
+        .unwrap();
+
+    reqwest_middleware::ClientBuilder::new(client)
         .with(OutermostObservingMiddleware)
         .with(RetryTransientMiddleware::new_with_policy(
             default_retry_policy(),

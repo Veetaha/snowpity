@@ -6,21 +6,23 @@ use itertools::Either;
 use reqwest::Url;
 use serde::Deserialize;
 
-use self::api::MediaId;
+use self::derpitools::DerpiPlatformKind;
 
 mod api;
 mod db;
+mod derpitools;
 
 pub(crate) mod derpibooru;
 pub(crate) mod ponerpics;
+pub(crate) mod twibooru;
 
 #[derive(Clone, Deserialize)]
 pub(crate) struct Config {
-    // Derpibooru doesn't require an API key for read-only requests.
+    // Derpilike platforms doesn't require an API key for read-only requests.
     // The rate limiting is also the same for both anonymous and authenticated requests,
     // therefore we don't really need an API key
     //
-    // This was confirmed by the Derpibooru staff in discord:
+    // For Derpibooru, this was confirmed by the Derpibooru staff in discord:
     // https://discord.com/channels/430829008402251796/438029140659142657/1059492359122989146
     //
     // This config struct exists here, just in case some day we do need to use an API key,
@@ -30,149 +32,8 @@ pub(crate) struct Config {
 }
 
 impl ConfigTrait for Config {
-    const ENV_PREFIX: &'static str = "DERPIBOORU_";
-}
-
-struct Derpitools {
-    api: api::Client,
-    db: db::BlobCacheRepo,
-    platform: DerpiPlatformKind,
-}
-
-impl Derpitools {
-    async fn get_post<Platform: PlatformTrait<BlobId = (), PostId = MediaId>>(
-        &self,
-        media: MediaId,
-    ) -> Result<Post<Platform>> {
-        let media = self
-            .api
-            .get_media(media)
-            .instrument(info_span!(
-                "fetching_media",
-                platform = %self.platform
-            ))
-            .await?;
-
-        let authors = media.authors().map_collect(|author| Author {
-            web_url: author.web_url(),
-            kind: match author.kind {
-                api::AuthorKind::Artist => None,
-                api::AuthorKind::Editor => Some(AuthorKind::Editor),
-                api::AuthorKind::Prompter => Some(AuthorKind::Prompter),
-            },
-            name: author.name,
-        });
-
-        let safety = media.safety_rating_tags().map(ToOwned::to_owned).collect();
-        let safety = if safety == ["safe"] {
-            SafetyRating::Sfw
-        } else {
-            SafetyRating::Nsfw { kinds: safety }
-        };
-
-        let dimensions = MediaDimensions {
-            width: media.width,
-            height: media.height,
-        };
-        let repr = best_tg_reprs(&media).map_collect(|(download_url, kind)| {
-            BlobRepr {
-                dimensions: Some(dimensions),
-                download_url,
-                kind,
-                // Sizes for images are ~good enough, although not always accurate,
-                // but we don't know the size of MP4 equivalent for GIF or WEBM,
-                // however those will often fit into the limit of uploading via direct URL.
-                // Anyway, this is all not precise, so be it this way for now.
-                size: BlobSize::Unknown,
-            }
-        });
-
-        let blob = MultiBlob { id: (), repr };
-
-        Ok(Post {
-            base: BasePost {
-                id: media.id,
-                authors,
-                web_url: media.id.to_webpage_url(self.platform),
-                safety,
-            },
-            blobs: vec![blob],
-        })
-    }
-
-    async fn get_cached_blobs<Platform: PlatformTrait<BlobId = ()>>(
-        &self,
-        media_id: MediaId,
-    ) -> Result<Vec<CachedBlobId<Platform>>> {
-        Ok(Vec::from_iter(
-            self.db
-                .get(media_id)
-                .with_duration_log("Reading the cache from the database")
-                .await?
-                .map(CachedBlobId::with_tg_file),
-        ))
-    }
-
-    async fn set_cached_blob<Platform: PlatformTrait<BlobId = ()>>(
-        &self,
-        media_id: MediaId,
-        blob: CachedBlobId<Platform>,
-    ) -> Result {
-        self.db.set(media_id, blob.tg_file).await
-    }
-}
-
-#[derive(strum::Display, strum::IntoStaticStr, Debug, Clone, Copy)]
-pub(crate) enum DerpiPlatformKind {
-    Derpibooru,
-    Ponerpics,
-}
-
-impl DerpiPlatformKind {
-    pub(crate) fn db_table_name(self) -> &'static str {
-        match self {
-            DerpiPlatformKind::Derpibooru => "derpibooru",
-            DerpiPlatformKind::Ponerpics => "ponerpics",
-        }
-    }
-
-    pub(crate) fn base_url(self) -> Url {
-        let url = match self {
-            DerpiPlatformKind::Derpibooru => "https://derpibooru.org",
-            DerpiPlatformKind::Ponerpics => "https://ponerpics.org",
-        };
-        url.parse().unwrap_or_else(|err| {
-            panic!(
-                "Failed to parse base URL.\n\
-                url: {url:?}\n\
-                platform: {self:#?}\n\
-                Error: {err:#?}",
-            );
-        })
-    }
-
-    pub(crate) fn url(self, segments: impl IntoIterator<Item = impl AsRef<str>>) -> Url {
-        let mut url = self.base_url();
-        url.path_segments_mut()
-            .unwrap_or_else(|()| {
-                panic!(
-                    "Base URL can not be a base\n\
-                    url: {}\n\
-                    platform: {self:#?}",
-                    self.base_url(),
-                )
-            })
-            .extend(segments);
-
-        url
-    }
-
-    pub(crate) fn api_url(self, segments: impl IntoIterator<Item = impl AsRef<str>>) -> Url {
-        let base = ["api", "v1", "json"].into_iter().map(Either::Left);
-        let segments = segments.into_iter().map(Either::Right);
-
-        self.url(itertools::chain(base, segments))
-    }
+    // TODO                           _________
+    const ENV_PREFIX: &'static str = "DERPILIKE_";
 }
 
 impl DisplayInFileNameViaToString for api::MediaId {}
@@ -191,12 +52,15 @@ impl DisplayInFileNameViaToString for api::MediaId {}
 ///
 /// [wiki]: https://github.com/Veetaha/snowpity/wiki/Telegram-images-compression
 /// [sources]: https://github.com/philomena-dev/philomena/blob/743699c6afe38b20b23f866c2c1a590c86d6095e/lib/philomena/images/thumbnailer.ex#L16-L24
-fn best_tg_reprs(media: &api::Media) -> Vec<(Url, BlobKind)> {
+fn best_tg_reprs(media: &api::Media, platform_kind: DerpiPlatformKind) -> Vec<(Url, BlobKind)> {
     match media.mime_type {
         api::MimeType::ImageJpeg => vec![(media.view_url.clone(), BlobKind::ImageJpeg)],
         api::MimeType::ImagePng => vec![(media.view_url.clone(), BlobKind::ImagePng)],
         api::MimeType::ImageSvgXml => vec![(media.view_url.clone(), BlobKind::ImageSvg)],
         api::MimeType::ImageGif => {
+            if let DerpiPlatformKind::Twibooru = platform_kind {
+                return vec![(media.view_url.clone(), BlobKind::AnimationGif)];
+            }
             vec![
                 // First of all try to get an existing MP4 representation for the GIF
                 (media.unwrap_mp4_url(), BlobKind::AnimationMp4),
@@ -205,7 +69,13 @@ fn best_tg_reprs(media: &api::Media) -> Vec<(Url, BlobKind)> {
                 (media.view_url.clone(), BlobKind::AnimationGif),
             ]
         }
-        api::MimeType::VideoWebm => vec![(media.unwrap_mp4_url(), BlobKind::VideoMp4)],
+        api::MimeType::VideoWebm => {
+            if let DerpiPlatformKind::Twibooru = platform_kind {
+                return vec![(media.view_url.clone(), BlobKind::VideoMp4)];
+            }
+            vec![(media.unwrap_mp4_url(), BlobKind::VideoMp4)]
+        }
+        api::MimeType::VideoMp4 => vec![(media.unwrap_mp4_url(), BlobKind::VideoMp4)],
     }
 }
 

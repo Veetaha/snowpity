@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 
 	twitterscraper "github.com/n0madic/twitter-scraper"
@@ -29,12 +30,15 @@ func Initialize(ffiCookies *C.char) *C.char {
 
 	scraper = twitterscraper.New()
 
+	proxy, is_exist := os.LookupEnv("PROXY_SERVER")
+	if is_exist {
+		panicIfErr(scraper.SetProxy(proxy))
+	}
 	scraper.SetCookies(*cookies)
 
 	// This is required for the scraper to know we are logged in
 	if !scraper.IsLoggedIn() {
-		// FIXME add twitter cookies!
-		// return ffiError(fmt.Errorf("failed to initialize (cookies may be invalid)"))
+		return ffiError(fmt.Errorf("failed to initialize (cookies may be invalid)"))
 	}
 
 	return ffiOk(nil)
@@ -109,7 +113,12 @@ func ffiDeserialize[T any](jsonChars *C.char) (*T, error) {
 func main() {
 	scraper = twitterscraper.New()
 
-	err := scraper.Login("username", "password", "mfa-code")
+	proxy, is_exist := os.LookupEnv("PROXY_SERVER")
+	if is_exist {
+		panicIfErr(scraper.SetProxy(proxy))
+	}
+
+	err := scraper.Login("username", "password", "mfa")
 	panicIfErr(err)
 
 	cookies := scraper.GetCookies()

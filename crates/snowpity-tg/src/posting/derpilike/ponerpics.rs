@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 
-use crate::posting::derpilike::api::{self, MediaId};
-use crate::posting::derpilike::db;
+use crate::posting::derpilike::api::MediaId;
 use crate::posting::derpilike::*;
-use crate::prelude::*;
 use crate::Result;
+
+use self::derpitools::Derpitools;
 
 pub(crate) struct Platform {
     tools: Derpitools,
@@ -23,14 +23,8 @@ impl PlatformTrait for Platform {
     const NAME: &'static str = "Ponerpics";
 
     fn new(params: PlatformParams<Config>) -> Self {
-        let platform = DerpiPlatformKind::Ponerpics;
-
         Self {
-            tools: Derpitools {
-                api: api::Client::new(params.config, params.http, platform),
-                db: db::BlobCacheRepo::new(params.db, platform.db_table_name()),
-                platform,
-            },
+            tools: Derpitools::new(params, DerpiPlatformKind::Ponerpics),
         }
     }
 

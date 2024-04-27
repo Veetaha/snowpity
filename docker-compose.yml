@@ -16,6 +16,8 @@ services:
       DATABASE_URL: postgres://snowpity:${PG_PASSWORD}@postgres:5432/snowpity
       RUST_BACKTRACE: full
 
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
     volumes:
       - /proc/stat:/proc/stat:ro
       - /proc/meminfo:/proc/meminfo:ro
