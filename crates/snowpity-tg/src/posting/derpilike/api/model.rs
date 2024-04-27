@@ -29,6 +29,7 @@ sqlx_bat::impl_try_into_db_via_newtype!(MediaId(u64));
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct GetImageResponse {
+    #[serde(alias = "post")]
     pub(crate) image: RawMedia,
 }
 
@@ -108,6 +109,9 @@ pub(crate) enum MimeType {
 
     #[serde(rename = "video/webm")]
     VideoWebm,
+
+    #[serde(rename = "video/mp4")]
+    VideoMp4,
 }
 
 impl Media {
@@ -172,6 +176,6 @@ impl Author {
 
 impl MediaId {
     pub(crate) fn to_webpage_url(self, derpi_platform: DerpiPlatformKind) -> Url {
-        derpi_platform.url(["images", &self.to_string()])
+        derpi_platform.url([derpi_platform.content_kind(), &self.to_string()])
     }
 }

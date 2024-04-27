@@ -1,4 +1,4 @@
-use super::derpilike::{derpibooru, ponerpics};
+use super::derpilike::{derpibooru, ponerpics, twibooru};
 use super::platform::prelude::*;
 use super::{deviant_art, twitter};
 use crate::prelude::*;
@@ -170,7 +170,8 @@ def_all_platforms! {
     [derpibooru, Derpibooru],
     [twitter, Twitter],
     [deviant_art, DeviantArt],
-    [ponerpics, Ponerpics]
+    [ponerpics, Ponerpics],
+    [twibooru, Twibooru],
 }
 
 // #[derive(Debug, Clone, PartialEq, Eq, Hash)]

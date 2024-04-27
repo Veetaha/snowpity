@@ -4,9 +4,6 @@ use crate::posting::derpilike::{Config, DerpiPlatformKind};
 use crate::prelude::*;
 use crate::Result;
 
-/*
-TODO: support Derpibooru, Ponerpics, Furbooru...
-*/
 pub(crate) struct Client {
     http: http::Client,
     derpi_platform: DerpiPlatformKind,
@@ -28,7 +25,7 @@ impl Client {
         self.http
             .get(
                 self.derpi_platform
-                    .api_url(["images", &media_id.to_string()]),
+                    .api_url([self.derpi_platform.content_kind(), &media_id.to_string()]),
             )
             .read_json::<GetImageResponse>()
             .await?
