@@ -265,11 +265,6 @@ impl BasePost {
                 None => "",
             };
             let author_entry = format!("{}{}", author.name, author_entry);
-            // let author_entry = if matches!(author.kind, Some(AuthorKind::Editor)) {
-            //     format!("{} (editor)", author.name)
-            // } else {
-            //     author.name.clone()
-            // };
             markdown::link(author.web_url.as_str(), &markdown::escape(&author_entry))
         });
 

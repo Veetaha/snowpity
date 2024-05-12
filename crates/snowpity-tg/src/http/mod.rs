@@ -41,14 +41,7 @@ pub(crate) fn default_retry_policy() -> ExponentialBackoff {
 pub(crate) fn create_client() -> Client {
     let client = std::env::var("PROXY_SERVER")
         .ok()
-        .map(|proxy| {
-            let proxy = reqwest::Proxy::custom(move |url| match url.host_str() {
-                Some("cdn.twibooru.org") => Some(proxy.clone()),
-                _ => None,
-            });
-
-            reqwest::Client::builder().proxy(proxy)
-        })
+        .map(|proxy| reqwest::Client::builder().proxy(reqwest::Proxy::all(proxy).unwrap()))
         .unwrap_or_else(reqwest::Client::builder)
         .connect_timeout(Duration::from_secs(5))
         .timeout(Duration::from_secs(17))

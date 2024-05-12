@@ -13,7 +13,10 @@ mod db;
 mod derpitools;
 
 pub(crate) mod derpibooru;
+pub(crate) mod furbooru;
+pub(crate) mod manebooru;
 pub(crate) mod ponerpics;
+pub(crate) mod ponybooru;
 pub(crate) mod twibooru;
 
 #[derive(Clone, Deserialize)]
@@ -70,12 +73,17 @@ fn best_tg_reprs(media: &api::Media, platform_kind: DerpiPlatformKind) -> Vec<(U
             ]
         }
         api::MimeType::VideoWebm => {
-            if let DerpiPlatformKind::Twibooru = platform_kind {
+            if let DerpiPlatformKind::Twibooru | DerpiPlatformKind::Furbooru = platform_kind {
                 return vec![(media.view_url.clone(), BlobKind::VideoMp4)];
             }
             vec![(media.unwrap_mp4_url(), BlobKind::VideoMp4)]
         }
-        api::MimeType::VideoMp4 => vec![(media.unwrap_mp4_url(), BlobKind::VideoMp4)],
+        api::MimeType::VideoMp4 => {
+            if let DerpiPlatformKind::Ponybooru = platform_kind {
+                return vec![(media.view_url.clone(), BlobKind::VideoMp4)];
+            }
+            vec![(media.unwrap_mp4_url(), BlobKind::VideoMp4)]
+        }
     }
 }
 
