@@ -519,7 +519,7 @@ impl TgUploadMethodContext<'_> {
                 %actual_file_kind,
                 requested_file_type = %self.base.tg_file_type,
                 "Actual uploaded tg file type differs from requested",
-            )
+            );
         }
 
         Ok(TgFileMeta {

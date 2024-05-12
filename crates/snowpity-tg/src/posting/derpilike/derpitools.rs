@@ -102,8 +102,11 @@ impl Derpitools {
 #[derive(strum::Display, strum::IntoStaticStr, Debug, Clone, Copy)]
 pub(crate) enum DerpiPlatformKind {
     Derpibooru,
+    Manebooru,
     Ponerpics,
+    Ponybooru,
     Twibooru,
+    Furbooru,
 }
 
 impl DerpiPlatformKind {
@@ -117,7 +120,10 @@ impl DerpiPlatformKind {
     pub(crate) fn db_table_name(self) -> &'static str {
         match self {
             DerpiPlatformKind::Derpibooru => "derpibooru",
+            DerpiPlatformKind::Furbooru => "furbooru",
+            DerpiPlatformKind::Manebooru => "manebooru",
             DerpiPlatformKind::Ponerpics => "ponerpics",
+            DerpiPlatformKind::Ponybooru => "ponybooru",
             DerpiPlatformKind::Twibooru => "twibooru",
         }
     }
@@ -125,8 +131,11 @@ impl DerpiPlatformKind {
     pub(crate) fn base_url(self) -> Url {
         let url = match self {
             DerpiPlatformKind::Derpibooru => "https://derpibooru.org",
+            DerpiPlatformKind::Furbooru => "https://furbooru.org",
+            DerpiPlatformKind::Manebooru => "https://manebooru.art",
             DerpiPlatformKind::Ponerpics => "https://ponerpics.org",
-            DerpiPlatformKind::Twibooru => "https://twibooru.org/",
+            DerpiPlatformKind::Ponybooru => "https://ponybooru.org",
+            DerpiPlatformKind::Twibooru => "https://twibooru.org",
         };
         url.parse().unwrap_or_else(|err| {
             panic!(
