@@ -1,5 +1,5 @@
-mod gif_to_mp4;
+mod ffmpeg;
 mod resize_image_to_bounding_box;
 
-pub use gif_to_mp4::*;
+pub use ffmpeg::*;
 pub use resize_image_to_bounding_box::*;

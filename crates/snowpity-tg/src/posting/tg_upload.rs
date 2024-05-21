@@ -9,10 +9,12 @@ use assert_matches::assert_matches;
 use derive_more::Deref;
 use from_variants::FromVariants;
 use fs_err::tokio as fs;
+use futures::future::BoxFuture;
 use futures::prelude::*;
 use metrics_bat::prelude::*;
 use teloxide::prelude::*;
 use teloxide::types::{FileMeta, InputFile, MessageKind};
+use tempfile::TempPath;
 
 /// If the blob is larger than this, then we will refuse to download it, because
 /// it's too big for us to handle, or it could be a malicious blob.
@@ -123,6 +125,7 @@ impl TgUploadContext<'_> {
             ImageJpeg | ImagePng | ImageSvg => self.upload_image().await,
             AnimationMp4 => self.upload_mpeg4_gif().await,
             VideoMp4 => self.upload_video().await,
+            VideoWebm => self.upload_webm_as_mpeg4().await,
             AnimationGif => self.upload_gif_as_mpeg4_gif().await,
         }
     }
@@ -209,18 +212,31 @@ impl TgUploadContext<'_> {
     }
 
     async fn upload_gif_as_mpeg4_gif(&self) -> Result<TgFileMeta> {
-        let ctx = self.file_kind(TgFileKind::Mpeg4Gif);
+        // in closure create BoxFuture on result
+
+        // self.upload_as_mpeg4(TgFileKind::Video, converter).await
+        todo!()
+    }
+
+    // TODO(Havoc) combine parts from `upload_gif_as_mpeg4_gif`
+    async fn upload_webm_as_mpeg4(&self) -> Result<TgFileMeta> {
+        // let converter = |path| async move { media_conv::webm_to_mp4(path).await }.boxed();
+        let converter = |path: &_| media_conv::webm_to_mp4(path).boxed();
+
+        self.upload_as_mpeg4(TgFileKind::Video, converter).await
+    }
+
+    async fn upload_as_mpeg4<F>(&self, file_kind: TgFileKind, converter: F) -> Result<TgFileMeta>
+    where
+        F: Fn(&std::path::Path) -> BoxFuture<Result<TempPath>>,
+    {
+        let ctx = self.file_kind(file_kind);
 
         let local_blob = ctx.download_blob_to_disk(MAX_DOWNLOAD_SIZE).await?;
 
-        let output = media_conv::gif_to_mp4(&local_blob.blob).await?;
+        let output = converter(&local_blob.blob).await?;
 
-        let size = fs::metadata(&output)
-            .await
-            .fatal_ctx(|| "Failed to read generated GIF meta")?
-            .len();
-
-        let local_blob = LocalBlob { blob: output, size };
+        let local_blob = LocalBlob::from_temp_path(output).await?;
 
         ctx.by_multipart(&local_blob.upcast()).upload().await
     }
@@ -309,6 +325,17 @@ impl<B> LocalBlob<B> {
             blob: self.blob.into(),
             size: self.size,
         }
+    }
+}
+
+impl LocalBlob<TempPath> {
+    async fn from_temp_path(output: TempPath) -> Result<Self> {
+        let size = fs::metadata(&output)
+            .await
+            .fatal_ctx(|| "Failed to read generated file metadata")?
+            .len();
+
+        Ok(LocalBlob { blob: output, size })
     }
 }
 
@@ -434,13 +461,22 @@ struct TgUploadMethodContext<'a> {
 
 impl TgUploadMethodContext<'_> {
     fn span_for_upload(&self) -> tracing::Span {
+        // TODO(Havoc) log file size correctly
+        let size = match &self.blob.repr.size {
+            BlobSize::Max(len) => format!("Less than {len}"),
+            BlobSize::Unknown => match &self.tg_upload_method {
+                TgUploadMethod::Multipart(local_blob) => local_blob.size.to_string(),
+                TgUploadMethod::Url => "Unknown".to_owned(),
+            },
+        };
+
         info_span!(
             "tg_upload",
             tg_file_type = %self.tg_file_type,
             tg_upload_method = %<&'static str>::from(&self.tg_upload_method),
             download_url = %self.blob.repr.download_url,
             blob_kind = %self.blob.repr.kind,
-            blob_size = ?self.blob.repr.size,
+            blob_size = size,
             blob_id = ?self.blob.id,
             post_id = ?self.post.id,
         )
@@ -515,7 +551,7 @@ impl TgUploadMethodContext<'_> {
         let (actual_file_kind, file_meta) = self.find_file(msg)?;
 
         if actual_file_kind != self.tg_file_type {
-            info!(
+            warn!(
                 %actual_file_kind,
                 requested_file_type = %self.base.tg_file_type,
                 "Actual uploaded tg file type differs from requested",
