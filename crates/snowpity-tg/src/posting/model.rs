@@ -46,6 +46,11 @@ pub(crate) enum BlobKind {
     /// Soundless MP4 video is considered to be an animation
     AnimationMp4,
 
+    // TODO(Havoc)
+    /// Use this only if MP4 is not supported from the source.
+    /// Webm file will be converted to MP4 via ffmpeg.
+    VideoWebm,
+
     /// Best not to have gifs, but MP4s. Use this only if MP4 is not supported
     /// from the source. It means we'll need to convert the gif to MP4.
     AnimationGif,
@@ -407,7 +412,10 @@ impl BlobKind {
             BlobKind::ImageJpeg => "jpg",
             BlobKind::ImagePng => "png",
             BlobKind::ImageSvg => "svg",
-            BlobKind::VideoMp4 | BlobKind::AnimationMp4 | BlobKind::AnimationGif => "mp4",
+            BlobKind::VideoMp4
+            | BlobKind::VideoWebm
+            | BlobKind::AnimationMp4
+            | BlobKind::AnimationGif => "mp4",
         }
     }
 }

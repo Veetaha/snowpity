@@ -1,10 +1,8 @@
-use async_trait::async_trait;
-
+use self::derpitools::Derpitools;
 use crate::posting::derpilike::api::MediaId;
 use crate::posting::derpilike::*;
 use crate::Result;
-
-use self::derpitools::Derpitools;
+use async_trait::async_trait;
 
 pub(crate) struct Platform {
     tools: Derpitools,
@@ -31,7 +29,7 @@ impl PlatformTrait for Platform {
     fn parse_query(query: &str) -> ParseQueryResult<MediaId> {
         let (_, host, id) = parse_with_regexes!(
             query,
-            r"(twibooru.org)/(\d+)",
+            r"(twibooru.org(?:/posts)?)/(\d+)",
             r"(cdn.twibooru.org/img)/\d+/\d+/\d+/(\d+)",
             r"(cdn.twibooru.org/img/(?:view|download))/\d+/\d+/\d+/(\d+)",
         )?;

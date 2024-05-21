@@ -61,6 +61,7 @@ fn best_tg_reprs(media: &api::Media, platform_kind: DerpiPlatformKind) -> Vec<(U
         api::MimeType::ImagePng => vec![(media.view_url.clone(), BlobKind::ImagePng)],
         api::MimeType::ImageSvgXml => vec![(media.view_url.clone(), BlobKind::ImageSvg)],
         api::MimeType::ImageGif => {
+            // GIFs in Twibooru do not have MP4 representation
             if let DerpiPlatformKind::Twibooru = platform_kind {
                 return vec![(media.view_url.clone(), BlobKind::AnimationGif)];
             }
@@ -73,12 +74,18 @@ fn best_tg_reprs(media: &api::Media, platform_kind: DerpiPlatformKind) -> Vec<(U
             ]
         }
         api::MimeType::VideoWebm => {
-            if let DerpiPlatformKind::Twibooru | DerpiPlatformKind::Furbooru = platform_kind {
+            // Webm's in Twibooru do not have MP4 representation
+            if let DerpiPlatformKind::Twibooru = platform_kind {
+                // TODO(Havoc) is elsewhere exist? -> then get mp4 from derpibooru
                 return vec![(media.view_url.clone(), BlobKind::VideoMp4)];
             }
-            vec![(media.unwrap_mp4_url(), BlobKind::VideoMp4)]
+            vec![
+                (media.unwrap_mp4_url(), BlobKind::VideoMp4),
+                (media.view_url.clone(), BlobKind::VideoMp4),
+            ]
         }
         api::MimeType::VideoMp4 => {
+            // In Ponybooru `view_url` to the media already has an MP4 extension
             if let DerpiPlatformKind::Ponybooru = platform_kind {
                 return vec![(media.view_url.clone(), BlobKind::VideoMp4)];
             }

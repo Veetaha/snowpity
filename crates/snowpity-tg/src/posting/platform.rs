@@ -1,10 +1,9 @@
+use super::model::*;
 use crate::{http, Result};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::fmt;
 use std::hash::Hash;
-
-use super::model::*;
 
 pub(crate) mod prelude {
     pub(crate) use super::{

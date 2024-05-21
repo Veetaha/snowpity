@@ -8,6 +8,10 @@ resolver = "2"
 [profile.dev]
 debug = 0
 
+# Faster image processing in debug builds
+[profile.dev.package.fast_image_resize]
+opt-level = 3
+
 [profile.bench]
 debug = 1
 
