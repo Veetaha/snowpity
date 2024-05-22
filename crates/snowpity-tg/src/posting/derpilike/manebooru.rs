@@ -11,7 +11,7 @@ pub(crate) struct Platform {
 impl PlatformTypes for Platform {
     type PostId = MediaId;
     type BlobId = ();
-    type RequestId = MediaId;
+    type Request = MediaId;
 }
 
 #[async_trait]

@@ -11,7 +11,8 @@ pub(crate) struct Platform {
 impl PlatformTypes for Platform {
     type PostId = MediaId;
     type BlobId = ();
-    type RequestId = MediaId;
+    type Request = MediaId;
+    type Mirror = Mirror;
 }
 
 #[async_trait]
@@ -34,6 +35,11 @@ impl PlatformTrait for Platform {
             r"(derpicdn.net/img)/\d+/\d+/\d+/(\d+)",
             r"(derpicdn.net/img/(?:view|download))/\d+/\d+/\d+/(\d+)",
         )?;
+
+        let mirror = host
+            .contains("trixiebooru.org")
+            .then_some(Mirror::Trixiebooru);
+
         Some((host.into(), id.parse().ok()?))
     }
 
@@ -47,5 +53,17 @@ impl PlatformTrait for Platform {
 
     async fn set_cached_blob(&self, media: MediaId, blob: CachedBlobId<Self>) -> Result {
         self.tools.set_cached_blob(media, blob).await
+    }
+}
+
+#[derive(Debug, Clone, strum::Display)]
+pub(crate) enum Mirror {
+    Trixiebooru,
+}
+
+impl MirrorTrait for Mirror {
+    fn try_update_url_to_mirror(&self, url: &mut Url) -> Result<(), url::ParseError> {
+        url.set_host(Some("trixiebooru.org"))?;
+        Ok(())
     }
 }

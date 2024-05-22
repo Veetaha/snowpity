@@ -14,7 +14,8 @@ pub(crate) struct Platform {
 impl PlatformTypes for Platform {
     type PostId = TweetId;
     type BlobId = MediaKey;
-    type RequestId = TweetId;
+    type Request = TweetId;
+    type Mirror = NoMirror;
 }
 
 #[async_trait]

@@ -1,20 +1,30 @@
 use super::model::*;
+use crate::prelude::*;
 use crate::{http, Result};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::fmt;
 use std::hash::Hash;
+use url::Url;
 
 pub(crate) mod prelude {
     pub(crate) use super::{
         parse_with_regexes, ConfigTrait, DisplayInFileName, DisplayInFileNameViaToString,
-        ParseQueryResult, PlatformParams, PlatformTrait, PlatformTypes,
+        MirrorTrait, NoMirror, ParseQueryResult, PlatformParams, PlatformTrait, PlatformTypes,
     };
     pub(crate) use crate::posting::model::*;
 }
 
-// The name of the media host, e.g. "derpibooru.org" and the request ID
-pub(crate) type ParseQueryResult<R> = Option<(String, R)>;
+pub(crate) type ParseQueryResult<Platform> = Option<ParseQueryOutput<Platform>>;
+
+pub(crate) struct ParseQueryOutput<Platform: PlatformTypes> {
+    /// The name of the media host, e.g. "derpibooru.org"
+    pub(crate) platform: String,
+    pub(crate) mirror: Option<Platform::Mirror>,
+    pub(crate) request: Platform::Request,
+}
+
+impl ParseQueryOutput {}
 
 pub(crate) struct PlatformParams<C> {
     pub(crate) config: C,
@@ -25,7 +35,8 @@ pub(crate) struct PlatformParams<C> {
 pub(crate) trait PlatformTypes {
     type PostId: fmt::Debug + Clone + PartialEq + Eq + Hash + DisplayInFileName;
     type BlobId: fmt::Debug + Clone + PartialEq + Eq + Hash + DisplayInFileName;
-    type RequestId: fmt::Debug + Clone + PartialEq + Eq + Hash;
+    type Request: fmt::Debug + Clone + PartialEq + Eq + Hash;
+    type Mirror: MirrorTrait;
 }
 
 #[async_trait]
@@ -36,16 +47,46 @@ pub(crate) trait PlatformTrait: Sized + PlatformTypes {
 
     fn new(params: PlatformParams<Self::Config>) -> Self;
 
-    fn parse_query(query: &str) -> ParseQueryResult<Self::RequestId>;
+    fn parse_query(query: &str) -> ParseQueryResult<Self>;
 
     /// Fetch metadata about the post from the posting platform.
-    async fn get_post(&self, request: Self::RequestId) -> Result<Post<Self>>;
+    async fn get_post(&self, request: Self::Request) -> Result<Post<Self>>;
 
     /// Get the cached version of the blobs from the database
-    async fn get_cached_blobs(&self, request: Self::RequestId) -> Result<Vec<CachedBlobId<Self>>>;
+    async fn get_cached_blobs(&self, request: Self::Request) -> Result<Vec<CachedBlobId<Self>>>;
 
     /// Save the information about the file uploaded to Telegram in the database.
     async fn set_cached_blob(&self, post: Self::PostId, blob: CachedBlobId<Self>) -> Result;
+}
+
+pub(crate) trait MirrorTrait: fmt::Display + fmt::Debug {
+    fn mirror_url(&self, mut url: Url) -> Url {
+        let original_url = url.clone();
+        if let Err(err) = self.try_update_url_to_mirror(&mut url) {
+            warn!(
+                %original_url,
+                mirror = ?self,
+                "Failed to update URL to mirror. Using original URL instead"
+            );
+        }
+        *url = original_url;
+    }
+
+    fn try_update_url_to_mirror(&self, url: &mut Url) -> Result<(), url::ParseError>;
+}
+
+pub(crate) enum NoMirror {}
+
+impl fmt::Display for NoMirror {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {}
+    }
+}
+
+impl MirrorTrait for NoMirror {
+    fn try_update_url_to_mirror(&self, _url: &mut Url) -> Result<(), url::ParseError> {
+        match *self {}
+    }
 }
 
 pub(crate) trait ConfigTrait {
