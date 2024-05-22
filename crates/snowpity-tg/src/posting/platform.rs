@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::fmt;
 use std::hash::Hash;
+use std::str::FromStr;
 use typed_builder::TypedBuilder;
 
 pub(crate) mod prelude {
@@ -129,7 +130,6 @@ macro_rules! parse_with_regexes {
 }
 
 pub(crate) use parse_with_regexes;
-use std::str::FromStr;
 
 #[cfg(test)]
 pub(crate) mod tests {
