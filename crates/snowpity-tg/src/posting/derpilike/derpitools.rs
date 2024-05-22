@@ -60,7 +60,7 @@ impl Derpitools {
                 // but we don't know the size of MP4 equivalent for GIF or WEBM,
                 // however those will often fit into the limit of uploading via direct URL.
                 // Anyway, this is all not precise, so be it this way for now.
-                size: BlobSize::Unknown,
+                size_hint: BlobSizeHint::Unknown,
             }
         });
 

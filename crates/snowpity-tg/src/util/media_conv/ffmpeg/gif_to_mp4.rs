@@ -1,12 +1,12 @@
-use futures::future::BoxFuture;
-
 use super::{ffmpeg, COMMON_ARGS};
 use crate::prelude::*;
 use crate::Result;
 use std::path::Path;
 
-#[instrument]
-pub(crate) async fn gif_to_mp4(input: &Path) -> Result<tempfile::TempPath> {
+#[instrument(skip_all, fields(input = %input.as_ref().display()))]
+pub(crate) async fn gif_to_mp4(input: impl AsRef<Path>) -> Result<tempfile::TempPath> {
+    let input = input.as_ref();
+
     let output = std::env::temp_dir().join(format!("{}.mp4", nanoid::nanoid!()));
     let log_message = format!("Converting GIF to mp4 with output at {output:?}");
 

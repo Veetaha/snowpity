@@ -126,7 +126,7 @@ pub(crate) struct MediaDimensions {
 
 /// The sizes are measured in bytes
 #[derive(Clone, Debug)]
-pub(crate) enum BlobSize {
+pub(crate) enum BlobSizeHint {
     /// The upper bound of the file size is known.
     /// For example, such information can be obtained from the media hosting
     /// platform docs, where they set limits on file sizes.
@@ -205,9 +205,9 @@ pub(crate) struct BlobRepr {
     /// May be `None` if the dimensions are unknown.
     pub(crate) dimensions: Option<MediaDimensions>,
 
-    /// Size of the blob in bytes if known. It should not be considered
+    /// Size hint of the blob in bytes if known. It should not be considered
     /// as a reliable source of information. It may be inaccurate.
-    pub(crate) size: BlobSize,
+    pub(crate) size_hint: BlobSizeHint,
 
     /// URL of the resource where the blob can be downloaded from
     pub(crate) download_url: Url,
@@ -389,7 +389,7 @@ impl MediaDimensions {
     }
 }
 
-impl BlobSize {
+impl BlobSizeHint {
     pub(crate) fn max_mb(megabytes: u64) -> Self {
         Self::Max(megabytes * MB)
     }

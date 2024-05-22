@@ -9,9 +9,9 @@ use assert_matches::assert_matches;
 use derive_more::Deref;
 use from_variants::FromVariants;
 use fs_err::tokio as fs;
-use futures::future::BoxFuture;
 use futures::prelude::*;
 use metrics_bat::prelude::*;
+use std::path::PathBuf;
 use teloxide::prelude::*;
 use teloxide::types::{FileMeta, InputFile, MessageKind};
 use tempfile::TempPath;
@@ -150,7 +150,7 @@ impl TgUploadContext<'_> {
 
         let ctx = self.file_kind(TgFileKind::Photo);
 
-        let max_size = self.blob.repr.size.to_max_or_zero();
+        let max_size = self.blob.repr.size_hint.to_max_or_zero();
 
         if max_size <= MAX_TG_PHOTO_SIZE.by_url {
             try_return_upload!(ctx.by_url());
@@ -212,29 +212,28 @@ impl TgUploadContext<'_> {
     }
 
     async fn upload_gif_as_mpeg4_gif(&self) -> Result<TgFileMeta> {
-        // in closure create BoxFuture on result
-
-        // self.upload_as_mpeg4(TgFileKind::Video, converter).await
-        todo!()
+        self.upload_as_mpeg4(TgFileKind::Mpeg4Gif, media_conv::gif_to_mp4)
+            .await
     }
 
-    // TODO(Havoc) combine parts from `upload_gif_as_mpeg4_gif`
     async fn upload_webm_as_mpeg4(&self) -> Result<TgFileMeta> {
-        // let converter = |path| async move { media_conv::webm_to_mp4(path).await }.boxed();
-        let converter = |path: &_| media_conv::webm_to_mp4(path).boxed();
-
-        self.upload_as_mpeg4(TgFileKind::Video, converter).await
+        self.upload_as_mpeg4(TgFileKind::Video, media_conv::webm_to_mp4)
+            .await
     }
 
-    async fn upload_as_mpeg4<F>(&self, file_kind: TgFileKind, converter: F) -> Result<TgFileMeta>
+    async fn upload_as_mpeg4<Fut>(
+        &self,
+        file_kind: TgFileKind,
+        converter: fn(PathBuf) -> Fut,
+    ) -> Result<TgFileMeta>
     where
-        F: Fn(&std::path::Path) -> BoxFuture<Result<TempPath>>,
+        Fut: Future<Output = Result<TempPath>>,
     {
         let ctx = self.file_kind(file_kind);
 
         let local_blob = ctx.download_blob_to_disk(MAX_DOWNLOAD_SIZE).await?;
 
-        let output = converter(&local_blob.blob).await?;
+        let output = converter(local_blob.blob.to_path_buf()).await?;
 
         let local_blob = LocalBlob::from_temp_path(output).await?;
 
@@ -252,7 +251,7 @@ impl TgUploadContext<'_> {
     async fn upload_mp4(&self, file_kind: TgFileKind) -> Result<TgFileMeta> {
         let ctx = self.file_kind(file_kind);
 
-        if self.blob.repr.size.to_max_or_zero() <= MAX_TG_FILE_SIZE.by_url {
+        if self.blob.repr.size_hint.to_max_or_zero() <= MAX_TG_FILE_SIZE.by_url {
             try_return_upload!(ctx.by_url());
         }
 
@@ -267,7 +266,7 @@ impl TgUploadContext<'_> {
     async fn upload_document(&self, maybe_local_blob: MaybeLocalBlob) -> Result<TgFileMeta> {
         let ctx = self.file_kind(TgFileKind::Document);
 
-        if self.blob.repr.size.to_max_or_zero() <= MAX_TG_FILE_SIZE.by_url {
+        if self.blob.repr.size_hint.to_max_or_zero() <= MAX_TG_FILE_SIZE.by_url {
             if let MaybeLocalBlob::None = &maybe_local_blob {
                 try_return_upload!(ctx.by_url());
             }
@@ -462,12 +461,9 @@ struct TgUploadMethodContext<'a> {
 impl TgUploadMethodContext<'_> {
     fn span_for_upload(&self) -> tracing::Span {
         // TODO(Havoc) log file size correctly
-        let size = match &self.blob.repr.size {
-            BlobSize::Max(len) => format!("Less than {len}"),
-            BlobSize::Unknown => match &self.tg_upload_method {
-                TgUploadMethod::Multipart(local_blob) => local_blob.size.to_string(),
-                TgUploadMethod::Url => "Unknown".to_owned(),
-            },
+        let size = match &self.tg_upload_method {
+            TgUploadMethod::Multipart(local_blob) => display::human_size(local_blob.size),
+            TgUploadMethod::Url => "Unknown".to_owned(),
         };
 
         info_span!(
@@ -477,6 +473,7 @@ impl TgUploadMethodContext<'_> {
             download_url = %self.blob.repr.download_url,
             blob_kind = %self.blob.repr.kind,
             blob_size = size,
+            blob_size_hint = ?self.blob.repr.size_hint,
             blob_id = ?self.blob.id,
             post_id = ?self.post.id,
         )
