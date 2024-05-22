@@ -1,8 +1,8 @@
 use super::platform::prelude::*;
-use super::AllPlatforms;
+use super::{AllPlatforms, Mirror};
 use crate::prelude::*;
-use crate::tg;
 use crate::util::units::MB;
+use crate::{tg, Result};
 use derivative::Derivative;
 use itertools::Itertools;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -192,6 +192,10 @@ pub(crate) struct Post<Service: PlatformTypes = AllPlatforms> {
 pub(crate) struct CachedPost<Service: PlatformTypes = AllPlatforms> {
     pub(crate) base: BasePost<Service>,
 
+    /// If present, denotes that this post was requested from the mirror of
+    /// the original posting platform.
+    pub(crate) mirror: Option<Service::Mirror>,
+
     /// List of blobs attached to the post. It may be empty
     pub(crate) blobs: Vec<CachedBlobId<Service>>,
 }
@@ -261,7 +265,11 @@ pub(crate) enum AuthorKind {
 }
 
 impl BasePost {
-    pub(crate) fn caption(&self) -> String {
+    fn prefer_mirror_url(mirror: Option<&Mirror>, url: Url) -> Url {
+        mirror.map(|mirror| mirror.mirror_url(url)).unwrap_or(url)
+    }
+
+    pub(crate) fn caption(&self, mirror: Option<&Mirror>) -> String {
         // FIXME: ensure the caption doesn't overflow 1024 characters
         let authors: Vec<_> = self.authors.iter().map_collect(|author| {
             let author_entry = match author.kind {
@@ -270,7 +278,9 @@ impl BasePost {
                 None => "",
             };
             let author_entry = format!("{}{}", author.name, author_entry);
-            markdown::link(author.web_url.as_str(), &markdown::escape(&author_entry))
+            let author_url = Self::prefer_mirror_url(mirror, author.web_url.clone());
+
+            markdown::link(author_url.as_str(), &markdown::escape(&author_entry))
         });
 
         let authors = match authors.as_slice() {
@@ -286,11 +296,17 @@ impl BasePost {
 
         let nsfw_ratings = markdown::escape(&nsfw_ratings);
 
+        let source = mirror
+            .map(ToString::to_string)
+            .unwrap_or_else(|| self.id.platform_name().to_owned());
+
+        let post_url = Self::prefer_mirror_url(mirror, self.web_url);
+
         format!(
             "*{}{authors}{nsfw_ratings}*",
             markdown::link(
-                self.web_url.as_str(),
-                &markdown::escape(&format!("Source ({})", self.id.platform_name()))
+                post_url.as_str(),
+                &markdown::escape(&format!("Source ({source})"))
             ),
         )
     }
@@ -441,10 +457,15 @@ where
 }
 
 impl<Service: PlatformTypes> BasePost<Service> {
-    pub(crate) fn with_cached_blobs(
+    pub(crate) fn into_cached(
         self,
+        mirror: Option<Service::Mirror>,
         blobs: Vec<CachedBlobId<Service>>,
     ) -> CachedPost<Service> {
-        CachedPost { base: self, blobs }
+        CachedPost {
+            base: self,
+            mirror,
+            blobs,
+        }
     }
 }

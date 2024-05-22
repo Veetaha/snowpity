@@ -1,6 +1,6 @@
 use crate::posting::platform::prelude::*;
 use crate::posting::tg_upload;
-use crate::posting::RequestId;
+use crate::posting::Request;
 use crate::prelude::*;
 use crate::{http, posting};
 use crate::{tg, util, Result};
@@ -34,7 +34,8 @@ metrics_bat::counters! {
 #[derive(Debug)]
 pub(crate) struct CachePostRequest {
     pub(crate) requested_by: teloxide::types::User,
-    pub(crate) id: RequestId,
+    pub(crate) request: Request,
+    pub(crate) mirror: Option<posting::Mirror>,
 }
 
 pub(crate) struct Envelope {
@@ -87,13 +88,18 @@ struct PostingService {
     ctx: PostingContext,
 
     /// Pool of in-flight requests to the blob cache
-    in_flight_futs: FuturesUnordered<BoxFuture<'static, (RequestId, Result<CachedPost>)>>,
+    in_flight_futs: FuturesUnordered<BoxFuture<'static, (Request, Result<CachedPost>)>>,
 
     /// Multiplexes the results of the cache requests to the callers
-    return_slots: HashMap<RequestId, Vec<oneshot::Sender<Result<CachedPost>>>>,
+    return_slots: HashMap<Request, Vec<ReturnSlot>>,
 
     /// Channel for incoming requests
     requests: mpsc::Receiver<Envelope>,
+}
+
+struct ReturnSlot {
+    mirror: Option<posting::Mirror>,
+    send: oneshot::Sender<Result<CachedPost>>,
 }
 
 impl PostingServiceHandle {
@@ -184,14 +190,22 @@ impl PostingService {
     }
 
     #[instrument(skip(self, response))]
-    fn dispatch_response(&mut self, request_id: RequestId, response: Result<CachedPost>) {
+    fn dispatch_response(&mut self, request: Request, response: Result<CachedPost>) {
         let slots = self
             .return_slots
-            .remove(&request_id)
+            .remove(&request)
             .expect("BUG: an in-flight future must have a corresponding response return slot");
 
         for slot in slots {
-            if slot.send(response.clone()).is_err() {
+            let mut response = response.clone();
+
+            // Update the mirror from the original request with the mirror required
+            // for this particular request (we saved it in the return slot for that).
+            if let (Ok(post), Some(mirror)) = (&mut response, &slot.mirror) {
+                post.mirror = mirror;
+            }
+
+            if slot.send.send(response).is_err() {
                 warn!("Failed to send response because the receiver has been dropped");
             }
         }
@@ -204,20 +218,25 @@ impl PostingService {
             return_slot,
         } = request;
 
+        let return_slot = ReturnSlot {
+            mirror: request.mirror,
+            send: return_slot,
+        };
+
         use std::collections::hash_map::Entry::*;
-        match self.return_slots.entry(request.id.clone()) {
+        match self.return_slots.entry(request.request.clone()) {
             Occupied(slot) => {
                 assert_ne!(slot.get().len(), 0);
                 slot.into_mut().push(return_slot);
             }
             Vacant(slot) => {
-                let request_id = request.id.clone();
+                let request = request.request.clone();
 
                 let fut = self
                     .ctx
                     .clone()
                     .process_request(request)
-                    .map(move |response| (request_id, response));
+                    .map(move |response| (request, response));
 
                 self.in_flight_futs.push(Box::pin(fut));
 
@@ -248,12 +267,12 @@ impl PostingContext {
     /// cache almost doesn't influence the latency of the request.
     #[instrument(skip_all, fields(
         requested_by = %request.requested_by.debug_id(),
-        request_id = ?request.id,
+        ?request,
     ))]
     async fn process_request(self, request: CachePostRequest) -> Result<CachedPost> {
         let (post, cached_blobs) = futures::try_join!(
-            self.platforms.get_post(request.id.clone()),
-            self.platforms.get_cached_blobs(request.id)
+            self.platforms.get_post(request.request.clone()),
+            self.platforms.get_cached_blobs(request.request)
         )?;
 
         let blobs: Vec<_> = post
@@ -273,7 +292,7 @@ impl PostingContext {
         if post.blobs.len() == blobs.len() {
             info!(blobs = blobs.len(), "Blobs cache hit");
             blob_cache_hits_total(vec![]).increment(1);
-            return Ok(post.base.with_cached_blobs(blobs));
+            return Ok(post.base.into_cached(request.mirror, blobs));
         }
 
         info!(
@@ -307,6 +326,6 @@ impl PostingContext {
             .try_collect()
             .await?;
 
-        Ok(post.base.with_cached_blobs(cached_blobs))
+        Ok(post.base.into_cached(request.mirror, cached_blobs))
     }
 }

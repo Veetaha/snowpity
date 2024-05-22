@@ -4,14 +4,16 @@ use super::{deviant_art, twitter};
 use crate::prelude::*;
 use crate::Result;
 use assert_matches::assert_matches;
+use std::fmt;
+use url::Url;
 
 macro_rules! def_all_platforms {
     (
         $([$platform:ident, $Platform:ident]),* $(,)?
     ) => {
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-        pub(crate) enum RequestId {
-            $( $Platform(<$platform::Platform as PlatformTypes>::RequestId), )*
+        pub(crate) enum Request {
+            $( $Platform(<$platform::Platform as PlatformTypes>::Request), )*
         }
 
         #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -22,6 +24,27 @@ macro_rules! def_all_platforms {
         #[derive(Clone, PartialEq, Eq, Hash, Debug)]
         pub(crate) enum BlobId {
             $( $Platform(<$platform::Platform as PlatformTypes>::BlobId), )*
+        }
+
+        #[derive(Clone, PartialEq, Eq, Hash, Debug)]
+        pub(crate) enum Mirror {
+            $( $Platform(<$platform::Platform as PlatformTypes>::Mirror), )*
+        }
+
+        impl fmt::Display for Mirror {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self {
+                    $( Self::$Platform(mirror) => fmt::Display::fmt(mirror, f), )*
+                }
+            }
+        }
+
+        impl MirrorTrait for Mirror {
+            fn try_update_url_to_mirror(&self, url: &mut Url) -> Result<(), url::ParseError> {
+                match self {
+                    $( Self::$Platform(mirror) => mirror.try_update_url_to_mirror(url), )*
+                }
+            }
         }
 
         impl DisplayInFileName for PostId {
@@ -82,11 +105,11 @@ macro_rules! def_all_platforms {
                 }
             }
 
-            pub(crate) async fn get_post(&self, id: RequestId) -> Result<Post> {
-                Ok(match id {
+            pub(crate) async fn get_post(&self, request: Request) -> Result<Post> {
+                Ok(match request {
                     $(
-                        RequestId::$Platform(id) => {
-                            let post = self.$platform.get_post(id).await?;
+                        Request::$Platform(request) => {
+                            let post = self.$platform.get_post(request).await?;
                             let blobs = post.blobs.map_collect(|blob| {
                                 let MultiBlob { repr, id } = blob;
                                 MultiBlob { repr, id: BlobId::$Platform(id) }
@@ -114,11 +137,11 @@ macro_rules! def_all_platforms {
 
             pub(crate) async fn get_cached_blobs(
                 &self,
-                request: RequestId,
+                request: Request,
             ) -> Result<Vec<CachedBlobId>> {
                 Ok(match request {
                     $(
-                        RequestId::$Platform(request) => {
+                        Request::$Platform(request) => {
                             self
                                 .$platform
                                 .get_cached_blobs(request)
@@ -152,12 +175,12 @@ macro_rules! def_all_platforms {
             }
         }
 
-        pub(crate) fn parse_query(input: &str) -> ParseQueryResult<RequestId> {
+        pub(crate) fn parse_query(input: &str) -> ParseQueryResult<AllPlatforms> {
             let input = input.trim();
 
             $(
                 if let Some((platform, id)) = <$platform::Platform as PlatformTrait>::parse_query(input) {
-                    return Some((platform, RequestId::$Platform(id)));
+                    return Some((platform, Request::$Platform(id)));
                 }
             )*
 
@@ -178,7 +201,8 @@ def_all_platforms! {
 }
 
 impl PlatformTypes for AllPlatforms {
-    type RequestId = RequestId;
+    type Request = Request;
     type PostId = PostId;
     type BlobId = BlobId;
+    type Mirror = Mirror;
 }

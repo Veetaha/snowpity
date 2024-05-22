@@ -95,7 +95,8 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     async {
         let request = posting::CachePostRequest {
             requested_by: query.from,
-            id: request_id,
+            request: request_id,
+            // TODO(havoc): pass mirror from parse_query
         };
 
         let post = inline_query.posting.cache_post(request).await?;

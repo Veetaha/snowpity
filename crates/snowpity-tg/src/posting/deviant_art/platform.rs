@@ -13,7 +13,7 @@ pub(crate) struct Platform {
 impl PlatformTypes for Platform {
     type PostId = DeviationId;
     type BlobId = ();
-    type RequestId = DeviationId;
+    type Request = DeviationId;
 }
 
 #[async_trait]
