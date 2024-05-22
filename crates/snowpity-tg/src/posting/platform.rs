@@ -1,30 +1,68 @@
 use super::model::*;
-use crate::prelude::*;
 use crate::{http, Result};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::fmt;
 use std::hash::Hash;
-use url::Url;
+use typed_builder::TypedBuilder;
 
 pub(crate) mod prelude {
     pub(crate) use super::{
         parse_with_regexes, ConfigTrait, DisplayInFileName, DisplayInFileNameViaToString,
-        MirrorTrait, NoMirror, ParseQueryResult, PlatformParams, PlatformTrait, PlatformTypes,
+        ParsedQuery, PlatformParams, PlatformTrait, PlatformTypes,
     };
     pub(crate) use crate::posting::model::*;
 }
 
-pub(crate) type ParseQueryResult<Platform> = Option<ParseQueryOutput<Platform>>;
+#[derive(TypedBuilder)]
+pub(crate) struct ParsedQuery<Platform: PlatformTypes> {
+    /// The origin of the request. It may include the host and part of the path.
+    /// This value is used only in metrics to identify the popularity of different
+    /// origins of post URLs even within the same platform.
+    #[builder(setter(into))]
+    pub(crate) origin: String,
 
-pub(crate) struct ParseQueryOutput<Platform: PlatformTypes> {
-    /// The name of the media host, e.g. "derpibooru.org"
-    pub(crate) platform: String,
-    pub(crate) mirror: Option<Platform::Mirror>,
+    /// [`Some`] if request came from a mirror of the platform.
+    #[builder(default)]
+    pub(crate) mirror: Option<Mirror>,
+
+    /// Request to the posting platform.
     pub(crate) request: Platform::Request,
 }
 
-impl ParseQueryOutput {}
+impl<Platform: PlatformTypes> ParsedQuery<Platform> {
+    pub(crate) fn from_origin_and_parse_request(
+        origin: impl Into<String>,
+        request: &str,
+    ) -> Option<Self>
+    where
+        Platform::Request: FromStr,
+    {
+        Self::from_origin_and_request(origin, request.parse().ok()?).into()
+    }
+
+    pub(crate) fn from_origin_and_request(
+        origin: impl Into<String>,
+        request: Platform::Request,
+    ) -> Self {
+        Self {
+            origin: origin.into(),
+            mirror: None,
+            request,
+        }
+    }
+
+    pub(crate) fn map_request<OtherPlatform: PlatformTypes>(
+        self,
+        map: impl FnOnce(Platform::Request) -> OtherPlatform::Request,
+    ) -> ParsedQuery<OtherPlatform> {
+        ParsedQuery {
+            origin: self.origin,
+            mirror: self.mirror,
+            request: map(self.request),
+        }
+    }
+}
 
 pub(crate) struct PlatformParams<C> {
     pub(crate) config: C,
@@ -36,7 +74,6 @@ pub(crate) trait PlatformTypes {
     type PostId: fmt::Debug + Clone + PartialEq + Eq + Hash + DisplayInFileName;
     type BlobId: fmt::Debug + Clone + PartialEq + Eq + Hash + DisplayInFileName;
     type Request: fmt::Debug + Clone + PartialEq + Eq + Hash;
-    type Mirror: MirrorTrait;
 }
 
 #[async_trait]
@@ -47,7 +84,7 @@ pub(crate) trait PlatformTrait: Sized + PlatformTypes {
 
     fn new(params: PlatformParams<Self::Config>) -> Self;
 
-    fn parse_query(query: &str) -> ParseQueryResult<Self>;
+    fn parse_query(query: &str) -> Option<ParsedQuery<Self>>;
 
     /// Fetch metadata about the post from the posting platform.
     async fn get_post(&self, request: Self::Request) -> Result<Post<Self>>;
@@ -57,36 +94,6 @@ pub(crate) trait PlatformTrait: Sized + PlatformTypes {
 
     /// Save the information about the file uploaded to Telegram in the database.
     async fn set_cached_blob(&self, post: Self::PostId, blob: CachedBlobId<Self>) -> Result;
-}
-
-pub(crate) trait MirrorTrait: fmt::Display + fmt::Debug {
-    fn mirror_url(&self, mut url: Url) -> Url {
-        let original_url = url.clone();
-        if let Err(err) = self.try_update_url_to_mirror(&mut url) {
-            warn!(
-                %original_url,
-                mirror = ?self,
-                "Failed to update URL to mirror. Using original URL instead"
-            );
-        }
-        *url = original_url;
-    }
-
-    fn try_update_url_to_mirror(&self, url: &mut Url) -> Result<(), url::ParseError>;
-}
-
-pub(crate) enum NoMirror {}
-
-impl fmt::Display for NoMirror {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {}
-    }
-}
-
-impl MirrorTrait for NoMirror {
-    fn try_update_url_to_mirror(&self, _url: &mut Url) -> Result<(), url::ParseError> {
-        match *self {}
-    }
 }
 
 pub(crate) trait ConfigTrait {
@@ -122,6 +129,7 @@ macro_rules! parse_with_regexes {
 }
 
 pub(crate) use parse_with_regexes;
+use std::str::FromStr;
 
 #[cfg(test)]
 pub(crate) mod tests {

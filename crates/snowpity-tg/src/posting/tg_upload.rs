@@ -65,6 +65,7 @@ metrics_bat::histograms! {
 
 pub(crate) async fn upload(
     base: &PostingContext,
+    mirror: Option<&Mirror>,
     post: &BasePost,
     blob: MultiBlob,
     requested_by: &teloxide::types::User,
@@ -78,6 +79,7 @@ pub(crate) async fn upload(
         };
         let ctx = TgUploadContext {
             base,
+            mirror,
             post,
             blob,
             requested_by,
@@ -105,6 +107,7 @@ pub(crate) async fn upload(
 struct TgUploadContext<'a> {
     #[deref(forward)]
     base: &'a PostingContext,
+    mirror: Option<&'a Mirror>,
     post: &'a BasePost,
     blob: UniBlob,
     requested_by: &'a teloxide::types::User,
@@ -531,7 +534,7 @@ impl TgUploadMethodContext<'_> {
     }
 
     fn caption(&self) -> String {
-        let core_caption = self.post.caption();
+        let core_caption = self.post.caption(self.mirror);
         let requested_by = self.requested_by.md_link();
         let via_method = match &self.tg_upload_method {
             TgUploadMethod::Url => "via URL",
