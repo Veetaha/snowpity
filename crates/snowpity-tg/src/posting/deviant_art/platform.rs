@@ -29,7 +29,7 @@ impl PlatformTrait for Platform {
         }
     }
 
-    fn parse_query(query: &str) -> ParseQueryResult<DeviationId> {
+    fn parse_query(query: &str) -> Option<ParsedQuery<Self>> {
         // Example:
         // https://miltvain.deviantart.com/art/Twilight-magic-418078970
         'first_try: {
@@ -49,34 +49,43 @@ impl PlatformTrait for Platform {
                 let art = art.to_owned();
                 let author = author.to_owned();
 
-                let host = format!("{host_prefix}{{author}}.deviantart.com");
-                return Some((host, DeviationId::Full { author, art, id }));
+                let origin = format!("{host_prefix}{{author}}.deviantart.com");
+                return Some(ParsedQuery::from_origin_and_request(
+                    origin,
+                    DeviationId::Full { author, art, id },
+                ));
             }
         }
 
-        if let Some((_, host, author, art, id)) = parse_with_regexes!(
+        if let Some((_, origin, author, art, id)) = parse_with_regexes!(
             query,
             r"((?:www\.)?deviantart\.com)/(?:(.+)/)?art/(.+)-(\d+)"
         ) {
             let id = id.parse().ok()?;
             let art = art.to_owned();
 
+            let parsed_query =
+                |request| Some(ParsedQuery::from_origin_and_request(origin, request));
+
             if author.is_empty() {
-                return Some((host.into(), DeviationId::ArtAndId { art, id }));
+                return parsed_query(DeviationId::ArtAndId { art, id });
             }
 
             let author = author.to_owned();
 
-            return Some((host.into(), DeviationId::Full { author, art, id }));
+            return parsed_query(DeviationId::Full { author, art, id });
         }
 
-        let (_, host, id) = parse_with_regexes!(
+        let (_, origin, id) = parse_with_regexes!(
             query,
             r"(deviantart\.com/deviation)/(\d+)",
             r"(view.deviantart\.com)/(\d+)",
         )?;
 
-        Some((host.into(), DeviationId::Id(id.parse().ok()?)))
+        Some(ParsedQuery::from_origin_and_request(
+            origin,
+            DeviationId::Id(id.parse().ok()?),
+        ))
     }
 
     async fn get_post(&self, deviation: DeviationId) -> Result<Post<Self>> {

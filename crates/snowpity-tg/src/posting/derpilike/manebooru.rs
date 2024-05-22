@@ -26,14 +26,14 @@ impl PlatformTrait for Platform {
         }
     }
 
-    fn parse_query(query: &str) -> ParseQueryResult<MediaId> {
-        let (_, host, id) = parse_with_regexes!(
+    fn parse_query(query: &str) -> Option<ParsedQuery<Self>> {
+        let (_, origin, id) = parse_with_regexes!(
             query,
             r"(manebooru.art(?:/images)?)/(\d+)",
             r"(static.manebooru.art/img)/\d+/\d+/\d+/(\d+)",
             r"(static.manebooru.art/img/(?:view|download))/\d+/\d+/\d+/(\d+)",
         )?;
-        Some((host.into(), id.parse().ok()?))
+        ParsedQuery::from_origin_and_parse_request(origin, id)
     }
 
     async fn get_post(&self, media: MediaId) -> Result<Post<Self>> {

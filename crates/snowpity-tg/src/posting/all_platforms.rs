@@ -4,8 +4,6 @@ use super::{deviant_art, twitter};
 use crate::prelude::*;
 use crate::Result;
 use assert_matches::assert_matches;
-use std::fmt;
-use url::Url;
 
 macro_rules! def_all_platforms {
     (
@@ -24,27 +22,6 @@ macro_rules! def_all_platforms {
         #[derive(Clone, PartialEq, Eq, Hash, Debug)]
         pub(crate) enum BlobId {
             $( $Platform(<$platform::Platform as PlatformTypes>::BlobId), )*
-        }
-
-        #[derive(Clone, PartialEq, Eq, Hash, Debug)]
-        pub(crate) enum Mirror {
-            $( $Platform(<$platform::Platform as PlatformTypes>::Mirror), )*
-        }
-
-        impl fmt::Display for Mirror {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                match self {
-                    $( Self::$Platform(mirror) => fmt::Display::fmt(mirror, f), )*
-                }
-            }
-        }
-
-        impl MirrorTrait for Mirror {
-            fn try_update_url_to_mirror(&self, url: &mut Url) -> Result<(), url::ParseError> {
-                match self {
-                    $( Self::$Platform(mirror) => mirror.try_update_url_to_mirror(url), )*
-                }
-            }
         }
 
         impl DisplayInFileName for PostId {
@@ -175,12 +152,12 @@ macro_rules! def_all_platforms {
             }
         }
 
-        pub(crate) fn parse_query(input: &str) -> ParseQueryResult<AllPlatforms> {
+        pub(crate) fn parse_query(input: &str) -> Option<ParsedQuery<AllPlatforms>> {
             let input = input.trim();
 
             $(
-                if let Some((platform, id)) = <$platform::Platform as PlatformTrait>::parse_query(input) {
-                    return Some((platform, Request::$Platform(id)));
+                if let Some(parsed_query) = <$platform::Platform as PlatformTrait>::parse_query(input) {
+                    return Some(parsed_query.map_request(Request::$Platform));
                 }
             )*
 
@@ -204,5 +181,4 @@ impl PlatformTypes for AllPlatforms {
     type Request = Request;
     type PostId = PostId;
     type BlobId = BlobId;
-    type Mirror = Mirror;
 }

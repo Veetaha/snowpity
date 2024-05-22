@@ -201,8 +201,8 @@ impl PostingService {
 
             // Update the mirror from the original request with the mirror required
             // for this particular request (we saved it in the return slot for that).
-            if let (Ok(post), Some(mirror)) = (&mut response, &slot.mirror) {
-                post.mirror = mirror;
+            if let Ok(post) = &mut response {
+                post.mirror = slot.mirror;
             }
 
             if slot.send.send(response).is_err() {
@@ -219,7 +219,7 @@ impl PostingService {
         } = request;
 
         let return_slot = ReturnSlot {
-            mirror: request.mirror,
+            mirror: request.mirror.clone(),
             send: return_slot,
         };
 
@@ -230,13 +230,12 @@ impl PostingService {
                 slot.into_mut().push(return_slot);
             }
             Vacant(slot) => {
-                let request = request.request.clone();
-
+                let inner_request = request.request.clone();
                 let fut = self
                     .ctx
                     .clone()
                     .process_request(request)
-                    .map(move |response| (request, response));
+                    .map(move |response| (inner_request, response));
 
                 self.in_flight_futs.push(Box::pin(fut));
 
@@ -304,9 +303,15 @@ impl PostingContext {
 
         let cached_blobs = stream::iter(post.blobs)
             .map(|blob| async {
-                let cached_blob = tg_upload::upload(&self, &post.base, blob, &request.requested_by)
-                    .await?
-                    .to_id();
+                let cached_blob = tg_upload::upload(
+                    &self,
+                    request.mirror.as_ref(),
+                    &post.base,
+                    blob,
+                    &request.requested_by,
+                )
+                .await?
+                .to_id();
 
                 let result = self
                     .platforms

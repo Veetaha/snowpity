@@ -15,7 +15,6 @@ impl PlatformTypes for Platform {
     type PostId = TweetId;
     type BlobId = MediaKey;
     type Request = TweetId;
-    type Mirror = NoMirror;
 }
 
 #[async_trait]
@@ -31,15 +30,15 @@ impl PlatformTrait for Platform {
         }
     }
 
-    fn parse_query(query: &str) -> ParseQueryResult<TweetId> {
+    fn parse_query(query: &str) -> Option<ParsedQuery<Self>> {
         // The regex was inspired by the one in the booru/scraper repository:
         // https://github.com/booru/scraper/blob/095771b28521b49ae67e30db2764406a68b74395/src/scraper/twitter.rs#L16
-        let (_, host, id) = parse_with_regexes!(
+        let (_, origin, id) = parse_with_regexes!(
             query,
             r"((?:(?:mobile\.)|vx)?(?:twitter|x).com)/[A-Za-z\d_]+/status/(\d+)",
         )?;
 
-        Some((host.into(), id.parse().ok()?))
+        ParsedQuery::from_origin_and_parse_request(origin, id)
     }
 
     async fn get_post(&self, tweet_id: TweetId) -> Result<Post<Self>> {

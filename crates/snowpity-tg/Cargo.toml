@@ -31,6 +31,7 @@ fast_image_resize           = { workspace = true }
 from_variants               = { workspace = true }
 fs-err                      = { workspace = true, features = ["tokio"] }
 futures                     = { workspace = true }
+heck                        = { workspace = true }
 humansize                   = { workspace = true }
 image                       = { workspace = true }
 itertools                   = { workspace = true }
@@ -67,6 +68,7 @@ tracing-error               = { workspace = true }
 tracing-loki                = { workspace = true }
 tracing-subscriber          = { workspace = true }
 twitter-scraper             = { workspace = true }
+typed-builder               = { workspace = true }
 url                         = { workspace = true, features = ["serde"] }
 wav_io                      = { workspace = true }
 

@@ -62,7 +62,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 
     let inline_query_id = query.id;
 
-    let Some((posting_platform_host, request_id)) = posting::parse_query(&query.query) else {
+    let Some(parsed_query) = posting::parse_query(&query.query) else {
         inline_queries_skipped_total(vec![]).increment(1);
 
         info!("Skipping inline query");
@@ -89,14 +89,14 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     .increment(1);
 
     let labels = InlineQueryLabels {
-        posting_platform_host: posting_platform_host.clone(),
+        posting_platform_host: parsed_query.origin,
     };
 
     async {
         let request = posting::CachePostRequest {
             requested_by: query.from,
-            request: request_id,
-            // TODO(havoc): pass mirror from parse_query
+            request: parsed_query.request,
+            mirror: parsed_query.mirror,
         };
 
         let post = inline_query.posting.cache_post(request).await?;
@@ -114,10 +114,9 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 
         let total_blobs = post.blobs.len();
 
-        let results = post
-            .blobs
-            .into_iter()
-            .map(|blob| make_inline_query_result(&comments, &post.base, blob));
+        let results = post.blobs.into_iter().map(|blob| {
+            make_inline_query_result(&comments, &post.base, post.mirror.as_ref(), blob)
+        });
 
         bot.answer_inline_query(&inline_query_id, results)
             .is_personal(false)
@@ -195,9 +194,10 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 fn make_inline_query_result(
     comments: &str,
     post: &posting::BasePost,
+    mirror: Option<&posting::Mirror>,
     blob: posting::CachedBlobId,
 ) -> InlineQueryResult {
-    let mut caption = post.caption();
+    let mut caption = post.caption(mirror);
     if !comments.is_empty() {
         caption = format!("{caption}\n\n{}", markdown::escape(comments));
     }
@@ -239,7 +239,7 @@ fn make_inline_query_result(
 /// Telegram BotFather, otherwise `ChosenInlineResult` updates will not be sent.
 pub(crate) async fn handle_chosen_inline_result(result: ChosenInlineResult) -> DynResult {
     let posting_platform_host = posting::parse_query(&result.query)
-        .map(|(host, _id)| host)
+        .map(|parsed_query| parsed_query.origin)
         .unwrap_or("{unknown}".to_owned());
 
     let labels = InlineQueryLabels {

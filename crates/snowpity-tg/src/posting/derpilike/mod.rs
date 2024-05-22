@@ -76,7 +76,8 @@ fn best_tg_reprs(media: &api::Media, platform_kind: DerpiPlatformKind) -> Vec<(U
         api::MimeType::VideoWebm => {
             // Webm's in Twibooru do not have MP4 representation
             if let DerpiPlatformKind::Twibooru = platform_kind {
-                // TODO(Havoc) is elsewhere exist? -> then get mp4 from derpibooru
+                // TODO: if elsewhere exists -> then get mp4 from the source resource
+                // For example, posts on twibooru often have a source link to derpibooru
                 return vec![(media.view_url.clone(), BlobKind::VideoMp4)];
             }
             vec![

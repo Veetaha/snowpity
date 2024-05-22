@@ -1,9 +1,10 @@
 use super::platform::prelude::*;
-use super::{AllPlatforms, Mirror};
+use super::AllPlatforms;
 use crate::prelude::*;
 use crate::util::units::MB;
 use crate::{tg, Result};
 use derivative::Derivative;
+use heck::ToPascalCase;
 use itertools::Itertools;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use reqwest::Url;
@@ -193,8 +194,8 @@ pub(crate) struct CachedPost<Service: PlatformTypes = AllPlatforms> {
     pub(crate) base: BasePost<Service>,
 
     /// If present, denotes that this post was requested from the mirror of
-    /// the original posting platform.
-    pub(crate) mirror: Option<Service::Mirror>,
+    /// the original posting platform. Contains the host name of the mirror.
+    pub(crate) mirror: Option<Mirror>,
 
     /// List of blobs attached to the post. It may be empty
     pub(crate) blobs: Vec<CachedBlobId<Service>>,
@@ -265,8 +266,10 @@ pub(crate) enum AuthorKind {
 }
 
 impl BasePost {
-    fn prefer_mirror_url(mirror: Option<&Mirror>, url: Url) -> Url {
-        mirror.map(|mirror| mirror.mirror_url(url)).unwrap_or(url)
+    fn prefer_mirror_url(mirror: Option<&Mirror>, url: &Url) -> Url {
+        mirror
+            .map(|mirror| mirror.mirror_url(url))
+            .unwrap_or_else(|| url.clone())
     }
 
     pub(crate) fn caption(&self, mirror: Option<&Mirror>) -> String {
@@ -278,7 +281,7 @@ impl BasePost {
                 None => "",
             };
             let author_entry = format!("{}{}", author.name, author_entry);
-            let author_url = Self::prefer_mirror_url(mirror, author.web_url.clone());
+            let author_url = Self::prefer_mirror_url(mirror, &author.web_url);
 
             markdown::link(author_url.as_str(), &markdown::escape(&author_entry))
         });
@@ -297,10 +300,10 @@ impl BasePost {
         let nsfw_ratings = markdown::escape(&nsfw_ratings);
 
         let source = mirror
-            .map(ToString::to_string)
+            .map(Mirror::display_name)
             .unwrap_or_else(|| self.id.platform_name().to_owned());
 
-        let post_url = Self::prefer_mirror_url(mirror, self.web_url);
+        let post_url = Self::prefer_mirror_url(mirror, &self.web_url);
 
         format!(
             "*{}{authors}{nsfw_ratings}*",
@@ -459,7 +462,7 @@ where
 impl<Service: PlatformTypes> BasePost<Service> {
     pub(crate) fn into_cached(
         self,
-        mirror: Option<Service::Mirror>,
+        mirror: Option<Mirror>,
         blobs: Vec<CachedBlobId<Service>>,
     ) -> CachedPost<Service> {
         CachedPost {
@@ -467,5 +470,55 @@ impl<Service: PlatformTypes> BasePost<Service> {
             mirror,
             blobs,
         }
+    }
+}
+
+/// Identifies the state necessary to form a URL that points to mirror resource
+/// that replicates the content from the original posting platform URL.
+#[derive(Debug, Clone)]
+pub(crate) struct Mirror {
+    /// The host of the mirror that is used to replace the host of the original
+    /// URL to mirror it
+    mirror_host: String,
+}
+
+impl Mirror {
+    /// Creates a new [`Mirror`] from the `suspect_host` if the `suspect_host` is
+    /// non-empty and different from the `target_host`.
+    pub(crate) fn if_differs(suspect_host: &str, target_host: &'static str) -> Option<Self> {
+        (!suspect_host.is_empty() && suspect_host != target_host).then(|| Self {
+            mirror_host: suspect_host.to_owned(),
+        })
+    }
+
+    /// Modify the original URL to use the mirror host instead of the original host.
+    fn mirror_url(&self, original_url: &Url) -> Url {
+        let mut mirror_url = original_url.clone();
+
+        let err = match mirror_url.set_host(Some(&self.mirror_host)) {
+            Ok(()) => return mirror_url,
+            Err(err) => err,
+        };
+
+        error!(
+            err = tracing_err(&err),
+            %mirror_url,
+            %original_url,
+            mirror = ?self,
+            "Failed to update URL to mirror. Using original URL instead"
+        );
+
+        original_url.clone()
+    }
+
+    /// Display the name of the mirror host in a human-readable form.
+    pub(crate) fn display_name(&self) -> String {
+        // Right now it's this simple, but we may add display name override
+        // in the `Mirror` struct as a config if we really need this.
+        self.mirror_host
+            .split_once('.')
+            .map(|(first, _)| first)
+            .unwrap_or(&self.mirror_host)
+            .to_pascal_case()
     }
 }

@@ -1,6 +1,7 @@
 use self::derpitools::Derpitools;
 use crate::posting::derpilike::api::MediaId;
 use crate::posting::derpilike::*;
+use crate::posting::platform::ParsedQuery;
 use crate::Result;
 use async_trait::async_trait;
 
@@ -12,7 +13,6 @@ impl PlatformTypes for Platform {
     type PostId = MediaId;
     type BlobId = ();
     type Request = MediaId;
-    type Mirror = Mirror;
 }
 
 #[async_trait]
@@ -27,20 +27,22 @@ impl PlatformTrait for Platform {
         }
     }
 
-    fn parse_query(query: &str) -> ParseQueryResult<MediaId> {
-        let (_, host, id) = parse_with_regexes!(
+    fn parse_query(query: &str) -> Option<ParsedQuery<Self>> {
+        let (_, origin, host, id) = parse_with_regexes!(
             query,
-            r"(derpibooru.org(?:/images)?)/(\d+)",
-            r"(trixiebooru.org(?:/images)?)/(\d+)",
-            r"(derpicdn.net/img)/\d+/\d+/\d+/(\d+)",
-            r"(derpicdn.net/img/(?:view|download))/\d+/\d+/\d+/(\d+)",
+            r"((trixiebooru.org|derpibooru.org)(?:/images)?)/(\d+)",
+            r"(()derpicdn.net/img)/\d+/\d+/\d+/(\d+)",
+            r"(()derpicdn.net/img/(?:view|download))/\d+/\d+/\d+/(\d+)",
         )?;
 
-        let mirror = host
-            .contains("trixiebooru.org")
-            .then_some(Mirror::Trixiebooru);
+        let mirror = Mirror::if_differs(host, "derpibooru.org");
 
-        Some((host.into(), id.parse().ok()?))
+        ParsedQuery::builder()
+            .origin(origin)
+            .mirror(mirror)
+            .request(id.parse().ok()?)
+            .build()
+            .into()
     }
 
     async fn get_post(&self, media: MediaId) -> Result<Post<Self>> {
@@ -53,17 +55,5 @@ impl PlatformTrait for Platform {
 
     async fn set_cached_blob(&self, media: MediaId, blob: CachedBlobId<Self>) -> Result {
         self.tools.set_cached_blob(media, blob).await
-    }
-}
-
-#[derive(Debug, Clone, strum::Display)]
-pub(crate) enum Mirror {
-    Trixiebooru,
-}
-
-impl MirrorTrait for Mirror {
-    fn try_update_url_to_mirror(&self, url: &mut Url) -> Result<(), url::ParseError> {
-        url.set_host(Some("trixiebooru.org"))?;
-        Ok(())
     }
 }
