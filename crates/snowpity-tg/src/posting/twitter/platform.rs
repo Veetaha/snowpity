@@ -65,21 +65,21 @@ impl PlatformTrait for Platform {
             let repr = match media.kind {
                 api::MediaType::Image => BlobRepr {
                     kind: BlobKind::ImageJpeg,
-                    size: BlobSize::max_mb(5),
+                    size_hint: BlobSizeHint::max_mb(5),
                     download_url: best_tg_url_for_photo(media.url),
                     dimensions,
                 },
                 api::MediaType::Gif => BlobRepr {
                     kind: BlobKind::AnimationMp4,
                     download_url: media.url,
-                    size: BlobSize::max_mb(15),
+                    size_hint: BlobSizeHint::max_mb(15),
                     dimensions,
                 },
                 api::MediaType::Video => {
                     BlobRepr {
                         kind: BlobKind::VideoMp4,
                         // Technically the video can be up to 512MB
-                        size: BlobSize::Unknown,
+                        size_hint: BlobSizeHint::Unknown,
                         download_url: media.url,
                         dimensions,
                     }

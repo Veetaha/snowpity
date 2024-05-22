@@ -65,8 +65,10 @@ use tempfile::TempPath;
 //     }
 // }
 
-#[instrument]
-pub(crate) async fn webm_to_mp4(input: &Path) -> Result<TempPath> {
+#[instrument(skip_all, fields(input = %input.as_ref().display()))]
+pub(crate) async fn webm_to_mp4(input: impl AsRef<Path>) -> Result<TempPath> {
+    let input = input.as_ref();
+
     let output = std::env::temp_dir().join(format!("{}.mp4", nanoid::nanoid!()));
     let log_message = format!("Converting Webm to mp4 with output at {output:?}");
 

@@ -104,10 +104,10 @@ impl PlatformTrait for Platform {
             )
         })?;
 
-        let (kind, size) = match file_extension {
-            "png" => (BlobKind::ImagePng, BlobSize::Unknown),
-            "jpg" => (BlobKind::ImageJpeg, BlobSize::Unknown),
-            "gif" => (BlobKind::AnimationGif, BlobSize::Unknown),
+        let (kind, size_hint) = match file_extension {
+            "png" => (BlobKind::ImagePng, BlobSizeHint::Unknown),
+            "jpg" => (BlobKind::ImageJpeg, BlobSizeHint::Unknown),
+            "gif" => (BlobKind::AnimationGif, BlobSizeHint::Unknown),
             _ => {
                 return Err(crate::fatal!(
                     "Unsupported DeviantArt file extension: `{file_extension}`",
@@ -174,7 +174,7 @@ impl PlatformTrait for Platform {
             // Sizes for images are ~good enough, although not always accurate,
             // but we don't know the size of MP4 equivalent for GIF or WEBM,
             // however those will often fit into the limit of uploading via direct URL.
-            size,
+            size_hint,
         });
 
         let safety = match oembed.safety {
