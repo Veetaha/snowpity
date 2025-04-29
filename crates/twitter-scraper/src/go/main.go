@@ -34,6 +34,8 @@ func Initialize(ffiCookies *C.char) *C.char {
 		panicIfErr(scraper.SetProxy(proxy))
 	}
 
+	// Unfortunately, logging in seems to be broken.
+	// Details: https://github.com/imperatrona/twitter-scraper/issues/47
 	scraper.LoginOpenAccount()
 
 	// scraper.SetCookies(*cookies)
