@@ -2,6 +2,9 @@ module main
 
 go 1.20
 
-require github.com/n0madic/twitter-scraper v0.0.0-20230620074753-7ce9e958fac8
+require github.com/imperatrona/twitter-scraper v0.0.17
 
-require golang.org/x/net v0.11.0 // indirect
+require (
+	github.com/AlexEidt/Vidio v1.5.1 // indirect
+	golang.org/x/net v0.29.0 // indirect
+)
