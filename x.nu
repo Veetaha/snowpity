@@ -107,7 +107,7 @@ def "main up" [
         ]
     )
 
-    RUST_BUILD_MODE=$build_mode docker-compose $args
+    RUST_BUILD_MODE=$build_mode docker-compose ...$args
 
     if $no_tg_bot {
         with-debug sqlx migrate run '--source' crates/snowpity-tg/migrations
@@ -119,7 +119,7 @@ def "main up" [
         | append-if (not $no_tg_bot) '--no-log-prefix' tg-bot
     )
 
-    docker-compose $args
+    docker-compose ...$args
 }
 
 # Shutdown the local containers and clean the persistent data volumes
@@ -290,7 +290,7 @@ def --env ssh [
         | append ($args | flatten-list)
     )
 
-    ^ssh $args
+    ^ssh ...$args
 }
 
 def tf [--no-debug, ...args: string] {
@@ -299,10 +299,10 @@ def tf [--no-debug, ...args: string] {
     let args = $args | flatten-list
 
     if $no_debug {
-        return (terraform $args)
+        return (terraform ...$args)
     }
 
-    with-debug terraform $args
+    with-debug terraform ...$args
 }
 
 def docker-compose [--no-debug, ...args: any] {
