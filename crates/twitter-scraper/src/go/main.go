@@ -4,11 +4,10 @@ import (
 	"C"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"sync"
 
-	twitterscraper "github.com/n0madic/twitter-scraper"
+	twitterscraper "github.com/imperatrona/twitter-scraper"
 )
 
 var scraper *twitterscraper.Scraper
@@ -16,10 +15,10 @@ var scraperMutex sync.Mutex
 
 //export Initialize
 func Initialize(ffiCookies *C.char) *C.char {
-	cookies, err := ffiDeserialize[[]*http.Cookie](ffiCookies)
-	if err != nil {
-		return ffiError(err)
-	}
+	// , err := ffiDeserialize[[]*http.Cookie](ffiCookies)
+	// if err != nil {
+	// 	return ffiError(err)
+	// }
 
 	scraperMutex.Lock()
 	defer scraperMutex.Unlock()
@@ -34,12 +33,15 @@ func Initialize(ffiCookies *C.char) *C.char {
 	if is_exist {
 		panicIfErr(scraper.SetProxy(proxy))
 	}
-	scraper.SetCookies(*cookies)
 
-	// This is required for the scraper to know we are logged in
-	if !scraper.IsLoggedIn() {
-		return ffiError(fmt.Errorf("failed to initialize (cookies may be invalid)"))
-	}
+	scraper.LoginOpenAccount()
+
+	// scraper.SetCookies(*cookies)
+
+	// // This is required for the scraper to know we are logged in
+	// if !scraper.IsLoggedIn() {
+	// 	return ffiError(fmt.Errorf("failed to initialize (cookies may be invalid)"))
+	// }
 
 	return ffiOk(nil)
 }
@@ -64,6 +66,10 @@ func GetTweet(ffiTweetId *C.char) *C.char {
 
 	if err != nil {
 		return ffiError(err)
+	}
+
+	if tweet == nil {
+		return ffiError(fmt.Errorf("tweet not found"))
 	}
 
 	// Remove these to avoid circular references,

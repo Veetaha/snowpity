@@ -50,7 +50,7 @@ locals {
     env_file_path  = local.env_file_path
     server_os_user = local.server_os_user
 
-    ssh_public_key = chomp(file("~/.ssh/id_rsa.pub"))
+    ssh_public_key = chomp(file(var.public_ssh_key))
 
     data_volume_device = hcloud_volume.master.linux_device
     data_volume_path   = local.data_volume_path

@@ -64,3 +64,8 @@ variable "twitter_cookies" {
   sensitive = true
   type      = string
 }
+
+variable "public_ssh_key" {
+  nullable = false
+  type     = string
+}
