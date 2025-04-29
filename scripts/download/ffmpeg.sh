@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -euxo pipefail
 
 script_dir=$(readlink -f $(dirname $0))
 
@@ -13,7 +13,7 @@ version=6.0
 
 file_stem=ffmpeg-$version-$arch_go-static
 
-url=https://johnvansickle.com/ffmpeg/releases/$file_stem.tar.xz
+url=https://johnvansickle.com/ffmpeg/old-releases/$file_stem.tar.xz
 
 # FIXME: use `md5sum` to verify the integrity of the downloaded file
 # See https://www.johnvansickle.com/ffmpeg/faq/
