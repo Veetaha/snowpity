@@ -17,7 +17,7 @@ module "workspace" {
 
 resource "hcloud_server" "master" {
   name         = local.hostname
-  image        = "ubuntu-22.04"
+  image        = "ubuntu-24.04"
   server_type  = "cax21"
   location     = local.location
   user_data    = data.cloudinit_config.master.rendered
