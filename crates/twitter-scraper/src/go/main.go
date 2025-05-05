@@ -4,6 +4,7 @@ import (
 	"C"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"sync"
 
@@ -15,10 +16,13 @@ var scraperMutex sync.Mutex
 
 //export Initialize
 func Initialize(ffiCookies *C.char) *C.char {
-	// , err := ffiDeserialize[[]*http.Cookie](ffiCookies)
-	// if err != nil {
-	// 	return ffiError(err)
-	// }
+	// Cookies can be obtained from the web browser. The only two required
+	// cookies known today are `auth_token` and `ct0`. The rest are optional.
+
+	cookies, err := ffiDeserialize[[]*http.Cookie](ffiCookies)
+	if err != nil {
+		return ffiError(err)
+	}
 
 	scraperMutex.Lock()
 	defer scraperMutex.Unlock()
@@ -29,21 +33,25 @@ func Initialize(ffiCookies *C.char) *C.char {
 
 	scraper = twitterscraper.New()
 
-	proxy, is_exist := os.LookupEnv("PROXY_SERVER")
-	if is_exist {
+	proxy := os.Getenv("PROXY_SERVER")
+	if proxy != "" {
 		panicIfErr(scraper.SetProxy(proxy))
 	}
 
-	// Unfortunately, logging in seems to be broken.
-	// Details: https://github.com/imperatrona/twitter-scraper/issues/47
-	scraper.LoginOpenAccount()
+	// It's possible that authenticated requests can be, in this case we can
+	// quickly switch to the open account mode.
+	//
+	// One such case: https://github.com/imperatrona/twitter-scraper/issues/47
+	if os.Getenv("X_OPEN_ACCOUNT") == "true" {
+		scraper.LoginOpenAccount()
+	} else {
+		scraper.SetCookies(*cookies)
 
-	// scraper.SetCookies(*cookies)
-
-	// // This is required for the scraper to know we are logged in
-	// if !scraper.IsLoggedIn() {
-	// 	return ffiError(fmt.Errorf("failed to initialize (cookies may be invalid)"))
-	// }
+		// This is required for the scraper to know we are logged in
+		if !scraper.IsLoggedIn() {
+			return ffiError(fmt.Errorf("failed to initialize (cookies may be invalid)"))
+		}
+	}
 
 	return ffiOk(nil)
 }
@@ -116,23 +124,12 @@ func ffiDeserialize[T any](jsonChars *C.char) (*T, error) {
 	return out, nil
 }
 
-// This is a small utility to get the cookies from a logged in session,
-// which can be used to login in the Rust library.
-func main() {
-	scraper = twitterscraper.New()
-
-	err := scraper.Login("username", "password", "mfa-code")
-	panicIfErr(err)
-
-	cookies := scraper.GetCookies()
-	bytes, err := json.Marshal(cookies)
-	panicIfErr(err)
-
-	fmt.Println(string(bytes))
-}
-
 func panicIfErr(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func main() {
+	// Can be used to test the code in this file with `go run main.go`
 }

@@ -6,7 +6,7 @@ script_dir=$(readlink -f $(dirname $0))
 
 . $script_dir/../../scripts/download/common.sh
 
-golang_version="1.21.0"
+golang_version="1.24.2"
 
 # Required for downloading the dependencies
 tmp_deps=(
