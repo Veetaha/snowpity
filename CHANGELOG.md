@@ -1,5 +1,9 @@
 # Unreleased
 
+# 0.9.2
+
+- Update `twitterscraper` go lib to get the fix for the broken auth
+
 # 0.9.0
 
 - Maintenance update of the server OS from Ubuntu 22 to Ubuntu 24
