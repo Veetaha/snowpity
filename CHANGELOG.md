@@ -1,5 +1,14 @@
 # Unreleased
 
+# 0.9.2
+
+- Update `twitterscraper` go lib to get the fix for the broken auth
+
+# 0.9.0
+
+- Maintenance update of the server OS from Ubuntu 22 to Ubuntu 24
+- Quick fix for Twitter support (details: https://github.com/imperatrona/twitter-scraper/issues/47)
+
 # 0.8.1
 
 ## Changed
