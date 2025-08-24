@@ -1,4 +1,6 @@
-# Unreleased
+# 0.10.0 2025-08-24
+
+- Update a whole lot of dependencies
 
 # 0.9.2
 
