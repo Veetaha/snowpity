@@ -34,7 +34,6 @@ bytes               = "1.1"
 cgo                 = "0.4"
 criterion           = "0.7"
 darling             = "0.21"
-derivative          = "2.2"
 derive_more         = { version = "2.0", features = ["deref", "from_str", "display"] }
 display-error-chain = "=0.2.2"
 dotenvy             = "0.15"
