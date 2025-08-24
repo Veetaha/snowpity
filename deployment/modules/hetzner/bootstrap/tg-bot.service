@@ -13,7 +13,7 @@ EnvironmentFile=${env_file_path}
 
 ExecStartPre=-/var/app/docker-compose.sh rm
 
-ExecStart=/var/app/docker-compose.sh up --detach --no-build --pull --wait
+ExecStart=/var/app/docker-compose.sh up --detach --no-build --pull always --wait
 
 # We increase the timeout, because shutting down `teloxide` takes a while
 # The issue in `teloxide`: https://github.com/teloxide/teloxide/issues/711

@@ -1,3 +1,8 @@
+# 0.10.1 2025-08-24
+
+- Fix docker compose invocation in systemd
+- Add restart policy to tg bot service
+
 # 0.10.0 2025-08-24
 
 - Update a whole lot of dependencies

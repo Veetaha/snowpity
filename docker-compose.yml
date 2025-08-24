@@ -10,6 +10,8 @@ services:
     # We are listening only for Ctrl-C
     stop_signal: SIGINT
 
+    restart: on-failure:50
+
     env_file: .env
     environment:
       LOKI_URL: http://loki:3100

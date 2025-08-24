@@ -19,7 +19,7 @@ opt-level = 3
 codegen-units = 1
 
 [workspace.package]
-version = "0.10.0"
+version = "0.10.1"
 
 authors = ["Veetaha <veetaha2@gmail.com>"]
 edition = "2021"
