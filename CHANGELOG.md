@@ -125,7 +125,7 @@
 - Migrated to `seaorm` and then back to `sqlx`, so almost nothing changed (lol)
 - Migrated to Oracle Cloud and then back to Hetzner, so almost nothing changed (lol)
 - Migrated most of the automation from bash and xtask to `x.nu` (nushell)
-- Migrated to the latest and greates Rust `1.66.0`
+- Migrated to the latest and greatest Rust `1.66.0`
 
 ## Fixed
 
