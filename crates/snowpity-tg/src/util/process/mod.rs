@@ -3,7 +3,10 @@ use crate::{fatal, Result};
 use std::process::Stdio;
 
 pub(crate) async fn run(program: &str, args: &[&str]) -> Result<Vec<u8>> {
-    let display_args = shlex::join(args.iter().copied());
+    let display_args = shlex::try_join(args.iter().copied()).fatal_ctx(|| {
+        format!("Couldn't run program that contains a nul byte: {program:?} {args:?}")
+    })?;
+
     let display_cmd = format!("{program} {display_args}");
     debug!(
         cmd = %display_cmd,

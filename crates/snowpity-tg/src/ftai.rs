@@ -76,15 +76,15 @@ impl FtaiService {
         let audio = self.http_client.get(url).read_bytes().await?;
 
         let mut reader = wav_io::reader::Reader::from_vec(audio.to_vec())
-            .map_err(|message| err!(FtAiError::CreateWavReader { message }))?;
+            .map_err(|source| err!(FtAiError::CreateWavReader { source }))?;
 
         let header = reader
             .read_header()
-            .map_err(|message| err!(FtAiError::ReadWavHeader { message }))?;
+            .map_err(|source| err!(FtAiError::ReadWavHeader { source }))?;
 
         let data = reader
             .get_samples_f32()
-            .map_err(|message| err!(FtAiError::ReadWavSamples { message }))?;
+            .map_err(|source| err!(FtAiError::ReadWavSamples { source }))?;
 
         // This seems to give the best quality. The original sample rate
         // of 15.ai is 44_100.
@@ -111,16 +111,14 @@ pub(crate) enum FtAiError {
     #[error("15.ai returned zero WAV files in the response")]
     MissingWavFile,
 
-    #[error(
-        "Failed to create a WAV reader, that is probably a bug, it must be infallible: {message}"
-    )]
-    CreateWavReader { message: &'static str },
+    #[error("Failed to create a WAV reader, that is probably a bug, it must be infallible")]
+    CreateWavReader { source: wav_io::reader::DecodeError },
 
-    #[error("Failed to read WAV header returned by 15.ai: {message}")]
-    ReadWavHeader { message: &'static str },
+    #[error("Failed to read WAV header returned by 15.ai")]
+    ReadWavHeader { source: wav_io::reader::DecodeError },
 
-    #[error("Failed to read WAV samples returned by 15.ai: {message}")]
-    ReadWavSamples { message: &'static str },
+    #[error("Failed to read WAV samples returned by 15.ai")]
+    ReadWavSamples { source: wav_io::reader::DecodeError },
 
     #[error("Failed to encode the resampled WAV to OGG")]
     EncodeWavToOpus { source: ogg_opus::Error },
