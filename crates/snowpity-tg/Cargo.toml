@@ -31,6 +31,7 @@ fast_image_resize           = { workspace = true }
 from_variants               = { workspace = true }
 fs-err                      = { workspace = true, features = ["tokio"] }
 futures                     = { workspace = true }
+http                        = { workspace = true }
 humansize                   = { workspace = true }
 image                       = { workspace = true }
 itertools                   = { workspace = true }
@@ -43,9 +44,8 @@ num_enum                    = { workspace = true }
 ogg-opus                    = { workspace = true }
 parking_lot                 = { workspace = true }
 reqwest                     = { workspace = true, features = ["json"] }
-reqwest-middleware          = { workspace = true }
+reqwest-middleware          = { workspace = true, features = ["json"] }
 reqwest-retry               = { workspace = true }
-retry-policies              = { workspace = true }
 sea-query                   = { workspace = true }
 serde                       = { workspace = true }
 serde_json                  = { workspace = true }
@@ -56,7 +56,6 @@ shlex                       = { workspace = true }
 sqlx                        = { workspace = true }
 strum                       = { workspace = true }
 sysinfo                     = { workspace = true }
-task-local-extensions       = { workspace = true }
 teloxide                    = { workspace = true, features = ["cache-me", "ctrlc_handler", "macros", "throttle", "trace-adaptor"] }
 tempfile                    = { workspace = true }
 thiserror                   = { workspace = true }

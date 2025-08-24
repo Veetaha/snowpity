@@ -6,7 +6,6 @@ use parking_lot::Mutex as SyncMutex;
 use serde::Serialize;
 use std::fmt;
 use std::time::Duration;
-use sysinfo::{CpuExt, SystemExt};
 
 pub(crate) struct SysInfoService {
     sysinfo: SyncMutex<sysinfo::System>,
@@ -14,9 +13,9 @@ pub(crate) struct SysInfoService {
 
 impl SysInfoService {
     fn refresh_kind() -> sysinfo::RefreshKind {
-        sysinfo::RefreshKind::new()
+        sysinfo::RefreshKind::nothing()
             .with_cpu(sysinfo::CpuRefreshKind::everything())
-            .with_memory()
+            .with_memory(sysinfo::MemoryRefreshKind::everything())
     }
 
     pub(crate) fn new() -> Self {
@@ -26,53 +25,53 @@ impl SysInfoService {
     }
 
     pub(crate) fn to_human_readable(&self) -> String {
-        let mut inf = self.sysinfo.lock();
-        inf.refresh_specifics(Self::refresh_kind());
+        let mut info = self.sysinfo.lock();
+        info.refresh_specifics(Self::refresh_kind());
 
-        let inf = inf;
+        let info = info;
         let percent = |x: &dyn fmt::Display| format!("{x:.1}%");
 
-        let load_average = inf.load_average();
+        let load_average = sysinfo::System::load_average();
         let load_average = LoadAvg {
             one_min: percent(&load_average.one),
             five_min: percent(&load_average.five),
             fifteen_min: percent(&load_average.fifteen),
         };
 
-        let cpu = inf.global_cpu_info();
         let cpu = Cpu {
-            cores: inf.physical_core_count(),
-            brand: cpu.brand().to_owned(),
-            usage: percent(&cpu.cpu_usage()),
-            freq: format!("{} MHz", cpu.frequency()),
+            arch: sysinfo::System::cpu_arch(),
+            usage: percent(&info.global_cpu_usage()),
         };
 
         let boot_time = Utc
-            .timestamp_opt(inf.boot_time().try_into().unwrap_or_default(), 0)
+            .timestamp_opt(
+                sysinfo::System::boot_time().try_into().unwrap_or_default(),
+                0,
+            )
             .unwrap()
             .to_human_readable();
 
-        let uptime = human_duration(Duration::from_secs(inf.uptime()));
+        let uptime = human_duration(Duration::from_secs(sysinfo::System::uptime()));
 
         let ram = Ram {
-            available: human_size(inf.available_memory()),
+            available: human_size(info.available_memory()),
             base: Mem {
-                used: human_size(inf.used_memory()),
-                free: human_size(inf.free_memory()),
-                total: human_size(inf.total_memory()),
+                used: human_size(info.used_memory()),
+                free: human_size(info.free_memory()),
+                total: human_size(info.total_memory()),
             },
         };
         let swap = Mem {
-            used: human_size(inf.used_swap()),
-            free: human_size(inf.free_swap()),
-            total: human_size(inf.total_swap()),
+            used: human_size(info.used_swap()),
+            free: human_size(info.free_swap()),
+            total: human_size(info.total_swap()),
         };
 
         let info = SysInfo {
             platform: Platform {
-                hostname: inf.host_name(),
-                kernel: inf.kernel_version(),
-                osname: inf.long_os_version(),
+                hostname: sysinfo::System::host_name(),
+                kernel: sysinfo::System::kernel_version(),
+                osname: sysinfo::System::long_os_version(),
             },
             cpu,
             load_average,
@@ -120,9 +119,7 @@ struct Platform {
 #[derive(Serialize)]
 struct Cpu {
     usage: String,
-    freq: String,
-    cores: Option<usize>,
-    brand: String,
+    arch: String,
 }
 
 #[derive(Serialize)]

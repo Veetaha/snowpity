@@ -21,6 +21,5 @@ impl Client {
             .query(&[("url", deviation.to_canonical_url())])
             .read_json()
             .await
-            .map_err(Into::into)
     }
 }

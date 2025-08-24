@@ -12,7 +12,7 @@ use teloxide::prelude::*;
 use teloxide::types::{
     ChosenInlineResult, InlineQuery, InlineQueryResult, InlineQueryResultCachedDocument,
     InlineQueryResultCachedMpeg4Gif, InlineQueryResultCachedPhoto, InlineQueryResultCachedVideo,
-    InlineQueryResultVideo, ParseMode,
+    InlineQueryResultVideo, InlineQueryResultsButton, InlineQueryResultsButtonKind, ParseMode,
 };
 use teloxide::utils::markdown;
 
@@ -68,8 +68,10 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
         info!("Skipping inline query");
 
         bot.answer_inline_query(inline_query_id, [])
-            .switch_pm_text("Help")
-            .switch_pm_parameter("help")
+            .button(InlineQueryResultsButton {
+                text: "Help".to_owned(),
+                kind: InlineQueryResultsButtonKind::StartParameter("help".to_owned()),
+            })
             .cache_time(CACHE_TIME_SECS)
             .await?;
 
@@ -118,7 +120,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
             .into_iter()
             .map(|blob| make_inline_query_result(&comments, &post.base, blob));
 
-        bot.answer_inline_query(&inline_query_id, results)
+        bot.answer_inline_query(inline_query_id.clone(), results)
             .is_personal(false)
             .cache_time(CACHE_TIME_SECS)
             .into_future()
@@ -172,7 +174,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
         .into();
 
         let result = bot
-            .answer_inline_query(&inline_query_id, [result])
+            .answer_inline_query(inline_query_id.clone(), [result])
             .is_personal(false)
             .cache_time(0)
             .into_future()
@@ -204,7 +206,7 @@ fn make_inline_query_result(
     let parse_mode = ParseMode::MarkdownV2;
     let title = "Click to send";
     let id = encoding::encode_base64_sha2(&blob.tg_file.id);
-    let file_id = blob.tg_file.id;
+    let file_id = teloxide::types::FileId(blob.tg_file.id);
 
     match blob.tg_file.kind {
         TgFileKind::Photo => InlineQueryResultCachedPhoto::new(id, file_id)

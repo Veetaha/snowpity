@@ -63,14 +63,14 @@ pub(crate) enum TgChatAction {
 sqlx_bat::impl_try_into_from_db_via_std!(TgChatAction, i16);
 
 impl TgChatKind {
-    pub(super) fn from_tg_api(chat: &tg_api::Chat) -> Self {
+    pub(super) fn from_tg_api(chat: &tg_api::ChatFullInfo) -> Self {
         match &chat.kind {
-            tg_api::ChatKind::Public(chat) => match chat.kind {
-                tg_api::PublicChatKind::Channel(_) => Self::PublicChannel,
-                tg_api::PublicChatKind::Group(_) => Self::PublicGroup,
-                tg_api::PublicChatKind::Supergroup(_) => Self::PublicSupergroup,
+            tg_api::ChatFullInfoKind::Public(chat) => match chat.kind {
+                tg_api::ChatFullInfoPublicKind::Channel(_) => Self::PublicChannel,
+                tg_api::ChatFullInfoPublicKind::Group(_) => Self::PublicGroup,
+                tg_api::ChatFullInfoPublicKind::Supergroup(_) => Self::PublicSupergroup,
             },
-            tg_api::ChatKind::Private(_) => Self::Private,
+            tg_api::ChatFullInfoKind::Private(_) => Self::Private,
         }
     }
 }

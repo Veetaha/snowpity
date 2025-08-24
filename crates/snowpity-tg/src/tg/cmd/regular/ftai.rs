@@ -2,7 +2,7 @@ use crate::prelude::*;
 use crate::{err, tg, Error, Result};
 use std::str::FromStr;
 use teloxide::prelude::*;
-use teloxide::types::{InputFile, Message};
+use teloxide::types::{InputFile, Message, ReplyParameters};
 use teloxide::utils::markdown;
 
 #[derive(Debug, Clone)]
@@ -61,7 +61,7 @@ impl FtaiCmd {
         ctx.bot
             .send_voice(msg.chat.id, input_file)
             .caption(caption)
-            .reply_to_message_id(msg.id)
+            .reply_parameters(ReplyParameters::new(msg.id))
             .await?;
 
         info!(%took, "Finished generating audio via 15.ai");

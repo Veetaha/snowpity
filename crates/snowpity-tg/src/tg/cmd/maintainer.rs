@@ -96,7 +96,7 @@ impl tg::cmd::Command for Cmd {
                     .reply_to_message()
                     .ok_or_else(|| err!(DescribeCommandError::NoReplyMessageInDescribe))?;
 
-                let sender = if let Some(sender) = reply.from() {
+                let sender = if let Some(sender) = &reply.from {
                     Some(ctx.bot.get_chat_member(msg.chat.id, sender.id).await?.kind)
                 } else {
                     None
@@ -173,7 +173,7 @@ impl tg::cmd::Command for Cmd {
 }
 
 pub(crate) fn filter(ctx: Arc<tg::Ctx>, msg: Message) -> bool {
-    matches!(msg.from(), Some(sender) if sender.id == ctx.cfg.maintainer)
+    matches!(msg.from, Some(sender) if sender.id == ctx.cfg.maintainer)
 }
 
 #[derive(Debug, thiserror::Error)]

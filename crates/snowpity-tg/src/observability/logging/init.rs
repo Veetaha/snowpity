@@ -18,7 +18,9 @@ impl LoggingTask {
 
         let ((), duration) = async {
             self.controller.shutdown().await;
-            self.task.await;
+            if let Err(err) = self.task.await {
+                eprintln!("Logging task panicked during shutdown: {err:#?}");
+            }
         }
         .with_duration()
         .await;

@@ -523,7 +523,7 @@ impl TgUploadMethodContext<'_> {
         }
 
         Ok(TgFileMeta {
-            id: file_meta.id,
+            id: file_meta.id.0,
             kind: actual_file_kind,
         })
     }
