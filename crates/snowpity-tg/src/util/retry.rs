@@ -1,8 +1,8 @@
 use crate::prelude::*;
 use crate::Result;
-use chrono::prelude::*;
-use retry_policies::{RetryDecision, RetryPolicy};
+use reqwest_retry::{RetryDecision, RetryPolicy};
 use std::future::Future;
+use std::time::SystemTime;
 
 /// We already have an existing http client with retries set up in this crate.
 /// However, this function is required to retry the HTTP operations that are
@@ -17,6 +17,7 @@ where
 {
     let policy = crate::http::default_retry_policy();
     let mut attempt = 0;
+    let start_time = SystemTime::now();
     loop {
         let err = match f().await {
             Ok(output) => {
@@ -35,7 +36,7 @@ where
             return Err(err);
         }
 
-        let execute_after = match policy.should_retry(attempt) {
+        let execute_after = match policy.should_retry(start_time, attempt) {
             RetryDecision::Retry { execute_after } => execute_after,
             RetryDecision::DoNotRetry => {
                 warn!(%attempt, "Giving up retrying HTTP request");
@@ -43,16 +44,14 @@ where
             }
         };
 
-        let duration = (execute_after.signed_duration_since(Utc::now()))
-            .to_std()
-            .unwrap_or_else(|err| {
-                warn!(
-                    err = tracing_err(&err),
-                    %execute_after,
-                    "Retry policy returned a negative duration, retrying immediately"
-                );
-                std::time::Duration::ZERO
-            });
+        let duration = (execute_after.duration_since(SystemTime::now())).unwrap_or_else(|err| {
+            warn!(
+                err = tracing_err(&err),
+                execute_after = %chrono::DateTime::<chrono::Utc>::from(execute_after),
+                "Retry policy returned a negative duration, retrying immediately"
+            );
+            std::time::Duration::ZERO
+        });
 
         // Sleep the requested amount before we try again.
         warn!(

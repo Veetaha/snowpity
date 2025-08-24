@@ -18,6 +18,6 @@ output "id_suffix_alnum" {
 }
 
 output "kind" {
-  description = "Discrimnator to take apart real production workspace and non-production workspaces"
+  description = "Discriminator to take apart real production workspace and non-production workspaces"
   value       = terraform.workspace == "default" ? "prod" : "dev"
 }

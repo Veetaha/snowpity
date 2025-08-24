@@ -11,7 +11,7 @@ use teloxide::types::ChatMemberKind;
 fn is_member(chat_member_kind: &ChatMemberKind) -> bool {
     use ChatMemberKind::*;
     match chat_member_kind {
-        Owner(_) | Administrator(_) | Member => true,
+        Owner(_) | Administrator(_) | Member(_) => true,
         Restricted(restricted) => restricted.is_member,
         Left | Banned(_) => false,
     }
@@ -36,9 +36,11 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, update: ChatMemberUpdated) -> DynR
             "Joined chat"
         );
 
+        let chat = ctx.bot.get_chat(update.chat.id).await?;
+
         ctx.tg_chats
             .register_chat(TgChatQuery {
-                chat: &update.chat,
+                chat: &chat,
                 requested_by: &update.from,
                 action: db::TgChatAction::HandleBotJoinedChat,
             })

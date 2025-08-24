@@ -3,10 +3,10 @@ use crate::prelude::*;
 use crate::Result;
 use sea_query::{Expr, OnConflict};
 use sqlx_bat::prelude::*;
-use teloxide::types::{Chat, User};
+use teloxide::types::{ChatFullInfo, User};
 
 pub(crate) struct TgChatQuery<'a> {
-    pub(crate) chat: &'a Chat,
+    pub(crate) chat: &'a ChatFullInfo,
     pub(crate) requested_by: &'a User,
     pub(crate) action: TgChatAction,
 }

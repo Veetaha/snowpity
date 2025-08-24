@@ -1,22 +1,17 @@
 # Docs: https://embarkstudios.github.io/cargo-deny/checks/index.html
 
 # We want to run `cargo deny` only for platforms we use and support
+[graph]
 targets = [{ triple = "x86_64-unknown-linux-gnu" }]
 
 [advisories]
-notice        = "deny"
-unmaintained  = "deny"
-unsound       = "deny"
-vulnerability = "deny"
-yanked        = "deny"
+unmaintained = "workspace"
+yanked       = "deny"
 
 ignore = [
-  # I really look for the day the entire Rust ecosystem will get rid of
-  # the old time crate version, when `chrono` disable the `oldtime` feature
-  # by default 🥲.
-  #
-  # Potential segfault in the time crate (0.1.43)
-  "RUSTSEC-2020-0071",
+  # TODO: remove vergen/gix dependencies
+  # https://rustsec.org/advisories/RUSTSEC-2025-0021
+  "RUSTSEC-2025-0021",
 ]
 
 [bans]
@@ -27,58 +22,151 @@ wildcards = "allow"
 
 multiple-versions = "deny"
 skip = [
-  # `serde_with` depends on older version of `darling`
-  { name = "darling", version = "=0.13.4" },
-  { name = "darling_core", version = "=0.13.4" },
-  { name = "darling_macro", version = "=0.13.4" },
-  { name = "darling", version = "=0.14.4" },
-  { name = "darling_core", version = "=0.14.4" },
-  { name = "darling_macro", version = "=0.14.4" },
-
-  # The ecosystem migration with `itertools` breaking changes seems to never end
-  { name = "itertools", version = "=0.9.0" },
-  { name = "itertools", version = "=0.10.5" },
-
-  # Comes from `teloxide`, hopefully new updates will upgrade this dependency
-  { name = "serde_with_macros", version = "=1.5.2" },
-
-  # Having `oldtime` feature by default in chrono is a huge mistake, because
-  # people don't read docs and don't disable it explicitly 🥲
-  { name = "time", version = "=0.1.45" },
-
-  # Comes from `ring`
-  { name = "spin", version = "=0.5.2" },
-
-  # Comes from `png`
+  # Comes from snowpity-tg -> image@0.25.6
+  # Direct parents: png@0.17.16
   { name = "bitflags", version = "=1.3.2" },
 
-  # Comes from `imara-diff` and `indexmap`
-  { name = "hashbrown", version = "0.12.3" },
+  # Comes from snowpity-tg -> nanoid@0.4.0
+  # Other direct parents: ogg-opus@0.1.2, retry-policies@0.4.0, sqlx-postgres@0.8.6
+  { name = "rand", version = "=0.8.5" },
 
-  # Comes through `bstr`
-  { name = "regex-syntax", version = "0.6.29" },
+  # Comes from snowpity-tg -> teloxide@0.17.0
+  # Direct parents: aquamarine@0.6.0
+  { name = "itertools", version = "=0.10.5" },
 
-  # I wish to witness the day when the ecosystem actually transitions to syn v2.
-  # I guess this won't ever happen, so be this line a memorial for syn v1!
+  # Comes from snowpity-tg -> vergen@8.3.2
+  # Direct parents: gix-actor@0.31.5, gix-config@0.37.0, gix-object@0.42.3, gix-ref@0.44.1
+  { name = "winnow", version = "=0.6.26" },
+
+  # Comes from snowpity-tg -> vergen@8.3.2
+  # Direct parents: rustix@0.38.44
+  { name = "linux-raw-sys", version = "=0.4.15" },
+
+  # Comes from snowpity-tg -> from_variants@1.0.2
+  # Direct parents:
+  #   darling_core@0.14.4
+  #   darling_macro@0.14.4
+  #   derivative@2.2.0
+  #   from_variants_impl@1.0.2
   { name = "syn", version = "=1.0.109" },
 
-  # Comes from `sqlx-core`, `metrics-exporter-prometheus`, `h2` (from `hyper`)
-  { name = "indexmap", version = "=1.9.3" },
+  # Comes from snowpity-tg -> image@0.25.6
+  # Direct parents: rav1e@0.7.1
+  { name = "itertools", version = "=0.12.1" },
 
-  # Comes from `criterion`
-  { name = "half", version = "=1.8.2" },
+  # Comes from snowpity-tg -> from_variants@1.0.2
+  # Direct parents: darling_core@0.14.4
+  { name = "strsim", version = "=0.10.0" },
 
-  # Comes from `metrics-util`
-  { name = "hashbrown", version = "=0.13.1" },
+  # Comes from snowpity-tg -> from_variants@1.0.2
+  # Direct parents: darling@0.14.4, darling_macro@0.14.4
+  { name = "darling_core", version = "=0.14.4" },
 
-  # Comes from `tracing-subscriber`
+  # Comes from snowpity-tg -> nanoid@0.4.0
+  # Direct parents: rand@0.8.5
+  { name = "rand_chacha", version = "=0.3.1" },
+
+  # Comes from sqlx-bat -> sea-query-binder@0.7.0
+  # Direct parents: sea-query-derive@0.4.3, serde_with_macros@3.14.0
+  { name = "darling", version = "=0.20.11" },
+
+  # Comes from snowpity-tg -> vergen@8.3.2
+  # Direct parents:
+  #   cargo_metadata@0.18.1
+  #   fast_image_resize@5.2.1
+  #   gix@0.63.0
+  #   gix-actor@0.31.5
+  #   gix-commitgraph@0.24.3
+  #   gix-config@0.37.0
+  #   gix-date@0.8.7
+  #   gix-diff@0.44.1
+  #   gix-discover@0.32.0
+  #   gix-features@0.38.2
+  #   gix-hash@0.14.2
+  #   gix-index@0.33.1
+  #   gix-lock@14.0.0
+  #   gix-object@0.42.3
+  #   gix-odb@0.61.1
+  #   gix-pack@0.51.1
+  #   gix-ref@0.44.1
+  #   gix-refspec@0.23.1
+  #   gix-revision@0.27.2
+  #   gix-revwalk@0.13.2
+  #   gix-traverse@0.39.2
+  #   gix-url@0.27.5
+  #   gix-validate@0.8.5
+  #   ogg-opus@0.1.2
+  #   rav1e@0.7.1
+  #   reqwest-middleware@0.4.2
+  #   reqwest-retry@0.7.0
+  #   wav_io@0.1.15
+  { name = "thiserror", version = "=1.0.69" },
+
+  # Comes from sqlx-bat -> sea-query-binder@0.7.0
+  # Direct parents: darling@0.20.11, darling_macro@0.20.11
+  { name = "darling_core", version = "=0.20.11" },
+
+  # Comes from snowpity-tg -> from_variants@1.0.2
+  # Direct parents: from_variants_impl@1.0.2
+  { name = "darling", version = "=0.14.4" },
+
+  # Comes from snowpity-tg -> vergen@8.3.2
+  # Direct parents: gix-index@0.33.1
+  { name = "rustix", version = "=0.38.44" },
+
+  # Comes from snowpity-tg -> teloxide@0.17.0
+  # Other direct parents: teloxide-core@0.13.0
+  { name = "derive_more", version = "=1.0.0" },
+
+  # Comes from snowpity-tg -> nanoid@0.4.0
+  # Direct parents: rand@0.8.5, rand_chacha@0.3.1
+  { name = "rand_core", version = "=0.6.4" },
+
+  # Comes from snowpity-tg -> nanoid@0.4.0
+  # Direct parents: rand_core@0.6.4, ring@0.17.14
+  { name = "getrandom", version = "=0.2.16" },
+
+  # Comes from snowpity-tg -> vergen@8.3.2
+  # Direct parents: gix-hashtable@0.5.2, gix-index@0.33.1
+  { name = "hashbrown", version = "=0.14.5" },
+
+  # Comes from snowpity-tg -> from_variants@1.0.2
+  # Direct parents: darling@0.14.4
+  { name = "darling_macro", version = "=0.14.4" },
+
+  # Comes from snowpity-tg -> tracing-subscriber@0.3.19
+  # Direct parents: regex-automata@0.1.10
+  { name = "regex-syntax", version = "=0.6.29" },
+
+  # Comes from sqlx-bat -> sea-query-binder@0.7.0
+  # Direct parents: darling@0.20.11
+  { name = "darling_macro", version = "=0.20.11" },
+
+  # Comes from snowpity-tg -> vergen@8.3.2
+  # Direct parents: thiserror@1.0.69
+  { name = "thiserror-impl", version = "=1.0.69" },
+
+  # Comes from snowpity-tg -> teloxide@0.17.0
+  # Direct parents: derive_more@1.0.0
+  { name = "derive_more-impl", version = "=1.0.0" },
+
+  # Comes from sqlx-bat -> sea-query-binder@0.7.0
+  # Direct parents: sea-query-derive@0.4.3
+  { name = "heck", version = "=0.4.1" },
+
+  # Comes from snowpity-tg -> tracing-subscriber@0.3.19
+  # Direct parents: matchers@0.1.0
   { name = "regex-automata", version = "=0.1.10" },
 
-  # Comes from `reqwest-retry`
-  { name = "socket2", version = "=0.4.9" },
-
+  # Comes from snowpity-tg -> vergen@8.3.2
+  # Direct parents:
+  #   gix@0.63.0
+  #   gix-index@0.33.1
+  #   gix-object@0.42.3
+  #   gix-ref@0.44.1
+  #   gix-refspec@0.23.1
+  { name = "gix-validate", version = "=0.8.5" },
 ]
-skip-tree = [{ name = "gix-fs", version = "=0.3.0" }]
 
 deny = [
   # Using only `rustls` relives us from linking to openssl
@@ -91,27 +179,22 @@ unknown-git      = "deny"
 unknown-registry = "warn"
 
 [licenses]
-copyleft   = "deny"
-unlicensed = "deny"
-
 # run `cargo deny list` to see which crates use which license
 allow = [
   "MIT",
+  "BSD-2-Clause",
   "BSD-3-Clause",
   "0BSD",
   "Unlicense",
   "Apache-2.0",
   "Zlib",
   "ISC",
-  "OpenSSL",
   # Best license ever 😂
   "WTFPL",
   "MPL-2.0",
-  "Unicode-DFS-2016",
+  "Unicode-3.0",
+  "CDLA-Permissive-2.0",
 ]
-allow-osi-fsf-free = "neither"
-default = "deny"
-deny = []
 
 # We want really high confidence when inferring licenses from text
 confidence-threshold = 0.92

@@ -23,7 +23,7 @@ jobs:
   terraform-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_wrapper: false
@@ -35,7 +35,7 @@ jobs:
       - run: terraform init -lockfile=readonly
         working-directory: deployment/project
 
-      # HACK: our terraform project assummes there is an ssh key at this path
+      # HACK: our terraform project assumes there is an ssh key at this path
       - run: mkdir -p ~/.ssh && touch ~/.ssh/id_rsa.pub
 
       - run: terraform validate
@@ -44,14 +44,14 @@ jobs:
   taplo-fmt-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: ./scripts/download/taplo.sh
       - run: ./taplo fmt --check
 
   typos:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: ./scripts/download/typos.sh
       - run: ./typos
 
@@ -67,8 +67,8 @@ jobs:
     continue-on-error: ${{ matrix.checks == 'advisories' }}
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: EmbarkStudios/cargo-deny-action@v1
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check ${{ matrix.checks }}
 
@@ -76,7 +76,7 @@ jobs:
   rust-unused-dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: ./scripts/download/cargo-machete.sh
       - run: ./cargo-machete
 
@@ -91,8 +91,7 @@ jobs:
         toolchain: [stable, beta, nightly]
 
     steps:
-      - uses: actions/checkout@v3
-
+      - uses: actions/checkout@v4
 
       - if: ${{ matrix.toolchain == 'stable' }}
         run: echo RUSTUP_TOOLCHAIN=$(cat rust-toolchain) >> $GITHUB_ENV
@@ -120,7 +119,7 @@ jobs:
         toolchain: [stable, beta, nightly]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - if: ${{ matrix.toolchain == 'stable' }}
         run: echo RUSTUP_TOOLCHAIN=$(cat rust-toolchain) >> $GITHUB_ENV

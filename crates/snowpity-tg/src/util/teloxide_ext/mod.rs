@@ -1,13 +1,13 @@
 mod requester;
 
 use easy_ext::ext;
-use teloxide::types::{Chat, MessageId, UpdateKind, User};
+use teloxide::types::{Chat, ChatFullInfo, ChatId, MessageId, UpdateKind, User};
 use teloxide::utils::markdown;
 
 pub(crate) mod prelude {
     pub(crate) use super::{
-        requester::UtilRequesterExt as _, ChatExt as _, MessageIdExt as _, UpdateKindExt as _,
-        UserExt as _,
+        requester::UtilRequesterExt as _, ChatExt as _, ChatFullInfoExt as _, MessageIdExt as _,
+        UpdateKindExt as _, UserExt as _,
     };
 }
 
@@ -35,11 +35,14 @@ pub(crate) impl User {
 #[ext(ChatExt)]
 pub(crate) impl Chat {
     fn debug_id(&self) -> String {
-        chat_debug_id_imp(self, no_escape)
+        chat_debug_id_imp(self.id, self.title(), self.username(), no_escape)
     }
+}
 
+#[ext(ChatFullInfoExt)]
+pub(crate) impl ChatFullInfo {
     fn debug_id_markdown_escaped(&self) -> String {
-        chat_debug_id_imp(self, markdown::escape)
+        chat_debug_id_imp(self.id, self.title(), self.username(), markdown::escape)
     }
 }
 
@@ -47,21 +50,21 @@ fn no_escape(str: &str) -> String {
     str.to_owned()
 }
 
-fn chat_debug_id_imp(chat: &Chat, escape: fn(&str) -> String) -> String {
-    let title = chat.title().unwrap_or("{{unknown_chat_title}}");
-    let username = chat
-        .username()
+fn chat_debug_id_imp(
+    chat_id: ChatId,
+    chat_title: Option<&str>,
+    chat_username: Option<&str>,
+    escape: fn(&str) -> String,
+) -> String {
+    let title = chat_title.unwrap_or("{{unknown_chat_title}}");
+    let username = chat_username
         .map(|name| format!("{name}, "))
         .unwrap_or_default();
 
-    let id = chat.id;
     let title = escape(title);
-    let suffix = escape(&format!("({username}{id})"));
+    let suffix = escape(&format!("({username}{chat_id})"));
 
-    chat.invite_link()
-        .map(markdown::escape_link_url)
-        .map(|invite_link| format!("[{title}]({invite_link}) {suffix}"))
-        .unwrap_or_else(|| format!("{title} {suffix}"))
+    format!("{title} {suffix}")
 }
 
 #[ext(MessageIdExt)]
@@ -87,16 +90,25 @@ pub(crate) impl UpdateKind {
             EditedMessage
             ChannelPost
             EditedChannelPost
+            BusinessConnection
+            BusinessMessage
+            EditedBusinessMessage
+            DeletedBusinessMessages
+            MessageReaction
+            MessageReactionCount
             InlineQuery
             ChosenInlineResult
             CallbackQuery
             ShippingQuery
             PreCheckoutQuery
+            PurchasedPaidMedia
             Poll
             PollAnswer
             MyChatMember
             ChatMember
             ChatJoinRequest
+            ChatBoost
+            RemovedChatBoost
             Error
         }
     }

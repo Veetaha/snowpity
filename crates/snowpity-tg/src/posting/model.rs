@@ -3,7 +3,6 @@ use super::AllPlatforms;
 use crate::prelude::*;
 use crate::tg;
 use crate::util::units::MB;
-use derivative::Derivative;
 use itertools::Itertools;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use reqwest::Url;
@@ -99,15 +98,11 @@ pub(crate) struct TgFileMeta {
     pub(crate) kind: TgFileKind,
 }
 
-#[derive(Derivative)]
-#[derivative(Clone(bound = ""))]
 pub(crate) struct CachedBlobId<Service: PlatformTypes = AllPlatforms> {
     pub(crate) id: Service::BlobId,
     pub(crate) tg_file: TgFileMeta,
 }
 
-#[derive(Derivative)]
-#[derivative(Clone(bound = ""))]
 pub(crate) struct CachedBlob<Service: PlatformTypes = AllPlatforms> {
     pub(crate) blob: UniBlob<Service>,
     pub(crate) tg_file: TgFileMeta,
@@ -152,8 +147,6 @@ pub(crate) enum SafetyRating {
 }
 
 /// Basic information about the post that doesn't contain the list of blobs
-#[derive(Derivative)]
-#[derivative(Clone(bound = ""))]
 pub(crate) struct BasePost<Service: PlatformTypes = AllPlatforms> {
     /// Unique identifier of the post specific to the posting platform
     ///
@@ -182,8 +175,6 @@ pub(crate) struct Post<Service: PlatformTypes = AllPlatforms> {
 
 /// Metadata about the post that is essentially an extension of [`Post`],
 /// but adds caching information to each blob.
-#[derive(Derivative)]
-#[derivative(Clone(bound = ""))]
 pub(crate) struct CachedPost<Service: PlatformTypes = AllPlatforms> {
     pub(crate) base: BasePost<Service>,
 
@@ -208,8 +199,6 @@ pub(crate) struct BlobRepr {
     pub(crate) download_url: Url,
 }
 
-#[derive(Derivative)]
-#[derivative(Clone(bound = ""))]
 pub(crate) struct UniBlob<Platform: PlatformTypes = AllPlatforms> {
     /// Unique identifier of the blob specific to the posting platform
     pub(crate) id: Platform::BlobId,
@@ -217,8 +206,7 @@ pub(crate) struct UniBlob<Platform: PlatformTypes = AllPlatforms> {
 }
 
 /// Metadata about a blob
-#[derive(Derivative)]
-#[derivative(Clone(bound = ""))]
+#[derive(Clone)]
 pub(crate) struct MultiBlob<Platform: PlatformTypes = AllPlatforms> {
     /// Unique identifier of the blob specific to the posting platform
     pub(crate) id: Platform::BlobId,
@@ -435,5 +423,52 @@ impl<Service: PlatformTypes> BasePost<Service> {
         blobs: Vec<CachedBlobId<Service>>,
     ) -> CachedPost<Service> {
         CachedPost { base: self, blobs }
+    }
+}
+
+impl<Service: PlatformTypes> Clone for CachedBlobId<Service> {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            tg_file: self.tg_file.clone(),
+        }
+    }
+}
+
+impl<Service: PlatformTypes> Clone for CachedBlob<Service> {
+    fn clone(&self) -> Self {
+        Self {
+            blob: self.blob.clone(),
+            tg_file: self.tg_file.clone(),
+        }
+    }
+}
+
+impl<Service: PlatformTypes> Clone for BasePost<Service> {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            authors: self.authors.clone(),
+            web_url: self.web_url.clone(),
+            safety: self.safety.clone(),
+        }
+    }
+}
+
+impl<Platform: PlatformTypes> Clone for UniBlob<Platform> {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            repr: self.repr.clone(),
+        }
+    }
+}
+
+impl<Service: PlatformTypes> Clone for CachedPost<Service> {
+    fn clone(&self) -> Self {
+        Self {
+            base: self.base.clone(),
+            blobs: self.blobs.clone(),
+        }
     }
 }

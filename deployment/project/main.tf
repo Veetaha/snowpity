@@ -28,7 +28,7 @@ module "hetzner" {
   docker_password = var.docker_password
 
   allowed_ssh_ips = var.allowed_ssh_ips
-  public_ssh_key = var.public_ssh_key
+  public_ssh_key  = var.public_ssh_key
 }
 
 module "dockerhub" {

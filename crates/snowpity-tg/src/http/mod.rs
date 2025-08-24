@@ -4,7 +4,7 @@ mod json_ext;
 use crate::prelude::*;
 use async_trait::async_trait;
 use reqwest_middleware::RequestBuilder;
-use reqwest_retry::policies::ExponentialBackoff;
+use reqwest_retry::policies::{ExponentialBackoff, ExponentialBackoffTimed};
 use reqwest_retry::RetryTransientMiddleware;
 use std::time::{Duration, Instant};
 
@@ -30,10 +30,10 @@ metrics_bat::histograms! {
 
 pub type Client = reqwest_middleware::ClientWithMiddleware;
 
-pub(crate) fn default_retry_policy() -> ExponentialBackoff {
+pub(crate) fn default_retry_policy() -> ExponentialBackoffTimed {
     // Retry exponentially increasing intervals between attempts.
     ExponentialBackoff::builder()
-        .backoff_exponent(2)
+        .base(2)
         .retry_bounds(Duration::from_millis(100), Duration::from_secs(2))
         .build_with_total_retry_duration(Duration::from_secs(10))
 }
@@ -67,7 +67,7 @@ impl reqwest_middleware::Middleware for OutermostObservingMiddleware {
     async fn handle(
         &self,
         request: reqwest::Request,
-        extensions: &mut task_local_extensions::Extensions,
+        extensions: &mut http::Extensions,
         next: reqwest_middleware::Next<'_>,
     ) -> reqwest_middleware::Result<reqwest::Response> {
         let span = info_span!(
@@ -94,7 +94,7 @@ impl reqwest_middleware::Middleware for InnermostObservingMiddleware {
     async fn handle(
         &self,
         request: reqwest::Request,
-        extensions: &mut task_local_extensions::Extensions,
+        extensions: &mut http::Extensions,
         next: reqwest_middleware::Next<'_>,
     ) -> reqwest_middleware::Result<reqwest::Response> {
         let (result, duration) =
@@ -133,7 +133,7 @@ impl reqwest_middleware::Middleware for InnermostObservingMiddleware {
 async fn measure_request(
     histogram: fn(HttpResponseLabels) -> metrics::Histogram,
     request: reqwest::Request,
-    extensions: &mut task_local_extensions::Extensions,
+    extensions: &mut http::Extensions,
     next: reqwest_middleware::Next<'_>,
 ) -> reqwest_middleware::Result<reqwest::Response> {
     let labels = request_labels(&request);

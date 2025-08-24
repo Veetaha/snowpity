@@ -1,6 +1,8 @@
 # See documentation for this config file at https://github.com/crate-ci/typos/blob/master/docs/reference.md
 
-[default.extend-identifiers]
+[default.extend-words]
+# Telegram `tme` link
+tme = "tme"
 
 [files]
 extend-exclude = [

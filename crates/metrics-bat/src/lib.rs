@@ -211,7 +211,7 @@ metric_macros! {
     counters,
     counters_nonprefixed,
     describe_counter,
-    register_counter,
+    counter,
     Counter,
     $
 }
@@ -220,7 +220,7 @@ metric_macros! {
     gauges,
     gauges_nonprefixed,
     describe_gauge,
-    register_gauge,
+    gauge,
     Gauge,
     $
 }
@@ -229,7 +229,7 @@ metric_macros! {
     histograms,
     histograms_nonprefixed,
     describe_histogram,
-    register_histogram,
+    histogram,
     Histogram,
     $
 }

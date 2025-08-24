@@ -4,7 +4,7 @@
 use easy_ext::ext;
 use teloxide::prelude::*;
 use teloxide::requests::Requester;
-use teloxide::types::Message;
+use teloxide::types::{Message, ReplyParameters};
 use teloxide::utils::markdown;
 
 /// There is [`RequesterExt`] in [`teloxide::prelude`]. We name this symbol
@@ -14,8 +14,7 @@ pub(crate) impl<T: Requester> T {
     /// Send a message to the chat, but split it into multiple ones if it's too long.
     fn reply_chunked(&self, msg: &Message, text: impl Into<String>) -> Self::SendMessage {
         self.send_message(msg.chat.id, text)
-            .reply_to_message_id(msg.id)
-            .allow_sending_without_reply(true)
+            .reply_parameters(ReplyParameters::new(msg.id).allow_sending_without_reply())
     }
 
     fn reply_help_md_escaped<Cmd: teloxide::utils::command::BotCommands>(

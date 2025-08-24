@@ -10,7 +10,7 @@
 #
 # See a detailed cross-compilation guide here:
 # https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
-FROM rust:1.72.0-bookworm as build
+FROM rust:1.89.0-bookworm as build
 
 # Possible values: debug or release
 ARG RUST_BUILD_MODE="debug"

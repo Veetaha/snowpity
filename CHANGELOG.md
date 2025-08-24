@@ -1,4 +1,6 @@
-# Unreleased
+# 0.10.0 2025-08-24
+
+- Update a whole lot of dependencies
 
 # 0.9.2
 
@@ -125,7 +127,7 @@
 - Migrated to `seaorm` and then back to `sqlx`, so almost nothing changed (lol)
 - Migrated to Oracle Cloud and then back to Hetzner, so almost nothing changed (lol)
 - Migrated most of the automation from bash and xtask to `x.nu` (nushell)
-- Migrated to the latest and greates Rust `1.66.0`
+- Migrated to the latest and greatest Rust `1.66.0`
 
 ## Fixed
 

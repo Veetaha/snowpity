@@ -4,7 +4,6 @@ use bytes::Bytes;
 use fast_image_resize as fr;
 use image::ColorType;
 use metrics_bat::prelude::*;
-use std::num::NonZeroU32;
 use std::sync::OnceLock;
 
 metrics_bat::histograms! {
@@ -44,35 +43,33 @@ pub fn resize_image_to_bounding_box_sync(bytes: Bytes, box_side: u32) -> Result<
 
     let mut src = get_image_with_linear_colorspace(src)?;
 
-    let mut dest = fr::Image::new(
-        non_zero_dimension(dest_width)?,
-        non_zero_dimension(dest_height)?,
-        src.pixel_type(),
-    );
+    let mut dest = fr::images::Image::new(dest_width, dest_height, src.pixel_type());
 
     let mul_div = fr::MulDiv::default();
 
-    // Lanczos3 is the best algorithm for downsampling
-    // https://en.wikipedia.org/wiki/Lanczos_resampling
-    // Also apply antialiasing by using super sampling
-    let algorithm = fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3);
-    let mut resizer = fr::Resizer::new(algorithm);
+    let mut resizer = fr::Resizer::new();
 
     if color.has_alpha() {
         mul_div
-            .multiply_alpha_inplace(&mut src.view_mut())
+            .multiply_alpha_inplace(&mut src)
             .fatal_ctx(|| "Failed to multiply color channels by alpha")?;
     }
 
+    let options = fr::ResizeOptions::new()
+        // Lanczos3 is the best algorithm for downsampling
+        // https://en.wikipedia.org/wiki/Lanczos_resampling
+        // Also apply antialiasing by using super sampling
+        .resize_alg(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3));
+
     resizer
-        .resize(&src.view(), &mut dest.view_mut())
+        .resize(&src, &mut dest, &options)
         .fatal_ctx(|| "Failed to resize image")?;
 
     drop(src);
 
     if color.has_alpha() {
         mul_div
-            .divide_alpha_inplace(&mut dest.view_mut())
+            .divide_alpha_inplace(&mut dest)
             .fatal_ctx(|| "Failed to divide color channels by alpha")?;
     }
 
@@ -87,8 +84,8 @@ pub fn resize_image_to_bounding_box_sync(bytes: Bytes, box_side: u32) -> Result<
     image::write_buffer_with_format(
         &mut std::io::Cursor::new(&mut output),
         dest.buffer(),
-        dest.width().get(),
-        dest.height().get(),
+        dest.width(),
+        dest.height(),
         color,
         format,
     )
@@ -97,17 +94,13 @@ pub fn resize_image_to_bounding_box_sync(bytes: Bytes, box_side: u32) -> Result<
     Ok(output.into())
 }
 
-fn non_zero_dimension(dimension: u32) -> Result<NonZeroU32> {
-    NonZeroU32::new(dimension).fatal_ctx(|| "The dimension must be greater than zero")
-}
-
 // This code was based on https://github.com/Cykooz/fast_image_resize/blob/24edd65eef20596e51c23f84db79474a900e2d18/resizer/src/main.rs#L105-L225
-fn get_image_with_linear_colorspace(image: image::DynamicImage) -> Result<fr::Image<'static>> {
-    let width =
-        NonZeroU32::new(image.width()).fatal_ctx(|| "Failed to get width of the source image")?;
+fn get_image_with_linear_colorspace(
+    image: image::DynamicImage,
+) -> Result<fr::images::Image<'static>> {
+    let width = image.width();
 
-    let height =
-        NonZeroU32::new(image.height()).fatal_ctx(|| "Failed to get height of the source image")?;
+    let height = image.height();
 
     let color = image.color();
 
@@ -128,7 +121,7 @@ fn get_image_with_linear_colorspace(image: image::DynamicImage) -> Result<fr::Im
         }
     };
 
-    let mut image = fr::Image::from_vec_u8(width, height, buffer, pixel_type)
+    let mut image = fr::images::Image::from_vec_u8(width, height, buffer, pixel_type)
         .fatal_ctx(|| "Failed to create source image pixels container")?;
 
     // Convert the source image from non-linear colorspace into linear
@@ -141,15 +134,15 @@ fn get_image_with_linear_colorspace(image: image::DynamicImage) -> Result<fr::Im
     Ok(image)
 }
 
-fn map_image_colorspace(
-    image: &mut fr::Image<'_>,
+fn map_image_colorspace<'a>(
+    image: &mut fr::images::Image<'a>,
     color_type: ColorType,
     direction_fn: fn(
         &fr::PixelComponentMapper,
-        image: &mut fr::DynamicImageViewMut<'_>,
+        image: &mut fr::images::Image<'a>,
     ) -> Result<(), fr::MappingError>,
 ) -> Result<()> {
-    direction_fn(mapper_for_color_type(color_type), &mut image.view_mut()).fatal_ctx(|| {
+    direction_fn(mapper_for_color_type(color_type), image).fatal_ctx(|| {
         format!(
             "Failed to map the image from non-linear \
                 colorspace to linear. color type: {color_type:?}"

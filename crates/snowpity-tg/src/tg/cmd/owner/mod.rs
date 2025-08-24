@@ -32,7 +32,7 @@ pub(crate) async fn filter(ctx: Arc<tg::Ctx>, msg: Message) -> bool {
     async {
         let user = ctx
             .bot
-            .get_chat_member(msg.chat.id, msg.from().unwrap().id)
+            .get_chat_member(msg.chat.id, msg.from.unwrap().id)
             .await?;
 
         let span = tracing::Span::current();
@@ -61,9 +61,11 @@ pub(crate) async fn filter(ctx: Arc<tg::Ctx>, msg: Message) -> bool {
 #[async_trait]
 impl tg::cmd::Command for Cmd {
     async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result {
+        let chat = ctx.bot.get_chat(msg.chat.id).await?;
+
         let tg_chat_ctx = |action| db::TgChatQuery {
-            chat: &msg.chat,
-            requested_by: msg.from().unwrap(),
+            chat: &chat,
+            requested_by: msg.from.as_ref().unwrap(),
             action,
         };
 

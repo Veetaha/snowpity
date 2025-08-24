@@ -15,7 +15,7 @@ use std::time::Duration;
 use teloxide::prelude::*;
 use teloxide::types::{
     ChatMember, ChatMemberKind, ChatPermissions, InlineKeyboardButton, InputFile, Message,
-    MessageId, ReplyMarkup, Restricted, UntilDate, User,
+    MessageId, ReplyMarkup, ReplyParameters, Restricted, UntilDate, User,
 };
 use teloxide::utils::markdown;
 use tokio::sync::oneshot;
@@ -58,7 +58,7 @@ struct CaptchaReplyPayload {
 #[instrument(skip_all, fields(
     from = %callback_query.from.debug_id(),
     chat = callback_query.message.as_ref()
-        .map(|msg| msg.chat.debug_id())
+        .map(|msg| msg.chat().debug_id())
         .as_deref()
         .unwrap_or("{{unknown_chat}}"),
 ))]
@@ -84,7 +84,7 @@ pub(crate) async fn handle_callback_query(
         let payload: CaptchaReplyPayload = encoding::secure_decode(&callback_data)?;
 
         let user_id = callback_query.from.id;
-        let chat_id = captcha_msg.chat.id;
+        let chat_id = captcha_msg.chat().id;
 
         let payload_span = {
             let expected_user = ctx
@@ -93,7 +93,7 @@ pub(crate) async fn handle_callback_query(
                 .lock()
                 .values()
                 .find(|unverified| {
-                    unverified.captcha_msg_id == captcha_msg.id && unverified.chat_id == chat_id
+                    unverified.captcha_msg_id == captcha_msg.id() && unverified.chat_id == chat_id
                 })
                 .as_ref()
                 .map(|unverified| unverified.member.user.debug_id())
@@ -151,10 +151,12 @@ pub(crate) async fn handle_new_chat_members(
         let users: Vec<_> = users.into_iter().filter(|user| user.id != bot_id).collect();
 
         if let Some(user) = users.first() {
+            let chat = ctx.bot.get_chat(msg.chat.id).await?;
+
             let is_captcha_enabled = ctx
                 .tg_chats
                 .get_or_update_captcha(db::TgChatQuery {
-                    chat: &msg.chat,
+                    chat: &chat,
                     requested_by: user,
                     action: db::TgChatAction::HandleNewChatMember,
                 })
@@ -232,7 +234,7 @@ pub(crate) async fn handle_new_chat_members(
                 let captcha_msg = bot
                     .send_animation(chat_id, InputFile::url(image_url.clone()))
                     .caption(caption)
-                    .reply_to_message_id(msg.id)
+                    .reply_parameters(ReplyParameters::new(msg.id))
                     .reply_markup(ReplyMarkup::inline_kb(buttons))
                     .into_future()
                     .err_into();
@@ -455,7 +457,7 @@ impl UnverifiedUser {
         let user_id = self.member.user.id;
 
         match &self.member.kind {
-            ChatMemberKind::Member => {
+            ChatMemberKind::Member(_) => {
                 info!("Restoring original member permissions");
 
                 bot.restrict_chat_member(chat_id, user_id, ChatPermissions::all())
@@ -493,27 +495,37 @@ fn restricted_to_chat_perms(restricted: &Restricted) -> ChatPermissions {
         until_date: _,
         is_member: _,
         can_send_messages,
-        can_send_media_messages,
+        can_send_audios,
+        can_send_documents,
+        can_send_photos,
+        can_send_videos,
+        can_send_video_notes,
+        can_send_voice_notes,
         can_send_other_messages,
         can_add_web_page_previews,
         can_change_info,
         can_invite_users,
         can_pin_messages,
-        can_send_polls,
         can_manage_topics,
+        can_send_polls,
     } = restricted;
 
     #[rustfmt::skip]
     let perms = [
         (can_send_messages,         ChatPermissions::SEND_MESSAGES),
-        (can_send_media_messages,   ChatPermissions::SEND_MEDIA_MESSAGES),
+        (can_send_audios,           ChatPermissions::SEND_AUDIOS),
+        (can_send_documents,        ChatPermissions::SEND_DOCUMENTS),
+        (can_send_photos,           ChatPermissions::SEND_PHOTOS),
+        (can_send_videos,           ChatPermissions::SEND_VIDEOS),
+        (can_send_video_notes,      ChatPermissions::SEND_VIDEO_NOTES),
+        (can_send_voice_notes,      ChatPermissions::SEND_VOICE_NOTES),
         (can_send_other_messages,   ChatPermissions::SEND_OTHER_MESSAGES),
         (can_add_web_page_previews, ChatPermissions::ADD_WEB_PAGE_PREVIEWS),
         (can_change_info,           ChatPermissions::CHANGE_INFO),
         (can_invite_users,          ChatPermissions::INVITE_USERS),
         (can_pin_messages,          ChatPermissions::PIN_MESSAGES),
-        (can_send_polls,            ChatPermissions::SEND_POLLS),
         (can_manage_topics,         ChatPermissions::MANAGE_TOPICS),
+        (can_send_polls,            ChatPermissions::SEND_POLLS),
     ];
 
     perms

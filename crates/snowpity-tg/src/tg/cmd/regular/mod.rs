@@ -5,7 +5,7 @@ use crate::Result;
 use async_trait::async_trait;
 use ftai::FtaiCmd;
 use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardButton, InputFile, ReplyMarkup};
+use teloxide::types::{InlineKeyboardButton, InputFile, ReplyMarkup, ReplyParameters};
 use teloxide::utils::command::BotCommands;
 use teloxide::utils::markdown;
 
@@ -75,7 +75,7 @@ impl tg::cmd::Command for Cmd {
 
                 ctx.bot
                     .send_animation(msg.chat.id, animation)
-                    .reply_to_message_id(msg.id)
+                    .reply_parameters(ReplyParameters::new(msg.id))
                     .caption(help_text)
                     .reply_markup(ReplyMarkup::inline_kb(buttons))
                     .await?;
