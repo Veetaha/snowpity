@@ -7,7 +7,6 @@ pub mod display;
 pub mod encoding;
 pub mod media_conv;
 pub mod process;
-pub mod retry;
 pub mod temp_file;
 pub mod tokio;
 pub mod units;

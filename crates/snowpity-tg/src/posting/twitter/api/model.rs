@@ -16,46 +16,49 @@ pub(crate) struct MediaKey(String);
 
 sqlx_bat::impl_try_into_db_via_newtype!(MediaKey(String));
 
-#[derive(Debug)]
+/// API docs: <https://github.com/dylanpdx/BetterTwitFix>
+#[derive(Debug, Deserialize)]
 pub(crate) struct Tweet {
-    pub(crate) id: TweetId,
+    /// User's handle
+    pub(crate) user_name: String,
 
-    /// Display name of the user who posted the tweet
-    pub(crate) name: String,
+    /// User's display name that can contain special characters
+    pub(crate) user_screen_name: String,
 
-    pub(crate) username: String,
+    pub(crate) media_extended: Vec<Media>,
 
-    pub(crate) photos: Vec<twitter_scraper::Media>,
+    #[serde(default)]
+    pub(crate) possibly_sensitive: bool,
+}
 
-    pub(crate) videos: Vec<twitter_scraper::Media>,
+#[derive(Debug, Deserialize)]
+pub(crate) struct Media {
+    pub(crate) id_str: String,
 
-    pub(crate) gifs: Vec<twitter_scraper::Media>,
+    #[serde(rename = "type")]
+    pub(crate) kind: MediaType,
 
-    pub(crate) sensitive_content: bool,
+    pub(crate) url: url::Url,
+
+    #[serde(default)]
+    pub(crate) size: MediaSize,
+}
+
+#[derive(Default, Debug, Deserialize)]
+pub(crate) struct MediaSize {
+    pub(crate) height: Option<u64>,
+    pub(crate) width: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum MediaType {
+    Image,
+    Gif,
+    Video,
 }
 
 impl Tweet {
-    pub(crate) fn from_raw(id: TweetId, tweet: twitter_scraper::Tweet) -> Self {
-        let twitter_scraper::Tweet {
-            name,
-            username,
-            photos,
-            videos,
-            gifs,
-            sensitive_content,
-        } = tweet;
-
-        Self {
-            id,
-            name,
-            username,
-            photos,
-            videos,
-            gifs,
-            sensitive_content,
-        }
-    }
-
     /// URL to the Twitter web page of the user's profile
     pub(crate) fn author_web_url(&self) -> Url {
         // We could potentially create a link using the user ID, which would be
@@ -70,13 +73,16 @@ impl Tweet {
         // It's not documented anywhere, but I found this on stackoverflow:
         // https://stackoverflow.com/a/56924385/9259330
 
-        let mut web_url = Url::parse("https://twitter.com").unwrap();
+        let mut web_url = Url::parse("https://x.com").unwrap();
 
         // To be safe we push the name as a segment instead of interpolating
         // it into the parsed URL string higher to let the url library do
         // the necessary escaping for us in case twitter ever decides to
         // allow special characters in usernames.
-        web_url.path_segments_mut().unwrap().push(&self.username);
+        web_url
+            .path_segments_mut()
+            .unwrap()
+            .push(&self.user_screen_name);
 
         web_url
     }
