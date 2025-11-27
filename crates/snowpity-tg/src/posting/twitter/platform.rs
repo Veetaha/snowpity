@@ -21,7 +21,7 @@ impl PlatformTypes for Platform {
 impl PlatformTrait for Platform {
     type Config = Config;
 
-    const NAME: &'static str = "Twitter";
+    const NAME: &'static str = "X/Twitter";
 
     fn new(params: PlatformParams<Config>) -> Self {
         Self {
