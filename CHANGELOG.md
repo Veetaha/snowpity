@@ -1,3 +1,9 @@
+# 0.11.0 2025-11-28
+
+- Replace `twitterscraper` with [fixvx](https://fixvx.com/) API. `twitterscraper` unfortunately
+  stopped working again due to some Twitter changes, however `fixvx` seems to be working fine.
+- Rename `Twitter` to `X/Twitter` and use `x.com` links instead of `twitter.com` where possible.
+
 # 0.10.1 2025-08-24
 
 - Fix docker compose invocation in systemd

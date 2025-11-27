@@ -1,36 +1,28 @@
 use crate::posting::twitter::api::model::*;
 use crate::posting::twitter::Config;
 use crate::prelude::*;
-use crate::Result;
-use crate::{err_ctx, util};
+use crate::{util, Result};
 
-pub(crate) struct Client {}
+util::url::def!(pub(crate) fixvx_api, "https://api.vxtwitter.com/Twitter/status");
+
+pub(crate) struct Client {
+    client: crate::http::Client,
+}
 
 impl Client {
     // The config is used at the start of the program to initialize twitter_scraper lib
     pub(crate) fn new(_: Config) -> Self {
-        Self {}
+        Self {
+            client: crate::http::create_client(),
+        }
     }
 
+    /// API docs: <https://github.com/dylanpdx/BetterTwitFix>
     pub(crate) async fn get_tweet(&self, id: TweetId) -> Result<Tweet> {
-        let task = || async {
-            util::tokio::spawn_blocking(move || twitter_scraper::get_tweet(&id.to_string()))
-                .await
-                .map(|tweet| Tweet::from_raw(id, tweet))
-        };
-
-        // TODO: figure out how to properly differentiate between retryable
-        // and non-retryable errors here
-        util::retry::retry_http(task, |_err| true)
-            .await
-            .map_err(err_ctx!(TwitterError::Service {}))
+        let url = fixvx_api([&id.to_string()]);
+        let tweet = self.client.get(url).read_json::<Tweet>().await?;
+        Ok(tweet)
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub(crate) enum TwitterError {
-    #[error("Error getting tweet.")]
-    Service { source: twitter_scraper::Error },
 }
 
 #[cfg(test)]
@@ -43,8 +35,6 @@ mod tests {
         let _ = dotenvy::dotenv();
 
         let cfg: Config = crate::config::from_env_or_panic("TWITTER_");
-
-        twitter_scraper::initialize(&cfg.cookies);
 
         let client = Client::new(cfg);
 

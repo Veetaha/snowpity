@@ -21,7 +21,7 @@ impl PlatformTypes for Platform {
 impl PlatformTrait for Platform {
     type Config = Config;
 
-    const NAME: &'static str = "Twitter";
+    const NAME: &'static str = "X/Twitter";
 
     fn new(params: PlatformParams<Config>) -> Self {
         Self {
@@ -35,7 +35,7 @@ impl PlatformTrait for Platform {
         // https://github.com/booru/scraper/blob/095771b28521b49ae67e30db2764406a68b74395/src/scraper/twitter.rs#L16
         let (_, host, id) = parse_with_regexes!(
             query,
-            r"((?:mobile\.|vx)?(?:twitter|x)\.com)/[A-Za-z\d_]+/status/(\d+)",
+            r"(?:http(?:s)?://)?(.*(?:x|twitter|fixvx|vxtwitter)\.com)/[^/]+/status/(\d+)",
         )?;
 
         Some((host.into(), id.parse().ok()?))
@@ -48,71 +48,56 @@ impl PlatformTrait for Platform {
             .instrument(info_span!("Fetching media meta from Twitter"))
             .await?;
 
-        let web_url = tweet.tweet_url(tweet.id);
+        let web_url = tweet.tweet_url(tweet_id);
         let author = Author {
             web_url: tweet.author_web_url(),
             kind: None,
-            name: tweet.name,
+            name: tweet.user_name,
         };
 
-        // TODO: the dimensions are not available in the API right now,
-        // however this we could potentially modify the twitter-scraper
-        // code to return them. The author of that go library accepts PRs
-        //
-        // The size limits were taken from here:
-        // https://developer.twitter.com/en/docs/twitter-api/v1/media/upload-media/uploading-media/media-best-practices
+        let blobs = tweet.media_extended.into_iter().map_collect(|media| {
+            let dimensions = media
+                .size
+                .width
+                .zip(media.size.height)
+                .map(|(width, height)| MediaDimensions { width, height });
 
-        let blobs = tweet.photos.into_iter().map(|media| {
-            (
-                media.id,
-                BlobRepr {
+            let repr = match media.kind {
+                api::MediaType::Image => BlobRepr {
                     kind: BlobKind::ImageJpeg,
                     size: BlobSize::max_mb(5),
                     download_url: best_tg_url_for_photo(media.url),
-                    dimensions: None,
+                    dimensions,
                 },
-            )
-        });
-
-        let gifs = tweet.gifs.into_iter().map(|media| {
-            (
-                media.id,
-                BlobRepr {
+                api::MediaType::Gif => BlobRepr {
                     kind: BlobKind::AnimationMp4,
                     download_url: media.url,
                     size: BlobSize::max_mb(15),
-                    dimensions: None,
+                    dimensions,
                 },
-            )
-        });
+                api::MediaType::Video => {
+                    BlobRepr {
+                        kind: BlobKind::VideoMp4,
+                        // Technically the video can be up to 512MB
+                        size: BlobSize::Unknown,
+                        download_url: media.url,
+                        dimensions,
+                    }
+                }
+            };
 
-        let videos = tweet.videos.into_iter().map(|media| {
-            (
-                media.id,
-                BlobRepr {
-                    kind: BlobKind::VideoMp4,
-                    // Technically the video can be up to 512MB
-                    size: BlobSize::Unknown,
-                    download_url: media.url,
-                    dimensions: None,
-                },
-            )
-        });
-
-        let blobs = blobs
-            .chain(gifs)
-            .chain(videos)
-            .map_collect(|(id, repr)| MultiBlob {
-                id: MediaKey::from_raw(id),
+            MultiBlob {
+                id: MediaKey::from_raw(media.id_str),
                 repr: vec![repr],
-            });
+            }
+        });
 
         Ok(Post {
             base: BasePost {
-                id: tweet.id,
+                id: tweet_id,
                 web_url,
                 authors: <_>::from_iter([author]),
-                safety: SafetyRating::sfw_if(!tweet.sensitive_content),
+                safety: SafetyRating::sfw_if(!tweet.possibly_sensitive),
             },
             blobs,
         })
@@ -164,24 +149,32 @@ mod tests {
     fn smoke() {
         use crate::posting::platform::tests::assert_parse_query as test;
         test(
-            "https://twitter.com/NORDING34/status/1607191066318454791",
-            expect!["twitter.com:Twitter(TweetId(1607191066318454791))"],
+            "https://twitter.com/MouseuArt/status/1856809968261005595",
+            expect!["twitter.com:Twitter(TweetId(1856809968261005595))"],
         );
         test(
-            "https://x.com/NORDING34/status/1607191066318454791",
-            expect!["x.com:Twitter(TweetId(1607191066318454791))"],
+            "https://x.com/MouseuArt/status/1856809968261005595",
+            expect!["x.com:Twitter(TweetId(1856809968261005595))"],
         );
         test(
-            "https://vxtwitter.com/NORDING34/status/1607191066318454791",
-            expect!["vxtwitter.com:Twitter(TweetId(1607191066318454791))"],
+            "https://vxtwitter.com/MouseuArt/status/1856809968261005595",
+            expect!["vxtwitter.com:Twitter(TweetId(1856809968261005595))"],
         );
         test(
-            "https://mobile.twitter.com/NORDING34/status/1607191066318454791",
-            expect!["mobile.twitter.com:Twitter(TweetId(1607191066318454791))"],
+            "https://mobile.twitter.com/MouseuArt/status/1856809968261005595",
+            expect!["mobile.twitter.com:Twitter(TweetId(1856809968261005595))"],
         );
         test(
-            "https://mobile.x.com/NORDING34/status/1607191066318454791",
-            expect!["mobile.x.com:Twitter(TweetId(1607191066318454791))"],
+            "https://mobile.x.com/MouseuArt/status/1856809968261005595",
+            expect!["mobile.x.com:Twitter(TweetId(1856809968261005595))"],
         );
+        test(
+            "https://fixvx.com/MouseuArt/status/1856809968261005595",
+            expect!["fixvx.com:Twitter(TweetId(1856809968261005595))"],
+        );
+        test(
+            "https://anysubdomain.fixvx.com/MouseuArt/status/1856809968261005595",
+            expect!["anysubdomain.fixvx.com:Twitter(TweetId(1856809968261005595))"],
+        )
     }
 }

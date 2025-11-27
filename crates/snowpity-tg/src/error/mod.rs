@@ -96,12 +96,6 @@ pub(crate) enum ErrorKind {
         source: crate::posting::PostingError,
     },
 
-    #[error(transparent)]
-    Twitter {
-        #[from]
-        source: crate::posting::twitter::TwitterError,
-    },
-
     #[error("Not implemented yet: {message}")]
     // This variant is used only as a gag when we postpone the implementation
     // for the future, therefore it's not always used.
@@ -132,7 +126,6 @@ impl Error {
             | ErrorKind::InlineQuery { .. } => true,
             ErrorKind::Multiple { errs } => errs.iter().all(Self::is_user_error),
             ErrorKind::HttpClient { .. }
-            | ErrorKind::Twitter { .. }
             | ErrorKind::FtAi { .. }
             | ErrorKind::Tg { .. }
             | ErrorKind::Db { .. }
