@@ -101,4 +101,3 @@ metrics-bat-macros = { path = "crates/metrics-bat-macros" }
 snowpity-tg-macros = { path = "crates/snowpity-tg-macros" }
 sqlx-bat           = { path = "crates/sqlx-bat" }
 test-bat           = { path = "crates/test-bat" }
-twitter-scraper    = { path = "crates/twitter-scraper" }

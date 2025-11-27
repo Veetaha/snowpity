@@ -391,15 +391,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
-name = "cgo"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e801bd75570091765af086c1d43cfb39085114d8d477966570c653a3d5c6fd8"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4151,7 +4142,6 @@ dependencies = [
  "tracing-error",
  "tracing-loki",
  "tracing-subscriber",
- "twitter-scraper",
  "url",
  "vergen",
  "wav_io",
@@ -5069,21 +5059,6 @@ name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
-
-[[package]]
-name = "twitter-scraper"
-version = "0.10.1"
-dependencies = [
- "cgo",
- "dotenvy",
- "expect-test",
- "serde",
- "serde_json",
- "serde_with",
- "test-bat",
- "thiserror 2.0.16",
- "url",
-]
 
 [[package]]
 name = "typenum"

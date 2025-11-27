@@ -126,7 +126,6 @@ impl Error {
             | ErrorKind::InlineQuery { .. } => true,
             ErrorKind::Multiple { errs } => errs.iter().all(Self::is_user_error),
             ErrorKind::HttpClient { .. }
-            | ErrorKind::Twitter { .. }
             | ErrorKind::FtAi { .. }
             | ErrorKind::Tg { .. }
             | ErrorKind::Db { .. }
