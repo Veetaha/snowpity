@@ -35,7 +35,7 @@ impl PlatformTrait for Platform {
         // https://github.com/booru/scraper/blob/095771b28521b49ae67e30db2764406a68b74395/src/scraper/twitter.rs#L16
         let (_, host, id) = parse_with_regexes!(
             query,
-            r"((?:x|twitter|fixvx|vxtwitter)\.com)/[^/]+/status/(\d+)",
+            r"(?:http(?:s)?://)?(.*(?:x|twitter|fixvx|vxtwitter)\.com)/[^/]+/status/(\d+)",
         )?;
 
         Some((host.into(), id.parse().ok()?))
@@ -174,7 +174,7 @@ mod tests {
         );
         test(
             "https://anysubdomain.fixvx.com/MouseuArt/status/1856809968261005595",
-            expect!["fixvx.com:Twitter(TweetId(1856809968261005595))"],
+            expect!["anysubdomain.fixvx.com:Twitter(TweetId(1856809968261005595))"],
         )
     }
 }
