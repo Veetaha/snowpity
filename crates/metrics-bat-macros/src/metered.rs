@@ -1,6 +1,6 @@
 use crate::Result;
-use darling::ast::NestedMeta;
 use darling::FromMeta;
+use darling::ast::NestedMeta;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;

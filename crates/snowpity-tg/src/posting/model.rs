@@ -1,8 +1,8 @@
-use super::platform::prelude::*;
 use super::AllPlatforms;
+use super::platform::prelude::*;
 use crate::prelude::*;
 use crate::util::units::MB;
-use crate::{tg, Result};
+use crate::{Result, tg};
 use heck::ToPascalCase;
 use itertools::Itertools;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -364,11 +364,7 @@ impl UniBlob {
 impl SafetyRating {
     /// Simple conditional creation of [`SafetyRating::Sfw`] or [`SafetyRating::nsfw()`].
     pub(crate) fn sfw_if(condition: bool) -> Self {
-        if condition {
-            Self::Sfw
-        } else {
-            Self::nsfw()
-        }
+        if condition { Self::Sfw } else { Self::nsfw() }
     }
 
     /// Returns [`SafetyRating::Nsfw`] with no additional information about the

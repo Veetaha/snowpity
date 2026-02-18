@@ -1,6 +1,6 @@
+use crate::Result;
 use crate::posting::platform::prelude::*;
 use crate::prelude::*;
-use crate::Result;
 
 use itertools::Either;
 use reqwest::Url;
@@ -128,7 +128,7 @@ mod tests {
         );
         test(
             "https://derpicdn.net/img/download/2022/12/28/3015836__safe_artist-colon-shadowreindeer_foo.jpg",
-            expect!["derpicdn.net/img/download:Derpibooru(MediaId(3015836))"]
+            expect!["derpicdn.net/img/download:Derpibooru(MediaId(3015836))"],
         );
     }
 }

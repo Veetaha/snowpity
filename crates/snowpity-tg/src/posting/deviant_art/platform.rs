@@ -1,8 +1,8 @@
+use crate::Result;
 use crate::posting::deviant_art::api::{self, DeviationId};
-use crate::posting::deviant_art::{db, Config};
+use crate::posting::deviant_art::{Config, db};
 use crate::posting::platform::prelude::*;
 use crate::prelude::*;
-use crate::Result;
 use async_trait::async_trait;
 
 pub(crate) struct Platform {
@@ -120,7 +120,7 @@ impl PlatformTrait for Platform {
             _ => {
                 return Err(crate::fatal!(
                     "Unsupported DeviantArt file extension: `{file_extension}`",
-                ))
+                ));
             }
         };
 

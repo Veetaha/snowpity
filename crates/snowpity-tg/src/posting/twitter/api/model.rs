@@ -1,6 +1,6 @@
 use reqwest::Url;
 use serde::Deserialize;
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 
 #[serde_as]
 #[derive(

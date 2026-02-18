@@ -1,8 +1,8 @@
+use crate::Result;
 use crate::http;
 use crate::posting::derpilike::api::model::*;
 use crate::posting::derpilike::{Config, DerpiPlatformKind};
 use crate::prelude::*;
-use crate::Result;
 
 pub(crate) struct Client {
     http: http::Client,

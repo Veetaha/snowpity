@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{fatal, Result};
+use crate::{Result, fatal};
 use std::process::Stdio;
 
 pub(crate) async fn run(program: &str, args: &[&str]) -> Result<Vec<u8>> {

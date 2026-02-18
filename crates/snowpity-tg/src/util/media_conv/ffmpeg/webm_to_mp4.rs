@@ -1,6 +1,6 @@
-use super::{ffmpeg, COMMON_ARGS};
-use crate::prelude::*;
+use super::{COMMON_ARGS, ffmpeg};
 use crate::Result;
+use crate::prelude::*;
 use std::path::Path;
 use tempfile::TempPath;
 

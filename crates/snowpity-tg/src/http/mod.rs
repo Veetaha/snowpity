@@ -4,8 +4,8 @@ mod json_ext;
 use crate::prelude::*;
 use async_trait::async_trait;
 use reqwest_middleware::RequestBuilder;
-use reqwest_retry::policies::{ExponentialBackoff, ExponentialBackoffTimed};
 use reqwest_retry::RetryTransientMiddleware;
+use reqwest_retry::policies::{ExponentialBackoff, ExponentialBackoffTimed};
 use std::time::{Duration, Instant};
 
 pub(crate) mod prelude {

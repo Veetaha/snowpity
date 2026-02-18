@@ -1,7 +1,7 @@
+use crate::Error;
 use crate::prelude::*;
 use crate::tg::Bot;
 use crate::util::DynResult;
-use crate::Error;
 use futures::prelude::*;
 use std::future::IntoFuture;
 use teloxide::prelude::*;

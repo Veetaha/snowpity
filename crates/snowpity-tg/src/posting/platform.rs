@@ -1,5 +1,5 @@
 use super::model::*;
-use crate::{http, Result};
+use crate::{Result, http};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::fmt;
@@ -8,8 +8,8 @@ use std::str::FromStr;
 
 pub(crate) mod prelude {
     pub(crate) use super::{
-        parse_with_regexes, ConfigTrait, DisplayInFileName, DisplayInFileNameViaToString,
-        ParsedQuery, PlatformParams, PlatformTrait, PlatformTypes,
+        ConfigTrait, DisplayInFileName, DisplayInFileNameViaToString, ParsedQuery, PlatformParams,
+        PlatformTrait, PlatformTypes, parse_with_regexes,
     };
     pub(crate) use crate::posting::model::*;
 }
@@ -130,7 +130,7 @@ pub(crate) use parse_with_regexes;
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::posting::all_platforms;
-    use expect_test::{expect, Expect};
+    use expect_test::{Expect, expect};
 
     #[track_caller]
     pub(crate) fn assert_parse_query(query: &str, expected: Expect) {

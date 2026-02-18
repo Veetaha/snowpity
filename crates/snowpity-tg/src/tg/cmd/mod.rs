@@ -4,7 +4,7 @@ pub(crate) mod regular;
 
 use crate::prelude::*;
 use crate::util::DynResult;
-use crate::{tg, Result};
+use crate::{Result, tg};
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use std::fmt;
@@ -21,8 +21,8 @@ pub(crate) trait Command: fmt::Debug + Send + Sync + 'static {
     async fn handle(self, ctx: &tg::Ctx, msg: &Message) -> Result;
 }
 
-pub(crate) fn handle<'a, C: Command>(
-) -> impl Fn(Arc<tg::Ctx>, Message, C) -> BoxFuture<'a, DynResult> {
+pub(crate) fn handle<'a, C: Command>()
+-> impl Fn(Arc<tg::Ctx>, Message, C) -> BoxFuture<'a, DynResult> {
     move |ctx, msg, cmd| {
         let info = info_span!(
             "handle_message",

@@ -1,8 +1,8 @@
 use super::derpilike::{derpibooru, furbooru, manebooru, ponerpics, ponybooru, tantabus, twibooru};
 use super::platform::prelude::*;
 use super::{deviant_art, twitter};
-use crate::prelude::*;
 use crate::Result;
+use crate::prelude::*;
 use assert_matches::assert_matches;
 
 macro_rules! def_all_platforms {

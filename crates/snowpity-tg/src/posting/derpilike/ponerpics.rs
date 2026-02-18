@@ -1,7 +1,7 @@
 use self::derpitools::Derpitools;
+use crate::Result;
 use crate::posting::derpilike::api::MediaId;
 use crate::posting::derpilike::*;
-use crate::Result;
 use async_trait::async_trait;
 
 pub(crate) struct Platform {

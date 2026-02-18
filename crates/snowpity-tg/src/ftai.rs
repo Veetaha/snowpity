@@ -1,7 +1,7 @@
 //! Symbols related to communicating with the 15.ai API
 
 use crate::prelude::*;
-use crate::{err, err_ctx, Result};
+use crate::{Result, err, err_ctx};
 use crate::{http, util};
 
 /// Limit of the text length that can be passed to 15.ai for voice generation
@@ -123,6 +123,8 @@ pub(crate) enum FtAiError {
     #[error("Failed to encode the resampled WAV to OGG")]
     EncodeWavToOpus { source: ogg_opus::Error },
 
-    #[error("Invalid input. Please check the name of the character on 15.ai website, or check your input for typos.")]
+    #[error(
+        "Invalid input. Please check the name of the character on 15.ai website, or check your input for typos."
+    )]
     Service { source: Box<crate::Error> },
 }

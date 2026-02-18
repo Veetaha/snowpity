@@ -1,4 +1,4 @@
-use super::{err, DynError, ErrorKind, Result};
+use super::{DynError, ErrorKind, Result, err};
 use easy_ext::ext;
 
 #[ext(ResultExt)]

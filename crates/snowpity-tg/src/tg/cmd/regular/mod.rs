@@ -1,7 +1,7 @@
 mod ftai;
 
-use crate::tg;
 use crate::Result;
+use crate::tg;
 use async_trait::async_trait;
 use ftai::FtaiCmd;
 use teloxide::prelude::*;

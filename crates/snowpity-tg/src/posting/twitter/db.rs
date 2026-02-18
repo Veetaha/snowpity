@@ -1,7 +1,7 @@
-use crate::posting::twitter::api::{MediaKey, TweetId};
-use crate::posting::TgFileMeta;
-use crate::prelude::*;
 use crate::Result;
+use crate::posting::TgFileMeta;
+use crate::posting::twitter::api::{MediaKey, TweetId};
+use crate::prelude::*;
 use futures::prelude::*;
 use sqlx_bat::prelude::*;
 

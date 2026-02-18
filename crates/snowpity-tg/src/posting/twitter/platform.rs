@@ -1,8 +1,8 @@
+use crate::Result;
 use crate::posting::platform::prelude::*;
 use crate::posting::twitter::api::{self, MediaKey, TweetId};
-use crate::posting::twitter::{db, Config};
+use crate::posting::twitter::{Config, db};
 use crate::prelude::*;
-use crate::Result;
 use async_trait::async_trait;
 use url::Url;
 

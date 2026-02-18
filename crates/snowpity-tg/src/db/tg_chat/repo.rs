@@ -1,6 +1,6 @@
 use super::model::*;
-use crate::prelude::*;
 use crate::Result;
+use crate::prelude::*;
 use sea_query::{Expr, OnConflict};
 use sqlx_bat::prelude::*;
 use teloxide::types::{ChatFullInfo, User};
