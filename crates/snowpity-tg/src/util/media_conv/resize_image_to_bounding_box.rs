@@ -11,14 +11,14 @@ metrics_bat::histograms! {
     resize_image_to_bounding_box_duration_seconds = crate::metrics::DEFAULT_DURATION_BUCKETS;
 }
 
-pub(crate) async fn resize_image_to_bounding_box(bytes: Bytes, box_side: u32) -> Result<Bytes> {
+pub async fn resize_image_to_bounding_box(bytes: Bytes, box_side: u32) -> Result<Bytes> {
     crate::util::tokio::spawn_blocking(move || resize_image_to_bounding_box_sync(bytes, box_side))
         .record_duration(resize_image_to_bounding_box_duration_seconds, vec![])
         .with_duration_log("Resize image to bounding box")
         .await
 }
 
-pub(crate) fn resize_image_to_bounding_box_sync(bytes: Bytes, box_side: u32) -> Result<Bytes> {
+pub fn resize_image_to_bounding_box_sync(bytes: Bytes, box_side: u32) -> Result<Bytes> {
     let format =
         image::guess_format(&bytes).fatal_ctx(|| "Couldn't guess the format of the image")?;
 
