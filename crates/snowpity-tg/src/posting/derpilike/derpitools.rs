@@ -102,11 +102,12 @@ impl Derpitools {
 #[derive(strum::Display, strum::IntoStaticStr, Debug, Clone, Copy)]
 pub(crate) enum DerpiPlatformKind {
     Derpibooru,
+    Furbooru,
     Manebooru,
     Ponerpics,
     Ponybooru,
+    Tantabus,
     Twibooru,
-    Furbooru,
 }
 
 impl DerpiPlatformKind {
@@ -124,6 +125,7 @@ impl DerpiPlatformKind {
             DerpiPlatformKind::Manebooru => "manebooru",
             DerpiPlatformKind::Ponerpics => "ponerpics",
             DerpiPlatformKind::Ponybooru => "ponybooru",
+            DerpiPlatformKind::Tantabus => "tantabus",
             DerpiPlatformKind::Twibooru => "twibooru",
         }
     }
@@ -135,6 +137,7 @@ impl DerpiPlatformKind {
             DerpiPlatformKind::Manebooru => "https://manebooru.art",
             DerpiPlatformKind::Ponerpics => "https://ponerpics.org",
             DerpiPlatformKind::Ponybooru => "https://ponybooru.org",
+            DerpiPlatformKind::Tantabus => "https://tantabus.ai",
             DerpiPlatformKind::Twibooru => "https://twibooru.org",
         };
         url.parse().unwrap_or_else(|err| {

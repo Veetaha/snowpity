@@ -17,6 +17,7 @@ pub(crate) mod furbooru;
 pub(crate) mod manebooru;
 pub(crate) mod ponerpics;
 pub(crate) mod ponybooru;
+pub(crate) mod tantabus;
 pub(crate) mod twibooru;
 
 #[derive(Clone, Deserialize)]

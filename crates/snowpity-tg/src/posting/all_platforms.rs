@@ -1,4 +1,4 @@
-use super::derpilike::{derpibooru, furbooru, manebooru, ponerpics, ponybooru, twibooru};
+use super::derpilike::{derpibooru, furbooru, manebooru, ponerpics, ponybooru, tantabus, twibooru};
 use super::platform::prelude::*;
 use super::{deviant_art, twitter};
 use crate::prelude::*;
@@ -172,7 +172,9 @@ def_all_platforms! {
     [manebooru, Manebooru],
     [ponerpics, Ponerpics],
     [ponybooru, Ponybooru],
+    [tantabus, Tantabus],
     [twibooru, Twibooru],
+
     [twitter, Twitter],
     [deviant_art, DeviantArt],
 }
