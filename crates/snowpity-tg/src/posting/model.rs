@@ -46,9 +46,11 @@ pub(crate) enum BlobKind {
     /// Soundless MP4 video is considered to be an animation
     AnimationMp4,
 
-    // TODO(Havoc)
-    /// Use this only if MP4 is not supported from the source.
     /// Webm file will be converted to MP4 via ffmpeg.
+    #[expect(
+        dead_code,
+        reason = "TODO: Use this only if MP4 is not supported from the source."
+    )]
     VideoWebm,
 
     /// Best not to have gifs, but MP4s. Use this only if MP4 is not supported
