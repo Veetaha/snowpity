@@ -1,7 +1,7 @@
 use crate::posting::{self, TgFileKind};
 use crate::prelude::*;
-use crate::util::{encoding, DynResult};
-use crate::{err, tg, Error, ErrorKind};
+use crate::util::{DynResult, encoding};
+use crate::{Error, ErrorKind, err, tg};
 use futures::prelude::*;
 use itertools::Itertools;
 use metrics_bat::prelude::*;
@@ -23,7 +23,7 @@ const CACHE_TIME_SECS: u32 = 0;
 
 metrics_bat::labels! {
     InlineQueryTotalLabels { user }
-    InlineQueryLabels { posting_platform_host }
+    InlineQueryLabels { posting_platform_origin }
 }
 
 metrics_bat::counters! {
@@ -91,7 +91,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     .increment(1);
 
     let labels = InlineQueryLabels {
-        posting_platform_host: parsed_query.origin,
+        posting_platform_origin: parsed_query.origin,
     };
 
     async {
@@ -240,12 +240,12 @@ fn make_inline_query_result(
 /// XXX: This handler must be enabled manually via `/setinlinefeedback` command in
 /// Telegram BotFather, otherwise `ChosenInlineResult` updates will not be sent.
 pub(crate) async fn handle_chosen_inline_result(result: ChosenInlineResult) -> DynResult {
-    let posting_platform_host = posting::parse_query(&result.query)
+    let posting_platform_origin = posting::parse_query(&result.query)
         .map(|parsed_query| parsed_query.origin)
         .unwrap_or("{unknown}".to_owned());
 
     let labels = InlineQueryLabels {
-        posting_platform_host,
+        posting_platform_origin,
     };
 
     chosen_inline_results_total(labels).increment(1);

@@ -1310,7 +1310,7 @@
             "uid": "victoria-metrics"
           },
           "editorMode": "code",
-          "expr": "sum by (posting_platform_host) (increase(snowpity_tg_chosen_inline_results_total[8i]))",
+          "expr": "sum by (posting_platform_origin) (increase(snowpity_tg_chosen_inline_results_total[8i]))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"

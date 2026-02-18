@@ -1,3 +1,16 @@
+# 0.12.0 2025-02-18
+
+- Add support for numerous derpi altboorus (thanks [@nitkach](https://github.com/nitkach) for the contribution):
+    - [derpibooru](https://derpibooru.org)
+    - [furbooru](https://furbooru.org)
+    - [manebooru](https://manebooru.art)
+    - [ponerpics](https://ponerpics.org)
+    - [ponybooru](https://ponybooru.org)
+    - [tantabus](https://tantabus.ai)
+    - [twibooru](https://twibooru.org)
+- Add support for derpibooru mirrors such as [trixiebooru](https://trixiebooru.org)
+- Add special handling for `prompter` and `editor` tags to treat them as authorship tags (thanks [@nitkach](https://github.com/nitkach) for the contribution)
+
 # 0.11.0 2025-11-28
 
 - Replace `twitterscraper` with [fixvx](https://fixvx.com/) API. `twitterscraper` unfortunately
