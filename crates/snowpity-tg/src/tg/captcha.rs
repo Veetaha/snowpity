@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use crate::tg::{self, Bot};
-use crate::util::{encoding, DynResult};
-use crate::{db, err, Error, ErrorKind, Result};
+use crate::util::{DynResult, encoding};
+use crate::{Error, ErrorKind, Result, db, err};
 use chrono::prelude::*;
 use futures::prelude::*;
 use itertools::Itertools;
@@ -530,7 +530,7 @@ fn restricted_to_chat_perms(restricted: &Restricted) -> ChatPermissions {
 
     perms
         .into_iter()
-        .filter(|(&enabled, _)| enabled)
+        .filter(|&(&enabled, _)| enabled)
         .map(|(_, perm)| perm)
         .collect()
 }

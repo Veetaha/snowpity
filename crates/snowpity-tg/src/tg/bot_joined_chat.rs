@@ -1,7 +1,7 @@
+use crate::Error;
 use crate::db::TgChatQuery;
 use crate::prelude::*;
 use crate::util::DynResult;
-use crate::Error;
 use crate::{db, tg};
 use futures::prelude::*;
 use std::sync::Arc;

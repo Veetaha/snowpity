@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{err, tg, Error, Result};
+use crate::{Error, Result, err, tg};
 use std::str::FromStr;
 use teloxide::prelude::*;
 use teloxide::types::{InputFile, Message, ReplyParameters};
@@ -81,6 +81,8 @@ pub(crate) enum FtaiCommandError {
     )]
     TextTooLong { actual_len: usize },
 
-    #[error("The command for 15.ai must have the character name, a comma (,) and the text: <character name>,<text>")]
+    #[error(
+        "The command for 15.ai must have the character name, a comma (,) and the text: <character name>,<text>"
+    )]
     InvalidFormat,
 }

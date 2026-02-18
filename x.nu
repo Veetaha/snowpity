@@ -76,8 +76,8 @@ def "main docker build" [
 
     info $"Building in ($build_mode) mode..."
 
-    docker-build tg-bot --push $push --context . --build-args [[RUST_BUILD_MODE $build_mode]]
-    docker-build grafana --push $push --context ./docker/grafana
+    docker-build tg-bot --push=$push --context . --build-args [[RUST_BUILD_MODE $build_mode]]
+    docker-build grafana --push=$push --context ./docker/grafana
 }
 
 # Start all services locally using `docker compose`
@@ -339,11 +339,10 @@ def with-debug [cmd: string, ...args: any] {
 
     debug $invocation
 
-    let result = (run-external $cmd $args | complete)
+    let result = (run-external --trim-end-newline $cmd $args | complete)
     let span = (metadata $cmd).span;
 
     if $result.exit_code != 0 {
-        let invocation = [$invocation] | table --collapse
         error make --unspanned {
             msg: $"Command exited with code ($result.exit_code)\n($invocation)"
         }
@@ -382,37 +381,10 @@ def --env docker-compose-config [] {
     }
 }
 
-def --env wait-for-db [] {
-    let db_url = (
-        docker-compose-config
-        | get services.tg-bot.environment.DATABASE_URL
-        | url parse
-    )
-
-    let db_name = $db_url.path | parse "/{name}").0.name
-
-    let postgres_image = (docker-compose-config).services.postgres.image
-
-    let wait_time = 1min
-    let delay = 200ms
-    let max_retries = $wait_time / $delay
-
-    with-retry --fixed --max-retries $max_retries --delay $delay {(
-        with-debug docker run
-            '--network' 'snowpity_postgres'
-            $postgres_image
-            pg_isready
-            '--dbname' $db_name
-            '--host' $db_url.host
-            '--port' $db_url.port
-            '--username' $db_url.username
-    )}
-}
-
 # Returns a pair of tags with the exact version and "latest" tag
 def --env docker-build [
     component: string
-    --push: bool = false
+    --push
     --build-args: list = []
     --context: string
 ] {

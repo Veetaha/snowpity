@@ -11,7 +11,7 @@ use crate::ftai::FtaiService;
 use crate::prelude::*;
 use crate::sysinfo::SysInfoService;
 use crate::util::encoding;
-use crate::{db, http, posting, Result};
+use crate::{Result, db, http, posting};
 use captcha::CaptchaCtx;
 use dptree::di::DependencyMap;
 use inline_query::InlineQueryService;

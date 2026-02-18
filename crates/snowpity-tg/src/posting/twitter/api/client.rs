@@ -1,7 +1,7 @@
-use crate::posting::twitter::api::model::*;
 use crate::posting::twitter::Config;
+use crate::posting::twitter::api::model::*;
 use crate::prelude::*;
-use crate::{util, Result};
+use crate::{Result, util};
 
 util::url::def!(pub(crate) fixvx_api, "https://api.vxtwitter.com/Twitter/status");
 

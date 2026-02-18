@@ -1,7 +1,7 @@
 use crate::posting::{self, TgFileKind};
 use crate::prelude::*;
-use crate::util::{encoding, DynResult};
-use crate::{err, tg, Error, ErrorKind};
+use crate::util::{DynResult, encoding};
+use crate::{Error, ErrorKind, err, tg};
 use futures::prelude::*;
 use itertools::Itertools;
 use metrics_bat::prelude::*;
@@ -23,7 +23,7 @@ const CACHE_TIME_SECS: u32 = 0;
 
 metrics_bat::labels! {
     InlineQueryTotalLabels { user }
-    InlineQueryLabels { posting_platform_host }
+    InlineQueryLabels { posting_platform_origin }
 }
 
 metrics_bat::counters! {
@@ -62,7 +62,7 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 
     let inline_query_id = query.id;
 
-    let Some((posting_platform_host, request_id)) = posting::parse_query(&query.query) else {
+    let Some(parsed_query) = posting::parse_query(&query.query) else {
         inline_queries_skipped_total(vec![]).increment(1);
 
         info!("Skipping inline query");
@@ -91,13 +91,14 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
     .increment(1);
 
     let labels = InlineQueryLabels {
-        posting_platform_host: posting_platform_host.to_owned(),
+        posting_platform_origin: parsed_query.origin,
     };
 
     async {
         let request = posting::CachePostRequest {
             requested_by: query.from,
-            id: request_id,
+            request: parsed_query.request,
+            mirror: parsed_query.mirror,
         };
 
         let post = inline_query.posting.cache_post(request).await?;
@@ -115,10 +116,9 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 
         let total_blobs = post.blobs.len();
 
-        let results = post
-            .blobs
-            .into_iter()
-            .map(|blob| make_inline_query_result(&comments, &post.base, blob));
+        let results = post.blobs.into_iter().map(|blob| {
+            make_inline_query_result(&comments, &post.base, post.mirror.as_ref(), blob)
+        });
 
         bot.answer_inline_query(inline_query_id.clone(), results)
             .is_personal(false)
@@ -196,9 +196,10 @@ pub(crate) async fn handle(ctx: Arc<tg::Ctx>, query: InlineQuery) -> DynResult {
 fn make_inline_query_result(
     comments: &str,
     post: &posting::BasePost,
+    mirror: Option<&posting::Mirror>,
     blob: posting::CachedBlobId,
 ) -> InlineQueryResult {
-    let mut caption = post.caption();
+    let mut caption = post.caption(mirror);
     if !comments.is_empty() {
         caption = format!("{caption}\n\n{}", markdown::escape(comments));
     }
@@ -211,7 +212,7 @@ fn make_inline_query_result(
     match blob.tg_file.kind {
         TgFileKind::Photo => InlineQueryResultCachedPhoto::new(id, file_id)
             .caption(caption)
-            // XXX: title is ignored for photos in in results preview popup.
+            // XXX: title is ignored for photos in results preview popup.
             // That's really surprising, but that's how telegram works -_-
             .title(title)
             .parse_mode(parse_mode)
@@ -239,12 +240,12 @@ fn make_inline_query_result(
 /// XXX: This handler must be enabled manually via `/setinlinefeedback` command in
 /// Telegram BotFather, otherwise `ChosenInlineResult` updates will not be sent.
 pub(crate) async fn handle_chosen_inline_result(result: ChosenInlineResult) -> DynResult {
-    let posting_platform_host = posting::parse_query(&result.query)
-        .map(|(host, _id)| host)
+    let posting_platform_origin = posting::parse_query(&result.query)
+        .map(|parsed_query| parsed_query.origin)
         .unwrap_or("{unknown}".to_owned());
 
     let labels = InlineQueryLabels {
-        posting_platform_host,
+        posting_platform_origin,
     };
 
     chosen_inline_results_total(labels).increment(1);

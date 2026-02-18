@@ -3,16 +3,18 @@ use crate::posting::platform::prelude::*;
 use crate::posting::{PostingContext, PostingError};
 use crate::prelude::*;
 use crate::util::units::MB;
-use crate::util::{display, media_conv, DynError};
-use crate::{err, fatal, Result};
+use crate::util::{DynError, display, media_conv};
+use crate::{Result, err, fatal};
 use assert_matches::assert_matches;
 use derive_more::Deref;
 use from_variants::FromVariants;
 use fs_err::tokio as fs;
 use futures::prelude::*;
 use metrics_bat::prelude::*;
+use std::path::PathBuf;
 use teloxide::prelude::*;
 use teloxide::types::{FileMeta, InputFile, MessageKind};
+use tempfile::TempPath;
 
 /// If the blob is larger than this, then we will refuse to download it, because
 /// it's too big for us to handle, or it could be a malicious blob.
@@ -63,6 +65,7 @@ metrics_bat::histograms! {
 
 pub(crate) async fn upload(
     base: &PostingContext,
+    mirror: Option<&Mirror>,
     post: &BasePost,
     blob: MultiBlob,
     requested_by: &teloxide::types::User,
@@ -76,6 +79,7 @@ pub(crate) async fn upload(
         };
         let ctx = TgUploadContext {
             base,
+            mirror,
             post,
             blob,
             requested_by,
@@ -86,7 +90,7 @@ pub(crate) async fn upload(
                 return Ok(CachedBlob {
                     blob: ctx.blob,
                     tg_file,
-                })
+                });
             }
             Err(err) => err,
         };
@@ -103,6 +107,7 @@ pub(crate) async fn upload(
 struct TgUploadContext<'a> {
     #[deref(forward)]
     base: &'a PostingContext,
+    mirror: Option<&'a Mirror>,
     post: &'a BasePost,
     blob: UniBlob,
     requested_by: &'a teloxide::types::User,
@@ -123,6 +128,7 @@ impl TgUploadContext<'_> {
             ImageJpeg | ImagePng | ImageSvg => self.upload_image().await,
             AnimationMp4 => self.upload_mpeg4_gif().await,
             VideoMp4 => self.upload_video().await,
+            VideoWebm => self.upload_webm_as_mpeg4().await,
             AnimationGif => self.upload_gif_as_mpeg4_gif().await,
         }
     }
@@ -147,7 +153,7 @@ impl TgUploadContext<'_> {
 
         let ctx = self.file_kind(TgFileKind::Photo);
 
-        let max_size = self.blob.repr.size.to_max_or_zero();
+        let max_size = self.blob.repr.size_hint.to_max_or_zero();
 
         if max_size <= MAX_TG_PHOTO_SIZE.by_url {
             try_return_upload!(ctx.by_url());
@@ -209,18 +215,30 @@ impl TgUploadContext<'_> {
     }
 
     async fn upload_gif_as_mpeg4_gif(&self) -> Result<TgFileMeta> {
-        let ctx = self.file_kind(TgFileKind::Mpeg4Gif);
+        self.upload_as_mpeg4(TgFileKind::Mpeg4Gif, media_conv::gif_to_mp4)
+            .await
+    }
+
+    async fn upload_webm_as_mpeg4(&self) -> Result<TgFileMeta> {
+        self.upload_as_mpeg4(TgFileKind::Video, media_conv::webm_to_mp4)
+            .await
+    }
+
+    async fn upload_as_mpeg4<Fut>(
+        &self,
+        file_kind: TgFileKind,
+        converter: fn(PathBuf) -> Fut,
+    ) -> Result<TgFileMeta>
+    where
+        Fut: Future<Output = Result<TempPath>>,
+    {
+        let ctx = self.file_kind(file_kind);
 
         let local_blob = ctx.download_blob_to_disk(MAX_DOWNLOAD_SIZE).await?;
 
-        let output = media_conv::gif_to_mp4(&local_blob.blob).await?;
+        let output = converter(local_blob.blob.to_path_buf()).await?;
 
-        let size = fs::metadata(&output)
-            .await
-            .fatal_ctx(|| "Failed to read generated GIF meta")?
-            .len();
-
-        let local_blob = LocalBlob { blob: output, size };
+        let local_blob = LocalBlob::from_temp_path(output).await?;
 
         ctx.by_multipart(&local_blob.upcast()).upload().await
     }
@@ -236,7 +254,7 @@ impl TgUploadContext<'_> {
     async fn upload_mp4(&self, file_kind: TgFileKind) -> Result<TgFileMeta> {
         let ctx = self.file_kind(file_kind);
 
-        if self.blob.repr.size.to_max_or_zero() <= MAX_TG_FILE_SIZE.by_url {
+        if self.blob.repr.size_hint.to_max_or_zero() <= MAX_TG_FILE_SIZE.by_url {
             try_return_upload!(ctx.by_url());
         }
 
@@ -251,10 +269,10 @@ impl TgUploadContext<'_> {
     async fn upload_document(&self, maybe_local_blob: MaybeLocalBlob) -> Result<TgFileMeta> {
         let ctx = self.file_kind(TgFileKind::Document);
 
-        if self.blob.repr.size.to_max_or_zero() <= MAX_TG_FILE_SIZE.by_url {
-            if let MaybeLocalBlob::None = &maybe_local_blob {
-                try_return_upload!(ctx.by_url());
-            }
+        if self.blob.repr.size_hint.to_max_or_zero() <= MAX_TG_FILE_SIZE.by_url
+            && let MaybeLocalBlob::None = &maybe_local_blob
+        {
+            try_return_upload!(ctx.by_url());
         }
 
         let local_blob = match maybe_local_blob {
@@ -309,6 +327,17 @@ impl<B> LocalBlob<B> {
             blob: self.blob.into(),
             size: self.size,
         }
+    }
+}
+
+impl LocalBlob<TempPath> {
+    async fn from_temp_path(output: TempPath) -> Result<Self> {
+        let size = fs::metadata(&output)
+            .await
+            .fatal_ctx(|| "Failed to read generated file metadata")?
+            .len();
+
+        Ok(LocalBlob { blob: output, size })
     }
 }
 
@@ -434,13 +463,20 @@ struct TgUploadMethodContext<'a> {
 
 impl TgUploadMethodContext<'_> {
     fn span_for_upload(&self) -> tracing::Span {
+        // TODO: log file size correctly
+        let size = match &self.tg_upload_method {
+            TgUploadMethod::Multipart(local_blob) => display::human_size(local_blob.size),
+            TgUploadMethod::Url => "Unknown".to_owned(),
+        };
+
         info_span!(
             "tg_upload",
             tg_file_type = %self.tg_file_type,
             tg_upload_method = %<&'static str>::from(&self.tg_upload_method),
             download_url = %self.blob.repr.download_url,
             blob_kind = %self.blob.repr.kind,
-            blob_size = ?self.blob.repr.size,
+            blob_size = size,
+            blob_size_hint = ?self.blob.repr.size_hint,
             blob_id = ?self.blob.id,
             post_id = ?self.post.id,
         )
@@ -498,7 +534,7 @@ impl TgUploadMethodContext<'_> {
     }
 
     fn caption(&self) -> String {
-        let core_caption = self.post.caption();
+        let core_caption = self.post.caption(self.mirror);
         let requested_by = self.requested_by.md_link();
         let via_method = match &self.tg_upload_method {
             TgUploadMethod::Url => "via URL",
@@ -515,11 +551,11 @@ impl TgUploadMethodContext<'_> {
         let (actual_file_kind, file_meta) = self.find_file(msg)?;
 
         if actual_file_kind != self.tg_file_type {
-            info!(
+            warn!(
                 %actual_file_kind,
                 requested_file_type = %self.base.tg_file_type,
                 "Actual uploaded tg file type differs from requested",
-            )
+            );
         }
 
         Ok(TgFileMeta {
@@ -544,7 +580,7 @@ impl TgUploadMethodContext<'_> {
                 return Err(err!(PostingError::UnexpectedMediaKind {
                     actual,
                     expected: self.blob.repr.kind,
-                }))
+                }));
             }
         })
     }

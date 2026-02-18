@@ -1,7 +1,7 @@
 use crate::{PgQuery, PgQueryAs, PgQueryScalar};
 use easy_ext::ext;
-use sqlx::postgres::{PgArguments, PgRow};
 use sqlx::IntoArguments;
+use sqlx::postgres::{PgArguments, PgRow};
 
 pub mod expr {
     use sea_query::{Func, Iden, SimpleExpr};

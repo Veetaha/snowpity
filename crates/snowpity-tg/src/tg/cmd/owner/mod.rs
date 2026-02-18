@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use crate::util::encoding;
-use crate::{db, tg, Error, Result};
+use crate::{Error, Result, db, tg};
 use async_trait::async_trait;
 use std::sync::Arc;
 use teloxide::prelude::*;

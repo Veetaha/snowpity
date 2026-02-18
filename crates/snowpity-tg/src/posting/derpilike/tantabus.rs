@@ -1,0 +1,52 @@
+use self::derpitools::Derpitools;
+use crate::Result;
+use crate::posting::derpilike::api::MediaId;
+use crate::posting::derpilike::*;
+use crate::posting::platform::ParsedQuery;
+use async_trait::async_trait;
+
+pub(crate) struct Platform {
+    tools: Derpitools,
+}
+
+impl PlatformTypes for Platform {
+    type PostId = MediaId;
+    type BlobId = ();
+    type Request = MediaId;
+}
+
+#[async_trait]
+impl PlatformTrait for Platform {
+    type Config = Config;
+
+    const NAME: &'static str = "Tantabus";
+
+    fn new(params: PlatformParams<Config>) -> Self {
+        Self {
+            tools: Derpitools::new(params, DerpiPlatformKind::Tantabus),
+        }
+    }
+
+    fn parse_query(query: &str) -> Option<ParsedQuery<Self>> {
+        let (_, origin, id) = parse_with_regexes!(
+            query,
+            r"(tantabus.ai(?:/images)?)/(\d+)",
+            r"(tantabuscdn.net/img)/\d+/\d+/\d+/(\d+)",
+            r"(tantabuscdn.net/img/(?:view|download))/\d+/\d+/\d+/(\d+)",
+        )?;
+
+        ParsedQuery::from_origin_and_parse_request(origin, id)
+    }
+
+    async fn get_post(&self, media: MediaId) -> Result<Post<Self>> {
+        self.tools.get_post(media).await
+    }
+
+    async fn get_cached_blobs(&self, media: MediaId) -> Result<Vec<CachedBlobId<Self>>> {
+        self.tools.get_cached_blobs(media).await
+    }
+
+    async fn set_cached_blob(&self, media: MediaId, blob: CachedBlobId<Self>) -> Result {
+        self.tools.set_cached_blob(media, blob).await
+    }
+}

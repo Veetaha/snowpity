@@ -1,8 +1,9 @@
-use super::platform::prelude::*;
 use super::AllPlatforms;
+use super::platform::prelude::*;
 use crate::prelude::*;
-use crate::tg;
 use crate::util::units::MB;
+use crate::{Result, tg};
+use heck::ToPascalCase;
 use itertools::Itertools;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use reqwest::Url;
@@ -44,6 +45,13 @@ pub(crate) enum BlobKind {
 
     /// Soundless MP4 video is considered to be an animation
     AnimationMp4,
+
+    /// Webm file will be converted to MP4 via ffmpeg.
+    #[expect(
+        dead_code,
+        reason = "TODO: Use this only if MP4 is not supported from the source."
+    )]
+    VideoWebm,
 
     /// Best not to have gifs, but MP4s. Use this only if MP4 is not supported
     /// from the source. It means we'll need to convert the gif to MP4.
@@ -116,7 +124,7 @@ pub(crate) struct MediaDimensions {
 
 /// The sizes are measured in bytes
 #[derive(Clone, Debug)]
-pub(crate) enum BlobSize {
+pub(crate) enum BlobSizeHint {
     /// The upper bound of the file size is known.
     /// For example, such information can be obtained from the media hosting
     /// platform docs, where they set limits on file sizes.
@@ -178,6 +186,10 @@ pub(crate) struct Post<Service: PlatformTypes = AllPlatforms> {
 pub(crate) struct CachedPost<Service: PlatformTypes = AllPlatforms> {
     pub(crate) base: BasePost<Service>,
 
+    /// If present, denotes that this post was requested from the mirror of
+    /// the original posting platform. Contains the host name of the mirror.
+    pub(crate) mirror: Option<Mirror>,
+
     /// List of blobs attached to the post. It may be empty
     pub(crate) blobs: Vec<CachedBlobId<Service>>,
 }
@@ -191,9 +203,9 @@ pub(crate) struct BlobRepr {
     /// May be `None` if the dimensions are unknown.
     pub(crate) dimensions: Option<MediaDimensions>,
 
-    /// Size of the blob in bytes if known. It should not be considered
+    /// Size hint of the blob in bytes if known. It should not be considered
     /// as a reliable source of information. It may be inaccurate.
-    pub(crate) size: BlobSize,
+    pub(crate) size_hint: BlobSizeHint,
 
     /// URL of the resource where the blob can be downloaded from
     pub(crate) download_url: Url,
@@ -239,18 +251,29 @@ pub(crate) struct Author {
 pub(crate) enum AuthorKind {
     /// The author is not the original creator, but the editor
     Editor,
+    /// The author used AI to create media
+    Prompter,
 }
 
 impl BasePost {
-    pub(crate) fn caption(&self) -> String {
+    fn prefer_mirror_url(mirror: Option<&Mirror>, url: &Url) -> Url {
+        mirror
+            .map(|mirror| mirror.mirror_url(url))
+            .unwrap_or_else(|| url.clone())
+    }
+
+    pub(crate) fn caption(&self, mirror: Option<&Mirror>) -> String {
         // FIXME: ensure the caption doesn't overflow 1024 characters
         let authors: Vec<_> = self.authors.iter().map_collect(|author| {
-            let author_entry = if matches!(author.kind, Some(AuthorKind::Editor)) {
-                format!("{} (editor)", author.name)
-            } else {
-                author.name.clone()
+            let author_entry = match author.kind {
+                Some(AuthorKind::Editor) => " (editor)",
+                Some(AuthorKind::Prompter) => " (prompter)",
+                None => "",
             };
-            markdown::link(author.web_url.as_str(), &markdown::escape(&author_entry))
+            let author_entry = format!("{}{}", author.name, author_entry);
+            let author_url = Self::prefer_mirror_url(mirror, &author.web_url);
+
+            markdown::link(author_url.as_str(), &markdown::escape(&author_entry))
         });
 
         let authors = match authors.as_slice() {
@@ -266,11 +289,17 @@ impl BasePost {
 
         let nsfw_ratings = markdown::escape(&nsfw_ratings);
 
+        let source = mirror
+            .map(Mirror::display_name)
+            .unwrap_or_else(|| self.id.platform_name().to_owned());
+
+        let post_url = Self::prefer_mirror_url(mirror, &self.web_url);
+
         format!(
             "*{}{authors}{nsfw_ratings}*",
             markdown::link(
-                self.web_url.as_str(),
-                &markdown::escape(&format!("Source ({})", self.id.platform_name()))
+                post_url.as_str(),
+                &markdown::escape(&format!("Source ({source})"))
             ),
         )
     }
@@ -335,11 +364,7 @@ impl UniBlob {
 impl SafetyRating {
     /// Simple conditional creation of [`SafetyRating::Sfw`] or [`SafetyRating::nsfw()`].
     pub(crate) fn sfw_if(condition: bool) -> Self {
-        if condition {
-            Self::Sfw
-        } else {
-            Self::nsfw()
-        }
+        if condition { Self::Sfw } else { Self::nsfw() }
     }
 
     /// Returns [`SafetyRating::Nsfw`] with no additional information about the
@@ -356,7 +381,7 @@ impl SafetyRating {
             Self::Nsfw { kinds } => Right(
                 kinds
                     .iter()
-                    .map(|kind| kind.as_str())
+                    .map(String::as_str)
                     .chain(kinds.is_empty().then_some("nsfw")),
             ),
         }
@@ -369,7 +394,7 @@ impl MediaDimensions {
     }
 }
 
-impl BlobSize {
+impl BlobSizeHint {
     pub(crate) fn max_mb(megabytes: u64) -> Self {
         Self::Max(megabytes * MB)
     }
@@ -392,7 +417,10 @@ impl BlobKind {
             BlobKind::ImageJpeg => "jpg",
             BlobKind::ImagePng => "png",
             BlobKind::ImageSvg => "svg",
-            BlobKind::VideoMp4 | BlobKind::AnimationMp4 | BlobKind::AnimationGif => "mp4",
+            BlobKind::VideoMp4
+            | BlobKind::VideoWebm
+            | BlobKind::AnimationMp4
+            | BlobKind::AnimationGif => "mp4",
         }
     }
 }
@@ -418,11 +446,16 @@ where
 }
 
 impl<Service: PlatformTypes> BasePost<Service> {
-    pub(crate) fn with_cached_blobs(
+    pub(crate) fn into_cached(
         self,
+        mirror: Option<Mirror>,
         blobs: Vec<CachedBlobId<Service>>,
     ) -> CachedPost<Service> {
-        CachedPost { base: self, blobs }
+        CachedPost {
+            base: self,
+            mirror,
+            blobs,
+        }
     }
 }
 
@@ -467,8 +500,59 @@ impl<Platform: PlatformTypes> Clone for UniBlob<Platform> {
 impl<Service: PlatformTypes> Clone for CachedPost<Service> {
     fn clone(&self) -> Self {
         Self {
+            mirror: self.mirror.clone(),
             base: self.base.clone(),
             blobs: self.blobs.clone(),
         }
+    }
+}
+
+/// Identifies the state necessary to form a URL that points to mirror resource
+/// that replicates the content from the original posting platform URL.
+#[derive(Debug, Clone)]
+pub(crate) struct Mirror {
+    /// The host of the mirror that is used to replace the host of the original
+    /// URL to mirror it
+    mirror_host: String,
+}
+
+impl Mirror {
+    /// Creates a new [`Mirror`] from the `suspect_host` if the `suspect_host` is
+    /// non-empty and different from the `target_host`.
+    pub(crate) fn if_differs(suspect_host: &str, target_host: &'static str) -> Option<Self> {
+        (!suspect_host.is_empty() && suspect_host != target_host).then(|| Self {
+            mirror_host: suspect_host.to_owned(),
+        })
+    }
+
+    /// Modify the original URL to use the mirror host instead of the original host.
+    fn mirror_url(&self, original_url: &Url) -> Url {
+        let mut mirror_url = original_url.clone();
+
+        let err = match mirror_url.set_host(Some(&self.mirror_host)) {
+            Ok(()) => return mirror_url,
+            Err(err) => err,
+        };
+
+        error!(
+            err = tracing_err(&err),
+            %mirror_url,
+            %original_url,
+            mirror = ?self,
+            "Failed to update URL to mirror. Using original URL instead"
+        );
+
+        original_url.clone()
+    }
+
+    /// Display the name of the mirror host in a human-readable form.
+    pub(crate) fn display_name(&self) -> String {
+        // Right now it's this simple, but we may add display name override
+        // in the `Mirror` struct as a config if we really need this.
+        self.mirror_host
+            .split_once('.')
+            .map(|(first, _)| first)
+            .unwrap_or(&self.mirror_host)
+            .to_pascal_case()
     }
 }

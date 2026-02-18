@@ -4,7 +4,7 @@ mod error;
 
 mod tg_chat;
 
-use crate::{err_ctx, Result};
+use crate::{Result, err_ctx};
 use sqlx::prelude::*;
 
 pub(crate) use {config::*, error::*, tg_chat::*};

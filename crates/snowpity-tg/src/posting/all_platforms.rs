@@ -1,7 +1,8 @@
+use super::derpilike::{derpibooru, furbooru, manebooru, ponerpics, ponybooru, tantabus, twibooru};
 use super::platform::prelude::*;
-use super::{derpibooru, deviant_art, twitter};
-use crate::prelude::*;
+use super::{deviant_art, twitter};
 use crate::Result;
+use crate::prelude::*;
 use assert_matches::assert_matches;
 
 macro_rules! def_all_platforms {
@@ -9,8 +10,8 @@ macro_rules! def_all_platforms {
         $([$platform:ident, $Platform:ident]),* $(,)?
     ) => {
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-        pub(crate) enum RequestId {
-            $( $Platform(<$platform::Platform as PlatformTypes>::RequestId), )*
+        pub(crate) enum Request {
+            $( $Platform(<$platform::Platform as PlatformTypes>::Request), )*
         }
 
         #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -81,11 +82,11 @@ macro_rules! def_all_platforms {
                 }
             }
 
-            pub(crate) async fn get_post(&self, id: RequestId) -> Result<Post> {
-                Ok(match id {
+            pub(crate) async fn get_post(&self, request: Request) -> Result<Post> {
+                Ok(match request {
                     $(
-                        RequestId::$Platform(id) => {
-                            let post = self.$platform.get_post(id).await?;
+                        Request::$Platform(request) => {
+                            let post = self.$platform.get_post(request).await?;
                             let blobs = post.blobs.map_collect(|blob| {
                                 let MultiBlob { repr, id } = blob;
                                 MultiBlob { repr, id: BlobId::$Platform(id) }
@@ -113,11 +114,11 @@ macro_rules! def_all_platforms {
 
             pub(crate) async fn get_cached_blobs(
                 &self,
-                request: RequestId,
+                request: Request,
             ) -> Result<Vec<CachedBlobId>> {
                 Ok(match request {
                     $(
-                        RequestId::$Platform(request) => {
+                        Request::$Platform(request) => {
                             self
                                 .$platform
                                 .get_cached_blobs(request)
@@ -151,12 +152,12 @@ macro_rules! def_all_platforms {
             }
         }
 
-        pub(crate) fn parse_query(input: &str) -> ParseQueryResult<RequestId> {
+        pub(crate) fn parse_query(input: &str) -> Option<ParsedQuery<AllPlatforms>> {
             let input = input.trim();
 
             $(
-                if let Some((platform, id)) = <$platform::Platform as PlatformTrait>::parse_query(input) {
-                    return Some((platform, RequestId::$Platform(id)));
+                if let Some(parsed_query) = <$platform::Platform as PlatformTrait>::parse_query(input) {
+                    return Some(parsed_query.map_request(Request::$Platform));
                 }
             )*
 
@@ -167,12 +168,19 @@ macro_rules! def_all_platforms {
 
 def_all_platforms! {
     [derpibooru, Derpibooru],
+    [furbooru, Furbooru],
+    [manebooru, Manebooru],
+    [ponerpics, Ponerpics],
+    [ponybooru, Ponybooru],
+    [tantabus, Tantabus],
+    [twibooru, Twibooru],
+
     [twitter, Twitter],
     [deviant_art, DeviantArt],
 }
 
 impl PlatformTypes for AllPlatforms {
-    type RequestId = RequestId;
+    type Request = Request;
     type PostId = PostId;
     type BlobId = BlobId;
 }

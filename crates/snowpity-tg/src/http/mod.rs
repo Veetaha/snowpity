@@ -4,8 +4,8 @@ mod json_ext;
 use crate::prelude::*;
 use async_trait::async_trait;
 use reqwest_middleware::RequestBuilder;
-use reqwest_retry::policies::{ExponentialBackoff, ExponentialBackoffTimed};
 use reqwest_retry::RetryTransientMiddleware;
+use reqwest_retry::policies::{ExponentialBackoff, ExponentialBackoffTimed};
 use std::time::{Duration, Instant};
 
 pub(crate) mod prelude {
@@ -39,7 +39,17 @@ pub(crate) fn default_retry_policy() -> ExponentialBackoffTimed {
 }
 
 pub(crate) fn create_client() -> Client {
-    reqwest_middleware::ClientBuilder::new(teloxide::net::client_from_env())
+    let client = std::env::var("PROXY_SERVER")
+        .ok()
+        .map(|proxy| reqwest::Client::builder().proxy(reqwest::Proxy::all(proxy).unwrap()))
+        .unwrap_or_else(reqwest::Client::builder)
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(17))
+        .tcp_nodelay(true)
+        .build()
+        .unwrap();
+
+    reqwest_middleware::ClientBuilder::new(client)
         .with(OutermostObservingMiddleware)
         .with(RetryTransientMiddleware::new_with_policy(
             default_retry_policy(),

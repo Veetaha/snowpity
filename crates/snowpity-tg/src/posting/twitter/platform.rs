@@ -1,8 +1,8 @@
+use crate::Result;
 use crate::posting::platform::prelude::*;
 use crate::posting::twitter::api::{self, MediaKey, TweetId};
-use crate::posting::twitter::{db, Config};
+use crate::posting::twitter::{Config, db};
 use crate::prelude::*;
-use crate::Result;
 use async_trait::async_trait;
 use url::Url;
 
@@ -14,7 +14,7 @@ pub(crate) struct Platform {
 impl PlatformTypes for Platform {
     type PostId = TweetId;
     type BlobId = MediaKey;
-    type RequestId = TweetId;
+    type Request = TweetId;
 }
 
 #[async_trait]
@@ -30,15 +30,15 @@ impl PlatformTrait for Platform {
         }
     }
 
-    fn parse_query(query: &str) -> ParseQueryResult<TweetId> {
+    fn parse_query(query: &str) -> Option<ParsedQuery<Self>> {
         // The regex was inspired by the one in the booru/scraper repository:
         // https://github.com/booru/scraper/blob/095771b28521b49ae67e30db2764406a68b74395/src/scraper/twitter.rs#L16
-        let (_, host, id) = parse_with_regexes!(
+        let (_, origin, id) = parse_with_regexes!(
             query,
             r"(?:http(?:s)?://)?(.*(?:x|twitter|fixvx|vxtwitter)\.com)/[^/]+/status/(\d+)",
         )?;
 
-        Some((host.into(), id.parse().ok()?))
+        ParsedQuery::from_origin_and_parse_request(origin, id)
     }
 
     async fn get_post(&self, tweet_id: TweetId) -> Result<Post<Self>> {
@@ -65,21 +65,21 @@ impl PlatformTrait for Platform {
             let repr = match media.kind {
                 api::MediaType::Image => BlobRepr {
                     kind: BlobKind::ImageJpeg,
-                    size: BlobSize::max_mb(5),
+                    size_hint: BlobSizeHint::max_mb(5),
                     download_url: best_tg_url_for_photo(media.url),
                     dimensions,
                 },
                 api::MediaType::Gif => BlobRepr {
                     kind: BlobKind::AnimationMp4,
                     download_url: media.url,
-                    size: BlobSize::max_mb(15),
+                    size_hint: BlobSizeHint::max_mb(15),
                     dimensions,
                 },
                 api::MediaType::Video => {
                     BlobRepr {
                         kind: BlobKind::VideoMp4,
                         // Technically the video can be up to 512MB
-                        size: BlobSize::Unknown,
+                        size_hint: BlobSizeHint::Unknown,
                         download_url: media.url,
                         dimensions,
                     }

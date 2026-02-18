@@ -15,7 +15,7 @@ pub(crate) mod prelude {
     // time a new logging macro is needed.
     #[allow(unused_imports)]
     pub(crate) use tracing::{
-        debug, debug_span, error, error_span, info, info_span, instrument, trace, trace_span, warn,
-        warn_span, Instrument as _,
+        Instrument as _, debug, debug_span, error, error_span, info, info_span, instrument, trace,
+        trace_span, warn, warn_span,
     };
 }

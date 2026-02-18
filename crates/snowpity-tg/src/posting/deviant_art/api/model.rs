@@ -1,7 +1,7 @@
 use crate::util;
 use reqwest::Url;
 use serde::Deserialize;
-use serde_with::{serde_as, DisplayFromStr, PickFirst};
+use serde_with::{DisplayFromStr, PickFirst, serde_as};
 
 util::url::def!(www_deviantart_com, "https://www.deviantart.com");
 

@@ -1,6 +1,6 @@
-use crate::posting::{deviant_art::api::DeviationNumericId, TgFileMeta};
-use crate::prelude::*;
 use crate::Result;
+use crate::posting::{TgFileMeta, deviant_art::api::DeviationNumericId};
+use crate::prelude::*;
 use sqlx_bat::prelude::*;
 
 pub(crate) struct BlobCacheRepo {

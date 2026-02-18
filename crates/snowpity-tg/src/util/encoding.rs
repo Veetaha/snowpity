@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{err_ctx, Result};
+use crate::{Result, err_ctx};
 use base64::prelude::*;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -92,7 +92,9 @@ pub(crate) fn encode_base64_sha2(val: &str) -> String {
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum DeserializeError {
-    #[error("Failed to parse JSON as `{target_ty}`, input surrounded by backticks:\n```\n{input:?}\n```")]
+    #[error(
+        "Failed to parse JSON as `{target_ty}`, input surrounded by backticks:\n```\n{input:?}\n```"
+    )]
     Json {
         target_ty: &'static str,
         input: String,

@@ -6,9 +6,10 @@ mod tg_upload;
 
 pub(crate) mod platform;
 
-pub(crate) mod derpibooru;
 pub(crate) mod deviant_art;
 pub(crate) mod twitter;
+
+mod derpilike;
 
 pub(crate) use all_platforms::*;
 pub(crate) use error::*;

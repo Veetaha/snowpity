@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{fatal, Result};
+use crate::{Result, fatal};
 use bytes::Bytes;
 use fast_image_resize as fr;
 use image::ColorType;
@@ -117,7 +117,7 @@ fn get_image_with_linear_colorspace(
         image::DynamicImage::ImageRgb16(image) => (fr::PixelType::U16x3, u16_to_u8(image)),
         image::DynamicImage::ImageRgba16(image) => (fr::PixelType::U16x4, u16_to_u8(image)),
         image::DynamicImage::ImageRgb32F(_) | image::DynamicImage::ImageRgba32F(_) | _ => {
-            return Err(fatal!("Unsupported pixel's format of image: {color:?}"))
+            return Err(fatal!("Unsupported pixel's format of image: {color:?}"));
         }
     };
 

@@ -6,8 +6,8 @@ use teloxide::utils::markdown;
 
 pub(crate) mod prelude {
     pub(crate) use super::{
-        requester::UtilRequesterExt as _, ChatExt as _, ChatFullInfoExt as _, MessageIdExt as _,
-        UpdateKindExt as _, UserExt as _,
+        ChatExt as _, ChatFullInfoExt as _, MessageIdExt as _, UpdateKindExt as _, UserExt as _,
+        requester::UtilRequesterExt as _,
     };
 }
 

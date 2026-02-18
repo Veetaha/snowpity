@@ -1,10 +1,10 @@
 use super::HttpClientError;
 use crate::prelude::*;
-use crate::{err, Result};
+use crate::{Result, err};
 use async_trait::async_trait;
 use easy_ext::ext;
 use reqwest_middleware::RequestBuilder;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 #[ext(RequestBuilderJsonExt)]
 #[async_trait]

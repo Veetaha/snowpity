@@ -30,6 +30,7 @@ fast_image_resize           = { workspace = true }
 from_variants               = { workspace = true }
 fs-err                      = { workspace = true, features = ["tokio"] }
 futures                     = { workspace = true }
+heck                        = { workspace = true }
 http                        = { workspace = true }
 humansize                   = { workspace = true }
 image                       = { workspace = true }
