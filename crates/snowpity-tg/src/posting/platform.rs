@@ -5,7 +5,6 @@ use serde::de::DeserializeOwned;
 use std::fmt;
 use std::hash::Hash;
 use std::str::FromStr;
-use typed_builder::TypedBuilder;
 
 pub(crate) mod prelude {
     pub(crate) use super::{
@@ -15,16 +14,13 @@ pub(crate) mod prelude {
     pub(crate) use crate::posting::model::*;
 }
 
-#[derive(TypedBuilder)]
 pub(crate) struct ParsedQuery<Platform: PlatformTypes> {
     /// The origin of the request. It may include the host and part of the path.
     /// This value is used only in metrics to identify the popularity of different
     /// origins of post URLs even within the same platform.
-    #[builder(setter(into))]
     pub(crate) origin: String,
 
     /// [`Some`] if request came from a mirror of the platform.
-    #[builder(default)]
     pub(crate) mirror: Option<Mirror>,
 
     /// Request to the posting platform.

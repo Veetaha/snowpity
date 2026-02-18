@@ -3,6 +3,7 @@ use super::AllPlatforms;
 use crate::prelude::*;
 use crate::util::units::MB;
 use crate::{tg, Result};
+use heck::ToPascalCase;
 use itertools::Itertools;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use reqwest::Url;
@@ -501,6 +502,7 @@ impl<Platform: PlatformTypes> Clone for UniBlob<Platform> {
 impl<Service: PlatformTypes> Clone for CachedPost<Service> {
     fn clone(&self) -> Self {
         Self {
+            mirror: self.mirror.clone(),
             base: self.base.clone(),
             blobs: self.blobs.clone(),
         }

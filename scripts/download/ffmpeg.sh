@@ -9,11 +9,11 @@ script_dir=$(readlink -f $(dirname $0))
 # Download from https://johnvansickle.com/ffmpeg/
 # The URL format is not documented, it was just inferred from the links on the page
 
-version=6.1
+version=7.0.2
 
 file_stem=ffmpeg-$version-$arch_go-static
 
-url=https://johnvansickle.com/ffmpeg/old-releases/$file_stem.tar.xz
+url=https://johnvansickle.com/ffmpeg/releases/$file_stem.tar.xz
 
 # FIXME: use `md5sum` to verify the integrity of the downloaded file
 # See https://www.johnvansickle.com/ffmpeg/faq/

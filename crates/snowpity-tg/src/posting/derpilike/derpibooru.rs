@@ -37,12 +37,12 @@ impl PlatformTrait for Platform {
 
         let mirror = Mirror::if_differs(host, "derpibooru.org");
 
-        ParsedQuery::builder()
-            .origin(origin)
-            .mirror(mirror)
-            .request(id.parse().ok()?)
-            .build()
-            .into()
+        ParsedQuery {
+            origin: origin.into(),
+            mirror,
+            request: id.parse().ok()?,
+        }
+        .into()
     }
 
     async fn get_post(&self, media: MediaId) -> Result<Post<Self>> {
