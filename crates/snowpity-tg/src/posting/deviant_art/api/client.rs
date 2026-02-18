@@ -4,7 +4,7 @@ use crate::prelude::*;
 use crate::Result;
 use crate::{http, util};
 
-util::url::def!(backend_deviantart_com, "https://backend.deviantart.com");
+util::url::def!(backend_deviantart_com, "https://backend.fixdeviantart.com");
 
 pub(crate) struct Client {
     http: http::Client,

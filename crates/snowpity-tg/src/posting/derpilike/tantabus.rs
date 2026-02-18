@@ -28,21 +28,14 @@ impl PlatformTrait for Platform {
     }
 
     fn parse_query(query: &str) -> Option<ParsedQuery<Self>> {
-        let (_, origin, host, id) = parse_with_regexes!(
+        let (_, origin, id) = parse_with_regexes!(
             query,
-            r"((tantabus.ai)(?:/images)?)/(\d+)",
-            r"(()tantabuscdn.net/img)/\d+/\d+/\d+/(\d+)",
-            r"(()tantabuscdn.net/img/(?:view|download))/\d+/\d+/\d+/(\d+)",
+            r"(tantabus.ai(?:/images)?)/(\d+)",
+            r"(tantabuscdn.net/img)/\d+/\d+/\d+/(\d+)",
+            r"(tantabuscdn.net/img/(?:view|download))/\d+/\d+/\d+/(\d+)",
         )?;
 
-        let mirror = Mirror::if_differs(host, "tantabus.ai");
-
-        ParsedQuery {
-            origin: origin.into(),
-            mirror,
-            request: id.parse().ok()?,
-        }
-        .into()
+        ParsedQuery::from_origin_and_parse_request(origin, id)
     }
 
     async fn get_post(&self, media: MediaId) -> Result<Post<Self>> {

@@ -463,7 +463,7 @@ struct TgUploadMethodContext<'a> {
 
 impl TgUploadMethodContext<'_> {
     fn span_for_upload(&self) -> tracing::Span {
-        // TODO(Havoc) log file size correctly
+        // TODO: log file size correctly
         let size = match &self.tg_upload_method {
             TgUploadMethod::Multipart(local_blob) => display::human_size(local_blob.size),
             TgUploadMethod::Url => "Unknown".to_owned(),

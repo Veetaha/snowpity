@@ -36,7 +36,6 @@ pub(crate) struct Config {
 }
 
 impl ConfigTrait for Config {
-    // TODO                           _________
     const ENV_PREFIX: &'static str = "DERPILIKE_";
 }
 

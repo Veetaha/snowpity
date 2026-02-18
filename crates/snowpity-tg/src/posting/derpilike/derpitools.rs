@@ -167,7 +167,6 @@ impl DerpiPlatformKind {
     }
 
     pub(crate) fn api_url(self, segments: impl IntoIterator<Item = impl AsRef<str>>) -> Url {
-        // TODO ?
         let base: &[&'static str] = match self {
             DerpiPlatformKind::Twibooru => &["api", "v3"],
             _ => &["api", "v1", "json"],
