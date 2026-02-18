@@ -149,6 +149,6 @@ pub(crate) mod tests {
         use assert_parse_query as test;
 
         test("123", expect!["None"]);
-        test("furbooru.org/images/123/", expect!["None"]);
+        test("furbooru.org/images/123/", expect!["furbooru.org/images:Furbooru(MediaId(123))"]);
     }
 }
