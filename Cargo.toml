@@ -26,7 +26,7 @@ codegen-units = 1
 version = "0.11.0"
 
 authors = ["Veetaha <veetaha2@gmail.com>"]
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
 

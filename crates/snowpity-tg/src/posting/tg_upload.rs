@@ -3,8 +3,8 @@ use crate::posting::platform::prelude::*;
 use crate::posting::{PostingContext, PostingError};
 use crate::prelude::*;
 use crate::util::units::MB;
-use crate::util::{display, media_conv, DynError};
-use crate::{err, fatal, Result};
+use crate::util::{DynError, display, media_conv};
+use crate::{Result, err, fatal};
 use assert_matches::assert_matches;
 use derive_more::Deref;
 use from_variants::FromVariants;
@@ -90,7 +90,7 @@ pub(crate) async fn upload(
                 return Ok(CachedBlob {
                     blob: ctx.blob,
                     tg_file,
-                })
+                });
             }
             Err(err) => err,
         };
@@ -269,10 +269,10 @@ impl TgUploadContext<'_> {
     async fn upload_document(&self, maybe_local_blob: MaybeLocalBlob) -> Result<TgFileMeta> {
         let ctx = self.file_kind(TgFileKind::Document);
 
-        if self.blob.repr.size_hint.to_max_or_zero() <= MAX_TG_FILE_SIZE.by_url {
-            if let MaybeLocalBlob::None = &maybe_local_blob {
-                try_return_upload!(ctx.by_url());
-            }
+        if self.blob.repr.size_hint.to_max_or_zero() <= MAX_TG_FILE_SIZE.by_url
+            && let MaybeLocalBlob::None = &maybe_local_blob
+        {
+            try_return_upload!(ctx.by_url());
         }
 
         let local_blob = match maybe_local_blob {
@@ -580,7 +580,7 @@ impl TgUploadMethodContext<'_> {
                 return Err(err!(PostingError::UnexpectedMediaKind {
                     actual,
                     expected: self.blob.repr.kind,
-                }))
+                }));
             }
         })
     }
