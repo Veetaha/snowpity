@@ -1,3 +1,11 @@
+# Unreleased
+
+- Rewrite the dev CLI from nushell (`x.nu`) to Python (`x.py`). It needs no extra dependencies.
+  This also fixes these bugs of the old CLI:
+    - `x destroy` without `--all` targeted the data volume even without `--drop-data`
+    - `x docker build` pushed the images even without `--push`
+    - `x test` rejected arguments that start with `-`
+
 # 0.12.0 2025-02-18
 
 - Add support for numerous derpi altboorus (thanks [@nitkach](https://github.com/nitkach) for the contribution):
