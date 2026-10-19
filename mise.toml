@@ -1,2 +1,5 @@
 [tools]
-python = "3.15.0"
+node          = "24.22.0"
+"npm:pyright" = "1.1.414"
+python        = "3.15.0"
+ruff          = "0.17.1"
