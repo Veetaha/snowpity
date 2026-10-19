@@ -2,7 +2,8 @@
 """A dead-simple CLI that automates development processes in this repository."""
 
 import argparse
-import functools
+import contextlib
+import inspect
 import json
 import os
 import random
@@ -11,274 +12,260 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
+from functools import cache
+from inspect import Parameter
 from pathlib import Path
+from typing import Annotated, get_args, get_origin
 
 REPO = Path(__file__).resolve().parent
 TF_PROJECT = REPO / "deployment" / "project"
+
+# The `x <name>` commands. Each function's docstring is its help, and its
+# parameters are the arguments:
+# - a `bool` is a flag;
+# - a keyword-only parameter is an option;
+# - another parameter is a positional argument;
+# - `*args` takes the rest of the command line.
+# `Annotated` adds a help string and short aliases such as "-r".
+COMMANDS: dict[str, Callable[..., None]] = {}
+
+
+def command(name: str):
+    def register(func):
+        COMMANDS[name] = func
+        return func
+
+    return register
+
 
 #####################################
 ############ Entrypoints ############
 #####################################
 
 
-def cmd_ssh(args):
-    if args.code:
+@command("ssh")
+def cmd_ssh(
+    forward_ports: Annotated[bool, "-f", "Forward grafana and pgadmin4 ports to localhost"] = False,
+    code: Annotated[bool, "Connect using VSCode"] = False,
+):
+    """SSH into the app's server"""
+    if code:
         # FIXME: make vscode connection work via CLI, it doesn't right now :(
         run("code", "--folder-uri", f"vscode-remote://ssh-remote+{ssh_str()}")
-        return
-    ssh(forward_ports=args.forward_ports)
+    else:
+        ssh(forward_ports=forward_ports)
 
 
-def cmd_ssh_str(args):
+@command("ssh str")
+def cmd_ssh_str():
+    """Print the user@ip string for the app's server"""
     print(ssh_str())
 
 
-def cmd_ssh_journalctl(args):
+@command("ssh journalctl")
+def cmd_ssh_journalctl():
+    """Follow the logs of the app's systemd service"""
     ssh("sudo journalctl --follow --catalog --unit tg-bot.service")
 
 
-def cmd_ssh_systemctl_status(args):
+@command("ssh systemctl status")
+def cmd_ssh_systemctl_status():
+    """Display the app's systemd service status"""
     ssh("sudo systemctl status tg-bot.service")
 
 
-def cmd_ssh_cloud_init_log(args):
-    ssh_cloud_init_log(dump=args.dump)
+@command("ssh cloud-init log")
+def cmd_ssh_cloud_init_log(
+    dump: Annotated[bool, "Don't show the tail of the log file, but dump its full contents"] = False,
+):
+    """Display the server's cloud-init logs"""
+    ssh_cloud_init_log(dump=dump)
 
 
-def cmd_ssh_cloud_init_status(args):
+@command("ssh cloud-init status")
+def cmd_ssh_cloud_init_status():
+    """Display the server's cloud-init status"""
     ssh("cloud-init status")
 
 
-def cmd_ssh_cloud_init_user_data(args):
+@command("ssh cloud-init user-data")
+def cmd_ssh_cloud_init_user_data():
+    """Show the ultimate user data residing on the server"""
     ssh("sudo cloud-init query userdata")
 
 
-def cmd_docker_build(args):
-    docker_build_all(release=args.release, push=args.push)
+@command("docker build")
+def cmd_docker_build(
+    release: Annotated[bool, "-r", "Build in release mode"] = False,
+    push: Annotated[bool, "-p", "Push the image to remote docker registry"] = False,
+):
+    """Build all docker images"""
+    docker_build_all(release=release, push=push)
 
 
-def cmd_up(args):
-    if args.fresh:
+@command("up")
+def cmd_up(
+    no_tg_bot: Annotated[bool, "Don't start the tg_bot service"] = False,
+    no_observability: Annotated[bool, "Don't start the pgadmin and observability services"] = False,
+    fresh: Annotated[bool, "-f", "Delete the data volumes before starting the database"] = False,
+    release: Annotated[bool, "-r", "Build in release mode"] = False,
+):
+    """Start all services locally using `docker compose`"""
+    if fresh:
         info("--fresh was specified, so deleting the data volumes...")
         down(drop_data=True)
 
-    up_args = ["up", "--remove-orphans", "--build", "--wait", "postgres", "pgadmin"]
-    if not args.no_tg_bot:
-        up_args.append("tg-bot")
-    if not args.no_observability:
-        up_args += ["victoria-metrics", "grafana", "loki", "grafana-agent"]
+    services = ["postgres", "pgadmin"]
+    if not no_tg_bot:
+        services.append("tg-bot")
+    if not no_observability:
+        services += ["victoria-metrics", "grafana", "loki", "grafana-agent"]
 
-    docker_compose(*up_args, env={"RUST_BUILD_MODE": build_mode(args.release)})
+    docker_compose(
+        "up", "--remove-orphans", "--build", "--wait", *services,
+        env={"RUST_BUILD_MODE": build_mode(release)},
+    )  # fmt: skip
 
-    if args.no_tg_bot:
+    if no_tg_bot:
         run("sqlx", "migrate", "run", "--source", "crates/snowpity-tg/migrations", cwd=REPO)
-
-    logs_args = ["logs", "--follow"]
-    if args.no_tg_bot:
-        logs_args += ["pgadmin", "postgres"]
+        docker_compose("logs", "--follow", "pgadmin", "postgres")
     else:
-        logs_args += ["--no-log-prefix", "tg-bot"]
-
-    docker_compose(*logs_args)
+        docker_compose("logs", "--follow", "--no-log-prefix", "tg-bot")
 
 
-def cmd_down(args):
-    down(drop_data=args.drop_data)
+@command("down")
+def cmd_down(drop_data: Annotated[bool, "Remove all data volumes"] = False):
+    """Shutdown the local containers and clean the persistent data volumes"""
+    down(drop_data=drop_data)
 
 
-def cmd_deploy(args):
-    if not args.no_build:
-        docker_build_all(release=args.release, push=True)
+@command("deploy")
+def cmd_deploy(
+    no_build: Annotated[bool, "Skip build step, reuse the docker image that is already in the remote registry"] = False,
+    release: Annotated[bool, "-r", "Build in release mode"] = False,
+    drop_server: Annotated[bool, "Force the re-creation of the server instance"] = False,
+    drop_data: Annotated[bool, "Drop the persistent data (re-create the data volume)"] = False,
+    plan: Annotated[bool, "Do `tf plan` instead of `tf apply`"] = False,
+    yes: Annotated[bool, "-y", "Auto-approve the deployment"] = False,
+    no_tf_refresh: Annotated[bool, "Don't refresh the terraform state before deployment"] = False,
+):
+    """Deploy the full application's stack"""
+    if not no_build:
+        docker_build_all(release=release, push=True)
 
-    tf_args = ["plan" if args.plan else "apply", *tf_vars()]
-    if args.yes:
-        tf_args.append("--auto-approve")
-    if args.drop_server:
-        tf_args.append("--replace=module.hetzner.hcloud_server.master")
-    if args.drop_data:
-        tf_args.append("--replace=module.hetzner.hcloud_volume.master")
-    if args.no_tf_refresh:
-        tf_args.append("--refresh=false")
+    args = ["plan" if plan else "apply", *tf_vars()]
+    if yes:
+        args.append("--auto-approve")
+    if drop_server:
+        args.append("--replace=module.hetzner.hcloud_server.master")
+    if drop_data:
+        args.append("--replace=module.hetzner.hcloud_volume.master")
+    if no_tf_refresh:
+        args.append("--refresh=false")
 
-    tf(*tf_args)
+    tf(*args)
 
-    if not args.plan:
+    if not plan:
         # The server boots for a while, and ssh fails until it is up.
         with_retry(lambda: ssh_cloud_init_log(dump=False), max_retries=20)
 
 
-def cmd_tag(args):
+@command("tag")
+def cmd_tag():
+    """Create a git tag with the current project's version and push it to the remote"""
     run("git", "tag", f"v{project_version()}", cwd=REPO)
     run("git", "push", "--tags", cwd=REPO)
 
 
-def cmd_destroy(args):
-    tf_args = ["destroy", *tf_vars()]
-    if args.yes:
-        tf_args.append("--auto-approve")
-    if not args.all:
-        tf_args.append("--target=module.hetzner.hcloud_server.master")
-        if args.drop_data:
-            tf_args.append("--target=module.hetzner.hcloud_volume.master")
-    tf(*tf_args)
+@command("destroy")
+def cmd_destroy(
+    yes: Annotated[bool, "-y", "Auto-approve the destruction"] = False,
+    drop_data: Annotated[bool, "Destroy the Hetzner Cloud volume. ⚠️ This guarantees data loss"] = False,
+    all: Annotated[
+        bool,
+        "Destroy all resources. ⚠️ This guarantees data loss because "
+        "the database's data volume will be destroyed as well",
+    ] = False,
+):
+    """Destroy the application's stack. By default destroys only the server instance,
+    because it's safe to do, and no data will be lost. Use `--all` to destroy everything."""
+    args = ["destroy", *tf_vars()]
+    if yes:
+        args.append("--auto-approve")
+    if not all:
+        args.append("--target=module.hetzner.hcloud_server.master")
+        if drop_data:
+            args.append("--target=module.hetzner.hcloud_volume.master")
+    tf(*args)
 
 
-def cmd_tf_state_list(args):
+@command("tf state list")
+def cmd_tf_state_list():
+    """Convenience wrapper for `tf state list`"""
     tf("state", "list", debug=False)
 
 
-def cmd_tf_output(args):
+@command("tf output")
+def cmd_tf_output():
+    """Convenience wrapper for `tf output`"""
     print_json(tf_output())
 
 
-def cmd_derpibooru_image(args):
-    image = http_get_json(f"https://derpibooru.org/api/v1/json/images/{args.id}")["image"]
+@command("derpibooru image")
+def cmd_derpibooru_image(id: int):
+    """Fetch the image metadata from derpibooru"""
+    image = http_get_json(f"https://derpibooru.org/api/v1/json/images/{id}")["image"]
     # Show the image URLs of each size next to the other fields.
-    image.update(image.pop("representations"))
+    image |= image.pop("representations")
     print_json(image)
 
 
-def cmd_tg_chat_id(args):
-    query = urllib.parse.urlencode({"chat_id": f"@{args.chat_tag}", "text": "snowpity"})
-    url = f"https://api.telegram.org/bot{args.bot_token}/sendMessage?{query}"
+@command("tg chat-id")
+def cmd_tg_chat_id(*, bot_token: str, chat_tag: str):
+    """Get the ID of the telegram chat by its public tag.
+    This is needed to get the ID of the private telegram chat or channel.
+    We have to make that chat temporarily public, then get its ID and move
+    it back to private again."""
+    query = urllib.parse.urlencode({"chat_id": f"@{chat_tag}", "text": "snowpity"})
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage?{query}"
     print(http_get_json(url)["result"]["chat"]["id"])
 
 
-def cmd_sqlx_prepare(args):
+@command("sqlx prepare")
+def cmd_sqlx_prepare():
+    """Run `cargo sqlx prepare` for the bot crate"""
     run("cargo", "sqlx", "prepare", cwd=REPO / "crates" / "snowpity-tg")
 
 
-def cmd_test(args):
-    run("cargo", "test", "--", *args.args, cwd=REPO, env={"RUST_LOG": "debug,h2=info,hyper=info"})
-
-
-def cli():
-    parser = argparse.ArgumentParser(prog="x", description=__doc__)
-    commands = parser.add_subparsers(metavar="<command>", required=True)
-
-    def command(parent, name, func, help):
-        sub = parent.add_parser(name, help=help, description=help)
-        sub.set_defaults(func=func)
-        return sub
-
-    def group(parent, name, help):
-        sub = parent.add_parser(name, help=help, description=help)
-        return sub.add_subparsers(metavar="<command>", required=True)
-
-    ssh_cmd = command(commands, "ssh", cmd_ssh, "SSH into the app's server")
-    ssh_cmd.add_argument(
-        "-f", "--forward-ports", action="store_true", help="Forward grafana and pgadmin4 ports to localhost"
-    )
-    ssh_cmd.add_argument("--code", action="store_true", help="Connect using VSCode")
-    ssh_sub = ssh_cmd.add_subparsers(metavar="<command>")
-    command(ssh_sub, "str", cmd_ssh_str, "Print the user@ip string for the app's server")
-    command(ssh_sub, "journalctl", cmd_ssh_journalctl, "Follow the app's systemd service logs")
-    systemctl = ssh_sub.add_parser("systemctl", help="Inspect the app's systemd service")
-    systemctl_sub = systemctl.add_subparsers(metavar="<command>", required=True)
-    command(systemctl_sub, "status", cmd_ssh_systemctl_status, "Display the app's systemd service status")
-    cloud_init = ssh_sub.add_parser("cloud-init", help="Inspect the server's cloud-init")
-    cloud_init_sub = cloud_init.add_subparsers(metavar="<command>", required=True)
-    log = command(cloud_init_sub, "log", cmd_ssh_cloud_init_log, "Display the server's cloud-init logs")
-    log.add_argument(
-        "--dump", action="store_true", help="Don't show the tail of the log file, but dump its full contents"
-    )
-    command(cloud_init_sub, "status", cmd_ssh_cloud_init_status, "Display the server's cloud-init status")
-    command(
-        cloud_init_sub, "user-data", cmd_ssh_cloud_init_user_data, "Show the ultimate user data residing on the server"
-    )
-
-    docker = group(commands, "docker", "Docker images")
-    build = command(docker, "build", cmd_docker_build, "Build all docker images")
-    build.add_argument("-r", "--release", action="store_true", help="Build in release mode")
-    build.add_argument("-p", "--push", action="store_true", help="Push the image to remote docker registry")
-
-    up = command(commands, "up", cmd_up, "Start all services locally using `docker compose`")
-    up.add_argument("--no-tg-bot", action="store_true", help="Don't start the tg_bot service")
-    up.add_argument(
-        "--no-observability", action="store_true", help="Don't start the pgadmin and observability services"
-    )
-    up.add_argument("-f", "--fresh", action="store_true", help="Delete the data volumes before starting the database")
-    up.add_argument("-r", "--release", action="store_true", help="Build in release mode")
-
-    down_cmd = command(
-        commands, "down", cmd_down, "Shutdown the local containers and clean the persistent data volumes"
-    )
-    down_cmd.add_argument("--drop-data", action="store_true", help="Remove all data volumes")
-
-    deploy = command(commands, "deploy", cmd_deploy, "Deploy the full application's stack")
-    deploy.add_argument(
-        "--no-build",
-        action="store_true",
-        help="Skip build step, reuse the docker image that is already in the remote registry",
-    )
-    deploy.add_argument("-r", "--release", action="store_true", help="Build in release mode")
-    deploy.add_argument("--drop-server", action="store_true", help="Force the re-creation of the server instance")
-    deploy.add_argument(
-        "--drop-data", action="store_true", help="Drop the persistent data (re-create the data volume)"
-    )
-    deploy.add_argument("--plan", action="store_true", help="Do `tf plan` instead of `tf apply`")
-    deploy.add_argument("-y", "--yes", action="store_true", help="Auto-approve the deployment")
-    deploy.add_argument(
-        "--no-tf-refresh", action="store_true", help="Don't refresh the terraform state before deployment"
-    )
-
-    command(
-        commands, "tag", cmd_tag, "Create a git tag with the current project's version and push it to the remote"
-    )
-
-    destroy = command(
-        commands,
-        "destroy",
-        cmd_destroy,
-        "Destroy the application's stack. By default destroys only the server instance, "
-        "because it's safe to do, and no data will be lost. Use `--all` to destroy everything.",
-    )
-    destroy.add_argument("-y", "--yes", action="store_true", help="Auto-approve the destruction")
-    destroy.add_argument(
-        "--drop-data", action="store_true", help="Destroy the Hetzner Cloud volume. ⚠️ This guarantees data loss"
-    )
-    destroy.add_argument(
-        "--all",
-        action="store_true",
-        help="Destroy all resources. ⚠️ This guarantees data loss because "
-        "the database's data volume will be destroyed as well",
-    )
-
-    tf_group = group(commands, "tf", "Terraform shortcuts")
-    tf_state = tf_group.add_parser("state", help="Terraform state")
-    tf_state_sub = tf_state.add_subparsers(metavar="<command>", required=True)
-    command(tf_state_sub, "list", cmd_tf_state_list, "Convenience wrapper for `tf state list`")
-    command(tf_group, "output", cmd_tf_output, "Convenience wrapper for `tf output`")
-
-    derpibooru = group(commands, "derpibooru", "Derpibooru API")
-    image = command(derpibooru, "image", cmd_derpibooru_image, "Fetch the image metadata from derpibooru")
-    image.add_argument("id", type=int)
-
-    tg = group(commands, "tg", "Telegram API")
-    chat_id = command(
-        tg,
-        "chat-id",
-        cmd_tg_chat_id,
-        "Get the ID of the telegram chat by its public tag. "
-        "This is needed to get the ID of the private telegram chat or channel. "
-        "We have to make that chat temporarily public, then get its ID and move it back to private again.",
-    )
-    chat_id.add_argument("--bot-token", required=True)
-    chat_id.add_argument("--chat-tag", required=True)
-
-    sqlx = group(commands, "sqlx", "sqlx shortcuts")
-    command(sqlx, "prepare", cmd_sqlx_prepare, "Run `cargo sqlx prepare` for the bot crate")
-
-    test = command(commands, "test", cmd_test, "Invoke `cargo test` with logging enabled")
-    test.add_argument("args", nargs=argparse.REMAINDER, help="Arguments for the test binary")
-
-    return parser
+@command("test")
+def cmd_test(*args: Annotated[str, "Arguments for the test binary"]):
+    """Invoke `cargo test` with logging enabled"""
+    run("cargo", "test", "--", *args, cwd=REPO, env={"RUST_LOG": "debug,h2=info,hyper=info"})
 
 
 def main():
-    args = cli().parse_args()
+    parser = cli()
+    # argparse does not start `*args` with an option, such as `x test --nocapture`.
+    # It leaves such options in `unknown`, before the rest of `*args`.
+    args, unknown = parser.parse_known_args()
+    params = inspect.signature(args.func).parameters.values()
+    if unknown and all(param.kind is not Parameter.VAR_POSITIONAL for param in params):
+        parser.error(f"unrecognized arguments: {' '.join(unknown)}")
+
+    positional, keyword = [], {}
+    for param in params:
+        value = getattr(args, param.name)
+        match param.kind:
+            case Parameter.VAR_POSITIONAL:
+                rest = unknown + value
+                positional += rest[1:] if rest[:1] == ["--"] else rest
+            case Parameter.KEYWORD_ONLY:
+                keyword[param.name] = value
+            case _:
+                positional.append(value)
     try:
-        args.func(args)
+        args.func(*positional, **keyword)
     except CommandError as err:
         error(err)
         sys.exit(err.exit_code)
@@ -291,24 +278,81 @@ def main():
 ################################################
 
 
+def cli() -> argparse.ArgumentParser:
+    """Build the parser of `COMMANDS`."""
+    root = argparse.ArgumentParser(prog="x", description=__doc__, allow_abbrev=False, suggest_on_error=True)
+    parsers = {"": root}
+    subcommands = {}
+
+    def parser_for(path: str) -> argparse.ArgumentParser:
+        if path in parsers:
+            return parsers[path]
+        parent, _, name = path.rpartition(" ")
+        if parent not in subcommands:
+            subcommands[parent] = parser_for(parent).add_subparsers(
+                metavar="<command>", required=parent not in COMMANDS
+            )
+        help = inspect.getdoc(COMMANDS[path]) if path in COMMANDS else None
+        parsers[path] = subcommands[parent].add_parser(
+            name, help=help, description=help, allow_abbrev=False, suggest_on_error=True
+        )
+        return parsers[path]
+
+    for path, func in COMMANDS.items():
+        parser = parser_for(path)
+        parser.set_defaults(func=func)
+        for param in inspect.signature(func).parameters.values():
+            add_argument(parser, param)
+
+    return root
+
+
+def add_argument(parser: argparse.ArgumentParser, param: Parameter):
+    type_, *meta = get_args(param.annotation) if get_origin(param.annotation) is Annotated else [param.annotation]
+    aliases = [m for m in meta if m.startswith("-")]
+    help = next((m for m in meta if not m.startswith("-")), None)
+    option = "--" + param.name.replace("_", "-")
+
+    match param.kind:
+        case Parameter.VAR_POSITIONAL:
+            parser.add_argument(param.name, nargs=argparse.REMAINDER, help=help)
+        case _ if type_ is bool:
+            parser.add_argument(*aliases, option, dest=param.name, action="store_true", help=help)
+        case Parameter.KEYWORD_ONLY:
+            required = param.default is Parameter.empty
+            default = None if required else param.default
+            parser.add_argument(
+                *aliases, option, dest=param.name, type=type_, required=required, default=default, help=help
+            )
+        case _:
+            parser.add_argument(param.name, type=type_, help=help)
+
+
 class CommandError(Exception):
-    def __init__(self, invocation, exit_code):
+    def __init__(self, invocation: str, exit_code: int):
         super().__init__(f"Command exited with code {exit_code}\n{invocation}")
         self.exit_code = exit_code
 
 
-def run(*cmd, cwd=None, env=None, debug=True, capture=False):
+def run(
+    *cmd: str | Path,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+    debug: bool = True,
+    capture: bool = False,
+) -> str | None:
     """Run a command and raise `CommandError` when it fails.
 
     Return its stdout when `capture` is set.
     """
-    invocation = " ".join(str(arg) for arg in cmd)
+    cmd = [str(arg) for arg in cmd]
+    invocation = " ".join(cmd)
     if debug:
         log("34", "DEBUG", invocation)
     result = subprocess.run(
-        [str(arg) for arg in cmd],
+        cmd,
         cwd=cwd,
-        env={**os.environ, **env} if env else None,
+        env=os.environ | env if env else None,
         stdout=subprocess.PIPE if capture else None,
         text=True,
     )
@@ -317,33 +361,31 @@ def run(*cmd, cwd=None, env=None, debug=True, capture=False):
     return result.stdout
 
 
-def tf(*args, debug=True, capture=False):
+def tf(*args: str, debug: bool = True, capture: bool = False) -> str | None:
     return run("terraform", *args, cwd=TF_PROJECT, debug=debug, capture=capture)
 
 
-def tf_vars():
+def tf_vars() -> list[str]:
     return ["-var", f"tg_bot_image_tag={project_version()}"]
 
 
-@functools.lru_cache(maxsize=None)
-def tf_output():
+@cache
+def tf_output() -> dict:
     return json.loads(tf("output", "--json", debug=False, capture=True))
 
 
-@functools.lru_cache(maxsize=None)
-def project_version():
-    metadata = json.loads(
-        run("cargo", "metadata", "--format-version", "1", "--no-deps", cwd=REPO, debug=False, capture=True)
-    )
-    return next(pkg["version"] for pkg in metadata["packages"] if pkg["name"] == "snowpity-tg")
+@cache
+def project_version() -> str:
+    metadata = run("cargo", "metadata", "--format-version", "1", "--no-deps", cwd=REPO, debug=False, capture=True)
+    return next(pkg["version"] for pkg in json.loads(metadata)["packages"] if pkg["name"] == "snowpity-tg")
 
 
-def ssh_str():
+def ssh_str() -> str:
     server = tf_output()["server"]["value"]
     return f"{server['os_user']}@{server['ip']}"
 
 
-def ssh(*args, forward_ports=False):
+def ssh(*args: str, forward_ports: bool = False):
     ports = []
     if forward_ports:
         ports = [
@@ -354,37 +396,36 @@ def ssh(*args, forward_ports=False):
     run("ssh", "-t", ssh_str(), *ports, *args, debug=False)
 
 
-def ssh_cloud_init_log(dump):
+def ssh_cloud_init_log(dump: bool):
     cmd = "cat" if dump else "tail --follow"
     ssh(f"sudo {cmd} /var/log/cloud-init-output.log")
 
 
-def docker_compose(*args, env=None):
+def docker_compose(*args: str, env: dict[str, str] | None = None):
     current_uid = {"CURRENT_UID": f"{os.getuid()}:{os.getgid()}"}
-    run("docker", "compose", *args, cwd=REPO, env={**current_uid, **(env or {})})
+    run("docker", "compose", *args, cwd=REPO, env=current_uid | (env or {}))
 
 
-def down(drop_data):
+def down(drop_data: bool):
     docker_compose("down", "--timeout", "0", "--remove-orphans")
     if drop_data:
-        try:
+        # The volume may not exist.
+        with contextlib.suppress(CommandError):
             run("docker", "volume", "rm", "snowpity_postgres")
-        except CommandError:
-            pass  # The volume does not exist.
 
 
-def build_mode(release):
+def build_mode(release: bool) -> str:
     return "release" if release else "debug"
 
 
-def docker_build_all(release, push):
+def docker_build_all(release: bool, push: bool):
     mode = build_mode(release)
     info(f"Building in {mode} mode...")
     docker_build("tg-bot", push=push, context=".", build_args={"RUST_BUILD_MODE": mode})
     docker_build("grafana", push=push, context="./docker/grafana")
 
 
-def docker_build(component, push, context, build_args=None):
+def docker_build(component: str, push: bool, context: str, build_args: dict[str, str] | None = None):
     """Build an image with a tag of the exact version and the "latest" tag."""
     image = tf_output()["docker"]["value"]["image_name"]
     label = "" if component == "tg-bot" else f"{component}-"
@@ -409,7 +450,14 @@ def docker_build(component, push, context, build_args=None):
     run("docker", *args, cwd=REPO)
 
 
-def with_retry(imp, delay=0.2, max_retries=5, max_delay=5.0, fixed=False):
+def with_retry[T](
+    imp: Callable[[], T],
+    *,
+    delay: float = 0.2,
+    max_retries: int = 5,
+    max_delay: float = 5.0,
+    fixed: bool = False,
+) -> T:
     """Call `imp` until it succeeds or `max_retries` attempts fail.
 
     The delay grows exponentially with jitter, unless `fixed` is set.
@@ -428,7 +476,7 @@ def with_retry(imp, delay=0.2, max_retries=5, max_delay=5.0, fixed=False):
     return imp()
 
 
-def http_get_json(url):
+def http_get_json(url: str):
     request = urllib.request.Request(url, headers={"User-Agent": "snowpity-x"})
     with urllib.request.urlopen(request) as response:
         return json.load(response)
@@ -438,19 +486,19 @@ def print_json(value):
     print(json.dumps(value, indent=2, ensure_ascii=False))
 
 
-def log(color, level, msg):
+def log(color: str, level: str, msg: object):
     print(f"\033[{color};1m[{level}] {msg}\033[0m", file=sys.stderr)
 
 
-def info(msg):
+def info(msg: object):
     log("32", "INFO", msg)
 
 
-def warn(msg):
+def warn(msg: object):
     log("33", "WARN", msg)
 
 
-def error(msg):
+def error(msg: object):
     log("31", "ERROR", msg)
 
 

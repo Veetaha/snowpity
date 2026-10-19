@@ -27,7 +27,7 @@ It's also possible to run the bot in a container using `docker compose` just lik
 alias x="$(git rev-parse --show-toplevel)/x.py"
 ```
 
-It needs Python 3.9 or newer and uses only its standard library.
+It uses only the Python standard library. [`mise.toml`](mise.toml) pins the Python version. Install it with `mise install`.
 
 After that you will be able to run:
 
