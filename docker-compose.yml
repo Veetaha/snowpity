@@ -12,11 +12,25 @@ services:
 
     restart: on-failure:50
 
-    env_file: .env
+    # The server has this file. Elsewhere the variables come from the shell.
+    env_file:
+      - path: .env
+        required: false
     environment:
       LOKI_URL: http://loki:3100
       DATABASE_URL: postgres://snowpity:${PG_PASSWORD}@postgres:5432/snowpity
       RUST_BACKTRACE: full
+
+      # From the shell. A variable the shell does not set comes from `.env`.
+      DERPIBOORU_API_KEY:
+      TWITTER_BEARER_TOKEN:
+      TWITTER_COOKIES:
+      TG_BOT_ALERTS_CHAT:
+      TG_BOT_BLOB_CACHE_CHAT:
+      TG_BOT_LOG:
+      TG_BOT_LOG_LABELS:
+      TG_BOT_MAINTAINER:
+      TG_BOT_TOKEN:
 
     extra_hosts: ["host.docker.internal:host-gateway"]
 
