@@ -3,6 +3,8 @@
 [default.extend-words]
 # Telegram `tme` link
 tme = "tme"
+# Hetzner Helsinki location
+hel = "hel"
 
 [files]
 extend-exclude = [
