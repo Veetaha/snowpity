@@ -1,4 +1,4 @@
-# Unreleased
+# 0.13.0 2026-10-22
 
 - Rewrite the dev CLI from nushell (`x.nu`) to Python (`x.py`). It needs no extra dependencies.
   This also fixes these bugs of the old CLI:

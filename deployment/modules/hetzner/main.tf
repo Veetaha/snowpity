@@ -1,5 +1,5 @@
 locals {
-  location = "fsn1"
+  location = "hel1"
 
   hostname = "hetzner-master${module.workspace.id_suffix}"
 
@@ -32,7 +32,7 @@ resource "hcloud_server" "master" {
 }
 
 resource "hcloud_volume" "master" {
-  name     = "master${module.workspace.id_suffix}"
+  name     = "master-${local.location}${module.workspace.id_suffix}"
   size     = module.workspace.kind == "prod" ? 50 : 10
   location = local.location
 }
