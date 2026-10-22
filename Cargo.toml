@@ -35,7 +35,6 @@ assert_matches      = "1.5"
 async-trait         = "0.1"
 base64              = "0.22"
 bytes               = "1.1"
-cgo                 = "0.4"
 criterion           = "0.7"
 darling             = "0.21"
 derive_more         = { version = "2.0", features = ["deref", "from_str", "display"] }
@@ -65,7 +64,6 @@ parking_lot         = "0.12"
 pin-project-lite    = "0.2"
 proc-macro2         = "1.0"
 quote               = "1.0"
-rand                = "0.9"
 reqwest-middleware  = "0.4"
 reqwest-retry       = "0.7"
 serde_json          = "1.0"
@@ -83,7 +81,6 @@ wav_io              = "0.1"
 
 # Deps with feature overrides
 chrono                      = { version = "0.4", features = ["clock", "std"], default-features = false }
-clap                        = { version = "4.0", features = ["derive"] }
 metrics-exporter-prometheus = { version = "0.17", default-features = false }
 reqwest                     = { version = "0.12", features = ["rustls-tls"], default-features = false }
 sea-query                   = { version = "0.32", features = ["attr", "derive", "backend-postgres"], default-features = false }
@@ -98,7 +95,7 @@ timeago                     = { version = "0.5", features = ["chrono"] }
 tracing-error               = { version = "0.2", default-features = false }
 tracing-loki                = { version = "0.2", features = ["rustls", "compat-0-2-1"], default-features = false }
 tracing-subscriber          = { version = "0.3", features = ["env-filter"] }
-vergen                      = { version = "8.2", features = ["build", "rustc", "git", "gix", "cargo"] }
+vergen-gitcl                = { version = "10.0", features = ["build", "rustc", "cargo"] }
 
 # Path deps
 metrics-bat        = { path = "crates/metrics-bat" }

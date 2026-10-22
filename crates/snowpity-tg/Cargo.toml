@@ -12,7 +12,7 @@ harness = false
 name    = "image_resize"
 
 [build-dependencies]
-vergen = { workspace = true }
+vergen-gitcl = { workspace = true }
 
 [dependencies]
 assert_matches              = { workspace = true }
