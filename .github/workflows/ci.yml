@@ -23,8 +23,8 @@ jobs:
   terraform-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v2
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_wrapper: false
           # Make sure to keep it in sync with the version requirement in tf project
@@ -44,14 +44,14 @@ jobs:
   taplo-fmt-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: ./scripts/download/taplo.sh
       - run: ./taplo fmt --check
 
   typos:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: ./scripts/download/typos.sh
       - run: ./typos
 
@@ -67,7 +67,7 @@ jobs:
     continue-on-error: ${{ matrix.checks == 'advisories' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check ${{ matrix.checks }}
@@ -76,7 +76,7 @@ jobs:
   rust-unused-dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: ./scripts/download/cargo-machete.sh
       - run: ./cargo-machete
 
@@ -91,7 +91,7 @@ jobs:
         toolchain: [stable, beta, nightly]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - if: ${{ matrix.toolchain == 'stable' }}
         run: echo RUSTUP_TOOLCHAIN=$(cat rust-toolchain) >> $GITHUB_ENV
@@ -119,7 +119,7 @@ jobs:
         toolchain: [stable, beta, nightly]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - if: ${{ matrix.toolchain == 'stable' }}
         run: echo RUSTUP_TOOLCHAIN=$(cat rust-toolchain) >> $GITHUB_ENV

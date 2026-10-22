@@ -5,6 +5,8 @@
     - `x destroy` without `--all` targeted the data volume even without `--drop-data`
     - `x docker build` pushed the images even without `--push`
     - `x test` rejected arguments that start with `-`
+- Distrust the compromised eMudhra TLS intermediates
+- Updated Rust toolchain from `1.93.0` to `1.99.1`
 
 # 0.12.0 2025-02-18
 
