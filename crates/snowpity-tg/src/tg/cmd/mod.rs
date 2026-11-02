@@ -14,7 +14,6 @@ use teloxide::types::{Message, User};
 use teloxide::utils::markdown;
 
 pub(crate) use maintainer::DescribeCommandError;
-pub(crate) use regular::FtaiCommandError;
 
 #[async_trait]
 pub(crate) trait Command: fmt::Debug + Send + Sync + 'static {

@@ -9,9 +9,6 @@ deps=(
     # debian image that we in docker. This was also motivated by the following issue:
     # https://github.com/debuerreotype/docker-debian-artifacts/issues/15#issuecomment-634423712
     ca-certificates
-    # Required for ogg_opus crate (via auidopus_sys). Even though we could link it
-    # statically, it's easier to just install it.
-    libopus0
 )
 
 # Required for downloading the dependencies

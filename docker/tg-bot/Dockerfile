@@ -2,11 +2,9 @@
 
 
 # We could do cross-compilation by specifying `FROM --platform=$BUILDPLATFORM` here
-# and then using `cargo-zigbuild`. However, we are not doing this because our
-# transitive dependency `audiopus_sys` depends on a C library, and it's a huge
-# pain to cross-compile C libraries. So we are just using the emulation provided
-# by docker BuildKit with QEMU to do the build. The build time in this case is
-# drastically increased, but it's not a big deal for us at the moment.
+# and then using `cargo-zigbuild`. We use the emulation provided by docker
+# BuildKit with QEMU to do the build instead. It is simpler, but the build is
+# much slower.
 #
 # See a detailed cross-compilation guide here:
 # https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/

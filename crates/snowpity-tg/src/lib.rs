@@ -1,7 +1,6 @@
 mod config;
 mod db;
 mod error;
-mod ftai;
 mod http;
 mod observability;
 mod posting;

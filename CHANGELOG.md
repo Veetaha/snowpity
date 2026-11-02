@@ -1,3 +1,7 @@
+# Unreleased
+
+- Remove the `/ftai` command and the 15.ai integration. The service is not coming back
+
 # 0.13.0 2026-10-22
 
 - Rewrite the dev CLI from nushell (`x.nu`) to Python (`x.py`). It needs no extra dependencies.
