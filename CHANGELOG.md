@@ -1,4 +1,4 @@
-# Unreleased
+# 0.13.1 2026-11-05
 
 - Remove the `/ftai` command and the 15.ai integration. The service is not coming back
 
