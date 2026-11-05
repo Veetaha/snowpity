@@ -1,15 +1,10 @@
-mod ftai;
-
 use crate::Result;
 use crate::tg;
 use async_trait::async_trait;
-use ftai::FtaiCmd;
 use teloxide::prelude::*;
 use teloxide::types::{InlineKeyboardButton, InputFile, ReplyMarkup, ReplyParameters};
 use teloxide::utils::command::BotCommands;
 use teloxide::utils::markdown;
-
-pub(crate) use ftai::FtaiCommandError;
 
 const HELP_ANIMATION_URL: &str = "https://user-images.githubusercontent.com/36276403/209577979-b0ace368-4bea-4a10-a687-d3f24cbed6a2.mp4";
 const EXAMPLE_DERPIBOORU_MEDIA_URL: &str = "https://derpibooru.org/1975357";
@@ -22,16 +17,6 @@ const EXAMPLE_DEVIANT_ART_MEDIA_URL: &str =
 pub(crate) enum Cmd {
     #[command(description = "show the guide")]
     Help,
-    // #[command(description = "Generate audio via 15.ai: <character name>,<text>")]
-    // Ftai(String),
-}
-
-// 15 AI is very unstable, and not available now. We should come up with a way
-// to automatically keep track of its availability, and disable/enable the
-// 15.ai command accordingly to avoid unnecessarily displaying errors to users
-#[allow(dead_code)]
-fn ignore_15_ai(cmd: &str, ctx: &tg::Ctx, msg: &Message) {
-    drop(cmd.parse::<FtaiCmd>().unwrap().handle(ctx, msg));
 }
 
 #[async_trait]
@@ -79,11 +64,7 @@ impl tg::cmd::Command for Cmd {
                     .caption(help_text)
                     .reply_markup(ReplyMarkup::inline_kb(buttons))
                     .await?;
-            } // Cmd::Ftai(cmd) => {
-
-              //     cmd.parse::<FtaiCmd>()?.handle(ctx, msg).await?
-
-              // }
+            }
         }
         Ok(())
     }

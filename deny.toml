@@ -17,7 +17,7 @@ wildcards = "allow"
 multiple-versions = "deny"
 skip = [
   # Comes from snowpity-tg -> nanoid@0.4.0
-  # Other direct parents: ogg-opus@0.1.2, retry-policies@0.4.0, sqlx-postgres@0.8.6
+  # Other direct parents: retry-policies@0.4.0, sqlx-postgres@0.8.6
   { name = "rand", version = "=0.8.5" },
 
   # Comes from snowpity-tg -> teloxide@0.17.0
@@ -48,8 +48,8 @@ skip = [
   # Direct parents: sea-query-derive@0.4.3, serde_with_macros@3.14.0
   { name = "darling", version = "=0.20.11" },
 
-  # Comes from snowpity-tg -> ogg-opus@0.1.2
-  # Other direct parents: reqwest-middleware@0.4.2, reqwest-retry@0.7.0, wav_io@0.1.15
+  # Comes from snowpity-tg -> reqwest-middleware@0.4.2
+  # Other direct parents: reqwest-retry@0.7.0
   { name = "thiserror", version = "=1.0.69" },
 
   # Comes from sqlx-bat -> sea-query-binder@0.7.0
@@ -80,7 +80,7 @@ skip = [
   # Direct parents: darling@0.20.11
   { name = "darling_macro", version = "=0.20.11" },
 
-  # Comes from snowpity-tg -> ogg-opus@0.1.2
+  # Comes from snowpity-tg -> reqwest-middleware@0.4.2
   # Direct parents: thiserror@1.0.69
   { name = "thiserror-impl", version = "=1.0.69" },
 

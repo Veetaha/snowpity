@@ -7,7 +7,6 @@ mod config;
 mod inline_query;
 mod message_from_channel;
 
-use crate::ftai::FtaiService;
 use crate::prelude::*;
 use crate::sysinfo::SysInfoService;
 use crate::util::encoding;
@@ -22,7 +21,7 @@ use teloxide::prelude::*;
 use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
 
-pub(crate) use cmd::{DescribeCommandError, FtaiCommandError};
+pub(crate) use cmd::DescribeCommandError;
 pub(crate) use config::*;
 pub(crate) use inline_query::InlineQueryError;
 
@@ -44,7 +43,6 @@ pub(crate) struct Ctx {
     bot: Bot,
     tg_chats: db::TgChatRepo,
     cfg: Arc<Config>,
-    ftai: FtaiService,
     captcha: CaptchaCtx,
     sysinfo: SysInfoService,
     inline_query: InlineQueryService,
@@ -54,7 +52,6 @@ impl Ctx {
     fn new(bot: Bot, opts: RunBotOptions) -> Self {
         let http = http::create_client();
 
-        let ftai = FtaiService::new(http.clone());
         let tg_cfg = Arc::new(opts.tg_cfg);
 
         let posting_params = posting::platform::PlatformParams {
@@ -69,7 +66,6 @@ impl Ctx {
             tg_chats: db::TgChatRepo::new(opts.db),
             bot,
             cfg: tg_cfg,
-            ftai,
             sysinfo: SysInfoService::new(),
             captcha: Default::default(),
             inline_query: InlineQueryService::new(ctx),

@@ -39,12 +39,6 @@ struct ErrorImp {
 #[derive(Error, Debug)]
 pub(crate) enum ErrorKind {
     #[error(transparent)]
-    FtaiCommand {
-        #[from]
-        source: crate::tg::FtaiCommandError,
-    },
-
-    #[error(transparent)]
     DescribeCommand {
         #[from]
         source: crate::tg::DescribeCommandError,
@@ -54,12 +48,6 @@ pub(crate) enum ErrorKind {
     HttpClient {
         #[from]
         source: crate::http::HttpClientError,
-    },
-
-    #[error(transparent)]
-    FtAi {
-        #[from]
-        source: crate::ftai::FtAiError,
     },
 
     #[error(transparent)]
@@ -121,12 +109,9 @@ impl Error {
     /// These are most likely caused by humanz sending wrong input.
     pub(crate) fn is_user_error(&self) -> bool {
         match &self.imp.kind {
-            ErrorKind::FtaiCommand { .. }
-            | ErrorKind::DescribeCommand { .. }
-            | ErrorKind::InlineQuery { .. } => true,
+            ErrorKind::DescribeCommand { .. } | ErrorKind::InlineQuery { .. } => true,
             ErrorKind::Multiple { errs } => errs.iter().all(Self::is_user_error),
             ErrorKind::HttpClient { .. }
-            | ErrorKind::FtAi { .. }
             | ErrorKind::Tg { .. }
             | ErrorKind::Db { .. }
             | ErrorKind::Deserialize { .. }

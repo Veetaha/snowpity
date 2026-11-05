@@ -4,18 +4,11 @@ use crate::{Result, err};
 use async_trait::async_trait;
 use easy_ext::ext;
 use reqwest_middleware::RequestBuilder;
-use serde::{Serialize, de::DeserializeOwned};
+use serde::de::DeserializeOwned;
 
 #[ext(RequestBuilderJsonExt)]
 #[async_trait]
 pub(crate) impl RequestBuilder {
-    async fn send_and_read_json<Req: Serialize + Send + Sync, Res: DeserializeOwned>(
-        self,
-        req: Req,
-    ) -> Result<Res> {
-        self.json(&req).read_json().await
-    }
-
     async fn read_json<Res: DeserializeOwned>(self) -> Result<Res> {
         let bytes = self.read_bytes().await?;
         let err = match serde_json::from_slice(&bytes) {
