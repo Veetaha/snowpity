@@ -5,6 +5,7 @@ Description=Data volume initialization
 # that reads the configurations from `/etc/fstab`
 BindsTo=mnt-master.mount
 After=mnt-master.mount
+Before=docker.service
 
 [Service]
 Type=oneshot
@@ -17,4 +18,3 @@ ExecStart=/var/app/data-volume.sh
 
 [Install]
 RequiredBy=docker.service
-Before=docker.service

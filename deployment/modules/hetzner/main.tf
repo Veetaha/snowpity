@@ -47,46 +47,34 @@ resource "hcloud_volume_attachment" "master" {
   automount = false
 }
 
-# HACK: we need to gracefully shutdown our systemd service with the database
-# docker container before the data volume is detached. This null resource
-# depends on the volume attachment resource, so the remote-exec provisioner
-# teardown script will be run before the attachment is destroyed.
-#
-# Unfortunately, it's not possible to do this with `systemd`. The volume detach
-# sequence is undocumented in Hetzner docs. One would expect that all `systemd`
-# services dependent upon the volume's mount are stopped before the volume
-# is detached but this isn't true.
-#
-# The reality is cruel. It was experimentally found that the volume is
-# detached abruptly. Therefore the database doesn't have time to
-# flush its data to the disk, which means potential data loss.
+# The database must flush its data to the disk before the data volume is
+# detached. Hetzner detaches the volume from a running server abruptly, and the
+# `systemd` services that depend on the volume's mount are not stopped first.
+# This resource depends on the volume attachment, so its destroy-time
+# provisioner shuts the server down gracefully before the volume is detached.
 resource "null_resource" "teardown" {
   triggers = {
     data_volume_attachment_id = hcloud_volume_attachment.master.id
 
-    # The data volume attachment ID is enough for the trigger, but these
-    # triggers are needed to workaround the problem that it's impossible
-    # to reference symbols other than `self` variable in the provisioner block.
-    #
+    # A destroy-time provisioner can reference only `self`, so it gets its
+    # inputs from the triggers.
     # Issue in terraform: https://github.com/hashicorp/terraform/issues/23679
-    server_ip      = hcloud_server.master.ipv4_address
-    server_os_user = local.server_os_user
+    server_id    = hcloud_server.master.id
+    hcloud_token = var.hcloud_token
   }
 
-  provisioner "remote-exec" {
-    when = destroy
+  lifecycle {
+    # A token rotation must not replace this resource, because a replacement
+    # shuts the server down.
+    ignore_changes = [triggers["hcloud_token"]]
+  }
 
-    inline = [
-      <<-SCRIPT
-      #!/usr/bin/env bash
-      set -euo pipefail
-      sudo systemctl stop tg-bot.service
-      SCRIPT
-    ]
+  provisioner "local-exec" {
+    when    = destroy
+    command = "${path.module}/shutdown-server.py ${self.triggers.server_id}"
 
-    connection {
-      host = self.triggers.server_ip
-      user = self.triggers.server_os_user
+    environment = {
+      HCLOUD_TOKEN = self.triggers.hcloud_token
     }
   }
 }

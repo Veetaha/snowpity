@@ -1,4 +1,4 @@
 {
-  "include": ["x.py"],
+  "include": ["x.py", "deployment/modules/hetzner/shutdown-server.py"],
   "typeCheckingMode": "strict"
 }

@@ -152,6 +152,7 @@ def cmd_deploy(
     plan: Annotated[bool, "Do `tf plan` instead of `tf apply`"] = False,
     yes: Annotated[bool, "-y", "Auto-approve the deployment"] = False,
     no_tf_refresh: Annotated[bool, "Don't refresh the terraform state before deployment"] = False,
+    no_logs: Annotated[bool, "Don't follow the server's cloud-init log over SSH after deployment"] = False,
 ) -> None:
     """Deploy the full application's stack"""
     if not no_build:
@@ -169,7 +170,7 @@ def cmd_deploy(
 
     tf(*args)
 
-    if not plan:
+    if not plan and not no_logs:
         # The server boots for a while, and ssh fails until it is up.
         with_retry(lambda: ssh_cloud_init_log(dump=False), max_retries=20)
 

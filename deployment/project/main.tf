@@ -27,6 +27,7 @@ module "hetzner" {
   docker_username = var.docker_username
   docker_password = var.docker_password
 
+  hcloud_token    = local.hcloud_token
   allowed_ssh_ips = var.allowed_ssh_ips
   public_ssh_key  = var.public_ssh_key
 }

@@ -11,7 +11,10 @@ RemainAfterExit=yes
 WorkingDirectory=/var/app
 EnvironmentFile=${env_file_path}
 
-ExecStartPre=-/var/app/docker-compose.sh rm
+# Remove the containers of the previous server. They live on the data volume
+# with the docker data root, and their state can be broken. The data of the
+# services is in docker volumes, which this keeps.
+ExecStartPre=/var/app/docker-compose.sh rm --force --stop
 
 ExecStart=/var/app/docker-compose.sh up --detach --no-build --pull always --wait
 

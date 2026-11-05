@@ -65,6 +65,12 @@ variable "twitter_cookies" {
   type      = string
 }
 
+variable "hcloud_token" {
+  nullable  = false
+  type      = string
+  sensitive = true
+}
+
 variable "public_ssh_key" {
   nullable = false
   type     = string
