@@ -1976,7 +1976,7 @@ dependencies = [
 
 [[package]]
 name = "metrics-bat"
-version = "0.13.0"
+version = "0.13.1"
 dependencies = [
  "easy-ext",
  "inventory",
@@ -1989,7 +1989,7 @@ dependencies = [
 
 [[package]]
 name = "metrics-bat-macros"
-version = "0.13.0"
+version = "0.13.1"
 dependencies = [
  "darling 0.21.3",
  "proc-macro2",
@@ -3454,7 +3454,7 @@ checksum = "1b6b67fb9a61334225b5b790716f609cd58395f895b3fe8b328786812a40bc3b"
 
 [[package]]
 name = "snowpity-tg"
-version = "0.13.0"
+version = "0.13.1"
 dependencies = [
  "assert_matches",
  "async-trait",
@@ -3518,7 +3518,7 @@ dependencies = [
 
 [[package]]
 name = "snowpity-tg-macros"
-version = "0.13.0"
+version = "0.13.1"
 dependencies = [
  "darling 0.21.3",
  "proc-macro2",
@@ -3570,7 +3570,7 @@ dependencies = [
 
 [[package]]
 name = "sqlx-bat"
-version = "0.13.0"
+version = "0.13.1"
 dependencies = [
  "easy-ext",
  "sea-query",
@@ -3993,7 +3993,7 @@ dependencies = [
 
 [[package]]
 name = "test-bat"
-version = "0.13.0"
+version = "0.13.1"
 dependencies = [
  "expect-test",
  "serde",
