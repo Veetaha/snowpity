@@ -24,9 +24,6 @@ pub(crate) enum Cmd {
     #[command(description = "display version info")]
     Version,
 
-    #[command(description = "display short system information")]
-    Sys,
-
     #[command(description = "display all unverified users currently registered")]
     ListUnverified,
 
@@ -86,10 +83,6 @@ impl tg::cmd::Command for Cmd {
                 ctx.bot
                     .reply_chunked(msg, "Unverified users were cleared ✔️")
                     .await?;
-            }
-            Cmd::Sys => {
-                let info = markdown::code_block(&ctx.sysinfo.to_human_readable());
-                ctx.bot.reply_chunked(msg, info).await?;
             }
             Cmd::Describe => {
                 let reply = msg

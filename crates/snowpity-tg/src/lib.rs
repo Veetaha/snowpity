@@ -4,7 +4,6 @@ mod error;
 mod http;
 mod observability;
 mod posting;
-mod sysinfo;
 mod tg;
 
 pub mod util;

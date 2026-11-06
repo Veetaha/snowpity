@@ -69,7 +69,6 @@ serde_yaml          = "0.9"
 sha2                = "0.11"
 shlex               = "2.0"
 syn                 = "3.0"
-sysinfo             = "0.40"
 tempfile            = "3.27"
 thiserror           = "2.0"
 tokio               = "1.54"
@@ -91,7 +90,6 @@ sqlx                        = { version = "0.9", features = ["runtime-tokio", "p
 strum                       = { version = "0.28", features = ["derive"] }
 teloxide                    = { version = "0.17", features = ["rustls"], default-features = false }
 test-log                    = { version = "0.2", features = ["trace"], default-features = false }
-timeago                     = { version = "0.6", features = ["chrono"] }
 tracing-error               = { version = "0.2", default-features = false }
 tracing-loki                = { version = "0.2", features = ["rustls", "compat-0-2-1"], default-features = false }
 tracing-subscriber          = { version = "0.3", features = ["env-filter"] }

@@ -8,7 +8,6 @@ mod inline_query;
 mod message_from_channel;
 
 use crate::prelude::*;
-use crate::sysinfo::SysInfoService;
 use crate::util::encoding;
 use crate::{Result, db, http, posting};
 use captcha::CaptchaCtx;
@@ -44,7 +43,6 @@ pub(crate) struct Ctx {
     tg_chats: db::TgChatRepo,
     cfg: Arc<Config>,
     captcha: CaptchaCtx,
-    sysinfo: SysInfoService,
     inline_query: InlineQueryService,
 }
 
@@ -66,7 +64,6 @@ impl Ctx {
             tg_chats: db::TgChatRepo::new(opts.db),
             bot,
             cfg: tg_cfg,
-            sysinfo: SysInfoService::new()?,
             captcha: Default::default(),
             inline_query: InlineQueryService::new(ctx),
         })
