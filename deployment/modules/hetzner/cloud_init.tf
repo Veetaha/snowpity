@@ -56,9 +56,6 @@ locals {
     data_volume_path   = local.data_volume_path
     data_volume_fs     = local.data_volume_fs
 
-    docker_username = var.docker_username
-    docker_password = var.docker_password
-
     workspace_kind = module.workspace.kind
   }
 

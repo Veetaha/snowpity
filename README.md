@@ -43,7 +43,7 @@ x down
 
 The bot is deployed using [terraform]. All tf projects reside under `deployment/` directory.
 
-The application is hosted on [Hetzner Cloud][hetzner-cloud]. It is delivered to the server via a [Dockerhub repository][dockerhub-repo], and covered with telemetry exfiltration by self-hosted [Grafana][grafana], [Grafana Agent][grafana-agent], [Loki][loki], [Victoria Metrics][victoria-metrics]. The bot services are orchestrated by [docker-compose], which is in turn bootstrapped via [cloud-init] and [systemd].
+The application is hosted on [Hetzner Cloud][hetzner-cloud]. It is delivered to the server via the [GitHub Container Registry][ghcr-package], and covered with telemetry exfiltration by self-hosted [Grafana][grafana], [Grafana Agent][grafana-agent], [Loki][loki], [Victoria Metrics][victoria-metrics]. The bot services are orchestrated by [docker-compose], which is in turn bootstrapped via [cloud-init] and [systemd].
 
 # Cost
 
@@ -57,7 +57,6 @@ We use this minimum configuration for development mode deployments to save money
 
 To deploy the bot, you need to manually create several accounts at:
 
-- [hub.docker.com](https://hub.docker.com/)
 - [hetzner.com/cloud][hetzner-cloud]
 
 You also need to retrieve the bot token from [@BotFather] in Telegram.
@@ -79,9 +78,6 @@ tg_bot_token = {
     dev  = "..."
 }
 
-docker_username = "username"
-docker_password = "password"
-
 pg_password      = "password"
 pgadmin_password = "password"
 
@@ -98,17 +94,15 @@ Note that some credentials differ by the terraform workspace. If the default ter
 
 ## Deployment routine
 
-After all the necessary credentials are configured, you will be able to deploy the entire stack with the Dockerhub repo and Hetzner Cloud server.
-
-Note, however, there currently is a chicken-and-egg problem, so the deployment won't succeed from the first try because first the Dockerhub repo must be deployed, then artifacts uploaded and only after that can we deploy the Hetzner server. To do the deployment for the first time run this:
+The `docker` workflow builds the images on every push to `master` and tags them with the commit SHA. To build the images of another commit, or for the `dev` workspace, run it manually:
 
 ```bash
-cd deployment/project
-terraform init
-terraform apply -target=module.dockerhub
+gh workflow run docker.yml --ref <branch> --field workspace=dev
 ```
 
-Once this is done you don't need to repeat the steps higher again. You may run the following command to build the app and deploy the stack to Hetzner.
+The images must be public, because the server pulls them without credentials. GitHub makes a new package private, so make the `snowpity-tg` and `snowpity-tg-dev` packages public in their settings after the first push.
+
+Once the images of the current commit are in the registry, deploy the stack to Hetzner:
 
 ```bash
 x deploy
@@ -147,7 +141,7 @@ dual licensed as above, without any additional terms or conditions.
 [terraform]: https://www.terraform.io/
 [hetzner-cloud]: https://www.hetzner.com/cloud
 
-[dockerhub-repo]: https://hub.docker.com/repository/docker/veetaha/snowpity-tg
+[ghcr-package]: https://github.com/Veetaha/snowpity/pkgs/container/snowpity-tg
 [grafana]: https://grafana.com
 [grafana-agent]: https://grafana.com/docs/agent/latest/
 [loki]: https://grafana.com/oss/loki/

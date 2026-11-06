@@ -6,6 +6,11 @@ variable "tg_bot_alerts_chat" {
   })
 }
 
+variable "tg_bot_image_name" {
+  nullable = false
+  type     = string
+}
+
 variable "tg_bot_image_tag" {
   nullable = false
   type     = string
@@ -31,18 +36,6 @@ variable "tg_bot_token" {
     prod = optional(string)
     dev  = optional(string)
   })
-}
-
-variable "docker_username" {
-  nullable  = false
-  sensitive = true
-  type      = string
-}
-
-variable "docker_password" {
-  nullable  = false
-  sensitive = true
-  type      = string
 }
 
 variable "pg_password" {

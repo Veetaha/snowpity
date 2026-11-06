@@ -2,6 +2,8 @@
 
 - Fix the broken docker containers after a redeploy. The new server removes the containers of the old one
 - Shut down the server through the Hetzner API before its data volume is detached. Deploying needs no SSH key now
+- Build the docker images on GitHub ARM runners and publish them to the GitHub Container Registry instead of Docker Hub.
+  The images are tagged with the commit SHA, and `x deploy` deploys the images of the current commit
 
 # 0.13.1 2026-11-05
 

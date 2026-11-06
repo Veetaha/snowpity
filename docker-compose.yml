@@ -1,6 +1,6 @@
 services:
   tg-bot:
-    image: ${TG_BOT_IMAGE_NAME-veetaha/snowpity-tg-dev}:${TG_BOT_IMAGE_TAG-latest}
+    image: ${TG_BOT_IMAGE_NAME-snowpity-tg}:${TG_BOT_IMAGE_TAG-latest}
     build:
       context: .
       dockerfile: docker/tg-bot/Dockerfile
@@ -123,7 +123,7 @@ services:
     networks: [victoria-metrics]
 
   grafana:
-    image: ${TG_BOT_IMAGE_NAME-veetaha/snowpity-tg-dev}:grafana-${TG_BOT_IMAGE_TAG-latest}
+    image: ${TG_BOT_IMAGE_NAME-snowpity-tg}:grafana-${TG_BOT_IMAGE_TAG-latest}
     ports: [3000:3000]
     build: docker/grafana
     environment:

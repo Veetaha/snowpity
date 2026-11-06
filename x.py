@@ -20,6 +20,7 @@ from typing import Annotated, TypedDict, cast, get_args, get_origin
 
 REPO = Path(__file__).resolve().parent
 TF_PROJECT = REPO / "deployment" / "project"
+IMAGE_NAME = "ghcr.io/veetaha/snowpity-tg"
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 type Command = Callable[..., None]
@@ -102,9 +103,10 @@ def cmd_ssh_cloud_init_user_data() -> None:
 def cmd_docker_build(
     release: Annotated[bool, "-r", "Build in release mode"] = False,
     push: Annotated[bool, "-p", "Push the image to remote docker registry"] = False,
+    latest: Annotated[bool, "Also tag the images as the latest ones"] = False,
 ) -> None:
-    """Build all docker images"""
-    docker_build_all(release=release, push=push)
+    """Build all docker images of the current terraform workspace, tagged with the commit SHA"""
+    docker_build_all(release=release, push=push, latest=latest)
 
 
 @command("up")
@@ -145,8 +147,8 @@ def cmd_down(drop_data: Annotated[bool, "Remove all data volumes"] = False) -> N
 
 @command("deploy")
 def cmd_deploy(
-    no_build: Annotated[bool, "Skip build step, reuse the docker image that is already in the remote registry"] = False,
-    release: Annotated[bool, "-r", "Build in release mode"] = False,
+    build: Annotated[bool, "Build and push the images locally instead of using the ones built on CI"] = False,
+    release: Annotated[bool, "-r", "Build in release mode (with `--build`)"] = False,
     drop_server: Annotated[bool, "Force the re-creation of the server instance"] = False,
     drop_data: Annotated[bool, "Drop the persistent data (re-create the data volume)"] = False,
     plan: Annotated[bool, "Do `tf plan` instead of `tf apply`"] = False,
@@ -154,9 +156,11 @@ def cmd_deploy(
     no_tf_refresh: Annotated[bool, "Don't refresh the terraform state before deployment"] = False,
     no_logs: Annotated[bool, "Don't follow the server's cloud-init log over SSH after deployment"] = False,
 ) -> None:
-    """Deploy the full application's stack"""
-    if not no_build:
-        docker_build_all(release=release, push=True)
+    """Deploy the full application's stack at the current commit"""
+    if build:
+        docker_build_all(release=release, push=True, latest=False)
+    else:
+        require_image(f"{image_name()}:{image_tag()}")
 
     args = ["plan" if plan else "apply", *tf_vars()]
     if yes:
@@ -387,7 +391,34 @@ def tf(*args: str, debug: bool = True) -> None:
 
 
 def tf_vars() -> list[str]:
-    return ["-var", f"tg_bot_image_tag={project_version()}"]
+    return ["-var", f"tg_bot_image_name={image_name()}", "-var", f"tg_bot_image_tag={image_tag()}"]
+
+
+def tf_workspace() -> str:
+    """The same workspace that `terraform` selects, without running it."""
+    if workspace := os.environ.get("TF_WORKSPACE"):
+        return workspace
+    environment = TF_PROJECT / ".terraform" / "environment"
+    return environment.read_text().strip() if environment.exists() else "default"
+
+
+def image_name() -> str:
+    return IMAGE_NAME if tf_workspace() == "default" else f"{IMAGE_NAME}-dev"
+
+
+def image_tag() -> str:
+    return output("git", "rev-parse", "HEAD", cwd=REPO).strip()
+
+
+def require_image(image: str) -> None:
+    result = subprocess.run(["docker", "manifest", "inspect", image], check=False, capture_output=True)
+    if result.returncode != 0:
+        error(
+            f"Image {image} is not in the registry. Push the commit and build the images on CI with "
+            f"`gh workflow run docker.yml --ref <branch> --field workspace={tf_workspace()}`, "
+            "or deploy with `--build`."
+        )
+        sys.exit(1)
 
 
 class TfValue[T](TypedDict):
@@ -399,13 +430,8 @@ class TfServer(TypedDict):
     os_user: str
 
 
-class TfDocker(TypedDict):
-    image_name: str
-
-
 class TfOutput(TypedDict):
     server: TfValue[TfServer]
-    docker: TfValue[TfDocker]
 
 
 @cache
@@ -467,28 +493,31 @@ def build_mode(release: bool) -> str:
     return "release" if release else "debug"
 
 
-def docker_build_all(release: bool, push: bool) -> None:
+def docker_build_all(release: bool, push: bool, latest: bool) -> None:
     mode = build_mode(release)
     info(f"Building in {mode} mode...")
-    docker_build("tg-bot", push=push, context=".", build_args={"RUST_BUILD_MODE": mode})
-    docker_build("grafana", push=push, context="./docker/grafana")
+    build_args = {"RUST_BUILD_MODE": mode}
+    docker_build("tg-bot", push=push, latest=latest, context=".", build_args=build_args)
+    docker_build("grafana", push=push, latest=latest, context="./docker/grafana")
 
 
-def docker_build(component: str, push: bool, context: str, build_args: dict[str, str] | None = None) -> None:
-    """Build an image with a tag of the exact version and the "latest" tag."""
-    image = tf_output()["docker"]["value"]["image_name"]
+def docker_build(
+    component: str, push: bool, latest: bool, context: str, build_args: dict[str, str] | None = None
+) -> None:
+    """Build an image with a tag of the commit SHA, and the "latest" tag if `latest` is set."""
+    image = image_name()
     label = "" if component == "tg-bot" else f"{component}-"
-    version_tag = f"{image}:{label}{project_version()}"
-    latest_tag = f"{image}:{label}latest"
+    tags = [f"{image}:{label}{image_tag()}"]
+    if latest:
+        tags.append(f"{image}:{label}latest")
 
     pushing_msg = " and pushing it to the remote registry" if push else ""
-    info(f"Building docker image {version_tag}{pushing_msg}")
+    info(f"Building docker image {tags[0]}{pushing_msg}")
 
     args = [
         "buildx", "build", context,
         "--file", f"docker/{component}/Dockerfile",
-        "--tag", version_tag,
-        "--tag", latest_tag,
+        *(arg for tag in tags for arg in ["--tag", tag]),
         # We use ARM-propelled server in production, so doing AMD builds isn't critical
         "--platform", "linux/arm64/v8",
         "--push" if push else "--load",

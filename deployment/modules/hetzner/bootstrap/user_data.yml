@@ -68,10 +68,5 @@ runcmd:
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   - systemctl enable --now docker.service
 
-  # Log in to be able to pull the image from the private dockerhub repo in development workspace
-  # `runuser` is required here, because `docker login` stores the creds in $HOME
-  # and our systemd service will run on behalf of `${server_os_user}` user
-  - runuser -u ${server_os_user} -- docker login --username ${docker_username} --password ${docker_password}
-
   # Enable the systemd service responsible for managing Docker Compose services
   - systemctl enable --now tg-bot.service

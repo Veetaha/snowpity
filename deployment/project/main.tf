@@ -13,7 +13,7 @@ module "hetzner" {
   source = "../modules/hetzner"
 
   tg_bot_alerts_chat     = local.tg_bot_alerts_chat
-  tg_bot_image_name      = module.dockerhub.image_name
+  tg_bot_image_name      = var.tg_bot_image_name
   tg_bot_image_tag       = var.tg_bot_image_tag
   tg_bot_maintainer      = var.tg_bot_maintainer
   tg_bot_blob_cache_chat = local.tg_bot_blob_cache_chat
@@ -24,14 +24,7 @@ module "hetzner" {
   pg_password      = var.pg_password
   pgadmin_password = var.pgadmin_password
 
-  docker_username = var.docker_username
-  docker_password = var.docker_password
-
   hcloud_token    = local.hcloud_token
   allowed_ssh_ips = var.allowed_ssh_ips
   public_ssh_key  = var.public_ssh_key
-}
-
-module "dockerhub" {
-  source = "../modules/dockerhub"
 }

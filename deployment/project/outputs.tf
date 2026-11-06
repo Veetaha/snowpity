@@ -6,9 +6,3 @@ output "server" {
     data_volume_path = module.hetzner.data_volume_path
   }
 }
-
-output "docker" {
-  value = {
-    image_name = module.dockerhub.image_name
-  }
-}

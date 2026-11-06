@@ -4,7 +4,7 @@
 # We could do cross-compilation by specifying `FROM --platform=$BUILDPLATFORM` here
 # and then using `cargo-zigbuild`. We use the emulation provided by docker
 # BuildKit with QEMU to do the build instead. It is simpler, but the build is
-# much slower.
+# much slower. CI builds the images on an ARM runner, where no emulation is needed.
 #
 # See a detailed cross-compilation guide here:
 # https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
@@ -17,16 +17,6 @@ ENV CARGO_TERM_COLOR=always
 
 WORKDIR /app
 
-# Don't clean the apt cache (see the reason on the same command in the runtime stage)
-RUN rm -f /etc/apt/apt.conf.d/docker-clean
-
-RUN --mount=target=scripts/download,source=scripts/download \
-    --mount=target=docker/tg-bot,source=docker/tg-bot \
-    --mount=type=cache,id=build-apt,target=/var/cache/apt \
-    docker/tg-bot/install-build-deps.sh
-
-ENV PATH="/usr/local/go/bin:$PATH"
-
 RUN --mount=target=. \
     --mount=type=cache,id=build-cargo-git,target=/usr/local/cargo/git \
     --mount=type=cache,id=build-cargo-registry,target=/usr/local/cargo/registry \
@@ -35,6 +25,9 @@ RUN --mount=target=. \
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:bookworm-slim AS runtime
+
+# Links the image to the repository in the GitHub Container Registry
+LABEL org.opencontainers.image.source=https://github.com/Veetaha/snowpity
 
 WORKDIR /app
 

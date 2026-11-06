@@ -47,18 +47,6 @@ variable "pgadmin_password" {
   sensitive = true
 }
 
-variable "docker_username" {
-  nullable  = false
-  sensitive = true
-  type      = string
-}
-
-variable "docker_password" {
-  nullable  = false
-  sensitive = true
-  type      = string
-}
-
 variable "twitter_cookies" {
   nullable  = false
   sensitive = true

@@ -1,28 +1,6 @@
 # This file is maintained automatically by "terraform init".
 # Manual edits may be lost in future updates.
 
-provider "registry.terraform.io/barnabyshearer/dockerhub" {
-  version     = "0.0.15"
-  constraints = "~> 0.0.8"
-  hashes = [
-    "h1:HLC6kfcfi2ADyixHDWLJcBoqLDEmg4R9ULw2YMqffU4=",
-    "zh:383898cd942de5a6ff6ce711abbe767ffabe4295cf6e3919f4d2b5bdba63ede5",
-    "zh:552c8f4bd2d498db991f2860a52eb8481d94e35890e42ffbcb0c79caafe9c649",
-    "zh:94ff81ed578e233a850700bcd642ba6da5e084613528db348c1279771e31a390",
-    "zh:968f3d5d1190ef64e2aa4575bc459a6d6b6279944489ae72d7b5a8aed5bc7f02",
-    "zh:9dbc6e674c88374867e09986b5117dd7822c62558be976d1f0b83450fdd0bdad",
-    "zh:a1aa97199a3764a8abe4a9a4c65de81da0607a389ec897a03225ef620365717b",
-    "zh:b78368b7e5755f9fcc63ad51b33090ec06dc3bf92dd48bc03f86dcdf57770e60",
-    "zh:b94aed28fb66abb7928a59cf458cfe0606204ea87256400673cd40921277a583",
-    "zh:c1306be464b2041f1d4441d0483e191cb80eab6cf201d445f57a6c3f3af0d51d",
-    "zh:ca452d73fddfa671f3ee5ec305724b9fdf52258ae2220202ecccfd03184368b2",
-    "zh:d5b4476c5a69433c1460a61cefb382899f896c07b95e996f39a51e9cd8adfc1e",
-    "zh:e29dc9357bc45afe49f4b603d6dadd59682c40759ac121bbc977b505e8cfc9fe",
-    "zh:ed3838d273247c083f82fd36ce7aa180b1adf1309413a2e20f33c6031ab129a1",
-    "zh:eeddb754a14f76acac62fcaadc462532a2876544f4c45f488ef2117a25f03dd7",
-  ]
-}
-
 provider "registry.terraform.io/hashicorp/cloudinit" {
   version     = "2.3.2"
   constraints = "~> 2.3.2"
