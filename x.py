@@ -21,6 +21,8 @@ from typing import Annotated, TypedDict, cast, get_args, get_origin
 
 REPO = Path(__file__).resolve().parent
 TF_PROJECT = REPO / "deployment" / "project"
+# The exit code of `ssh` when it fails to connect or loses the connection
+SSH_CONNECTION_ERROR = 255
 IMAGE_NAME = "ghcr.io/veetaha/snowpity-tg"
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
@@ -86,6 +88,12 @@ def cmd_ssh_cloud_init_log(
 ) -> None:
     """Display the server's cloud-init logs"""
     ssh_cloud_init_log(dump=dump)
+
+
+@command("ssh check")
+def cmd_ssh_check() -> None:
+    """Check that the server finished its setup and runs the bot at the current commit"""
+    check_server()
 
 
 @command("ssh cloud-init status")
@@ -473,10 +481,15 @@ def ssh(*args: str, forward_ports: bool = False) -> None:
 
 def check_server() -> None:
     """Fail if the server did not finish its setup or a container of the bot is down."""
-    # The server boots for a while, and ssh fails until it is up.
-    with_retry(lambda: ssh("true"), max_retries=20)
     script = (REPO / "deployment" / "check-server.sh").read_text()
-    ssh(f"bash -c {shlex.quote(script)} check-server {shlex.quote(image_tag())}")
+    # The server is unreachable while it boots. It also reboots at the end of
+    # cloud-init when a package upgrade needs it.
+    with_retry(
+        lambda: ssh(f"bash -c {shlex.quote(script)} check-server {shlex.quote(image_tag())}"),
+        max_retries=60,
+        max_delay=10.0,
+        retry_if=lambda err: err.exit_code == SSH_CONNECTION_ERROR,
+    )
 
 
 def ssh_cloud_init_log(dump: bool) -> None:
@@ -543,17 +556,20 @@ def with_retry[T](
     max_retries: int = 5,
     max_delay: float = 5.0,
     fixed: bool = False,
+    retry_if: Callable[[CommandError], bool] = lambda _: True,
 ) -> T:
     """Call `imp` until it succeeds or `max_retries` attempts fail.
 
     The delay grows exponentially with jitter, unless `fixed` is set.
-    The last attempt raises its error.
+    An error for which `retry_if` is false and the last attempt raise their error.
     """
     base_delay = delay
     for attempt in range(1, max_retries):
         try:
             return imp()
         except CommandError as err:
+            if not retry_if(err):
+                raise
             warn(err)
         warn(f"Failure! Retrying ({attempt} / {max_retries}) in {delay:.1f}s...")
         time.sleep(delay)
