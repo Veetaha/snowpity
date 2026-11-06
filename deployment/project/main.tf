@@ -26,5 +26,5 @@ module "hetzner" {
 
   hcloud_token    = local.hcloud_token
   allowed_ssh_ips = var.allowed_ssh_ips
-  public_ssh_key  = var.public_ssh_key
+  ssh_public_keys = var.ssh_public_keys
 }

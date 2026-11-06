@@ -71,8 +71,8 @@ variable "twitter_cookies" {
   type      = string
 }
 
-variable "public_ssh_key" {
+variable "ssh_public_keys" {
   nullable    = false
-  description = "Public SSH key file path to be used for SSH access to the server"
-  type        = string
+  description = "Public SSH keys that can access the server"
+  type        = list(string)
 }

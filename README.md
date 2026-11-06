@@ -88,6 +88,9 @@ hcloud_token = {
 
 # IP addresses allowed to SSH in to the server by Hetzner firewall
 allowed_ssh_ips = ["255.255.255.255/32"]
+
+# Public SSH keys that can access the server
+ssh_public_keys = ["ssh-ed25519 AAAA... user@host"]
 ```
 
 Note that some credentials differ by the terraform workspace. If the default terraform workspace is selected, then `prod` credentials and configurations will be used. If `dev` workspace is selected, then development `dev` credentials and configurations will be used accordingly.

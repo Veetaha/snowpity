@@ -59,7 +59,7 @@ variable "hcloud_token" {
   sensitive = true
 }
 
-variable "public_ssh_key" {
+variable "ssh_public_keys" {
   nullable = false
-  type     = string
+  type     = list(string)
 }

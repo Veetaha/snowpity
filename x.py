@@ -7,6 +7,7 @@ import inspect
 import json
 import os
 import random
+import shlex
 import subprocess
 import sys
 import time
@@ -154,7 +155,7 @@ def cmd_deploy(
     plan: Annotated[bool, "Do `tf plan` instead of `tf apply`"] = False,
     yes: Annotated[bool, "-y", "Auto-approve the deployment"] = False,
     no_tf_refresh: Annotated[bool, "Don't refresh the terraform state before deployment"] = False,
-    no_logs: Annotated[bool, "Don't follow the server's cloud-init log over SSH after deployment"] = False,
+    no_check: Annotated[bool, "Don't check the server over SSH after deployment"] = False,
 ) -> None:
     """Deploy the full application's stack at the current commit"""
     if build:
@@ -174,9 +175,8 @@ def cmd_deploy(
 
     tf(*args)
 
-    if not plan and not no_logs:
-        # The server boots for a while, and ssh fails until it is up.
-        with_retry(lambda: ssh_cloud_init_log(dump=False), max_retries=20)
+    if not plan and not no_check:
+        check_server()
 
 
 @command("tag")
@@ -469,6 +469,14 @@ def ssh(*args: str, forward_ports: bool = False) -> None:
             "-L", "8428:localhost:8428",  # victoria-metrics
         ]  # fmt: skip
     run("ssh", "-t", ssh_str(), *ports, *args, debug=False)
+
+
+def check_server() -> None:
+    """Fail if the server did not finish its setup or a container of the bot is down."""
+    # The server boots for a while, and ssh fails until it is up.
+    with_retry(lambda: ssh("true"), max_retries=20)
+    script = (REPO / "deployment" / "check-server.sh").read_text()
+    ssh(f"bash -c {shlex.quote(script)} check-server {shlex.quote(image_tag())}")
 
 
 def ssh_cloud_init_log(dump: bool) -> None:
