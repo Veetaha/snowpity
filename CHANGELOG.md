@@ -8,6 +8,7 @@
 - Remove the `/sys` maintainer command
 - `x deploy` checks the server over SSH after the deployment. It fails when cloud-init fails, or when a container is down or runs an image of another commit. `--no-check` skips the check
 - The server accepts several SSH keys. The `public_ssh_key` file path variable is replaced with the `ssh_public_keys` list of keys
+- Update the dev tools of `mise.toml` to their latest versions: node `26.13.0`, python `3.15.2`, ruff `0.17.4`. Commit `mise.lock` with the checksums of the tools
 
 # 0.13.1 2026-11-05
 
