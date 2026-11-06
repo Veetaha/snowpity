@@ -34,13 +34,14 @@ impl SysInfoService {
 
         let info = info;
         let percent = |x: &dyn fmt::Display| format!("{x:.1}%");
+        let run_queue = |x: f64| format!("{x:.2}");
 
         let load_average =
             ok_or_warn(sysinfo::System::load_average(), "load_average").map(|load_average| {
                 LoadAvg {
-                    one_min: percent(&load_average.one),
-                    five_min: percent(&load_average.five),
-                    fifteen_min: percent(&load_average.fifteen),
+                    one_min: run_queue(load_average.one),
+                    five_min: run_queue(load_average.five),
+                    fifteen_min: run_queue(load_average.fifteen),
                 }
             });
 
