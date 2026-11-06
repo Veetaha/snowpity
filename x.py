@@ -498,8 +498,7 @@ def ssh_cloud_init_log(dump: bool) -> None:
 
 
 def docker_compose(*args: str, env: dict[str, str] | None = None) -> None:
-    current_uid = {"CURRENT_UID": f"{os.getuid()}:{os.getgid()}"}
-    run("docker", "compose", *args, cwd=REPO, env=current_uid | (env or {}))
+    run("docker", "compose", *args, cwd=REPO, env=env)
 
 
 def down(drop_data: bool) -> None:
