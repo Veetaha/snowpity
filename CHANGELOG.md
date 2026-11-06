@@ -1,3 +1,8 @@
+# Unreleased
+
+- Fix the broken docker containers after a redeploy. The new server removes the containers of the old one
+- Shut down the server through the Hetzner API before its data volume is detached. Deploying needs no SSH key now
+
 # 0.13.1 2026-11-05
 
 - Remove the `/ftai` command and the 15.ai integration. The service is not coming back
