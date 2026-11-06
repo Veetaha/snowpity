@@ -38,7 +38,24 @@ pub(crate) fn default_retry_policy() -> ExponentialBackoffTimed {
         .build_with_total_retry_duration(Duration::from_secs(10))
 }
 
+/// Install the TLS crypto provider for the whole process.
+/// HTTP clients panic on creation if no provider is installed.
+pub fn install_tls_crypto_provider() {
+    // An error means that a provider is installed already
+    let _ = rustls::crypto::ring::default_provider().install_default();
+}
+
+/// Trust the Mozilla root certificates that are bundled into the binary.
+/// The system root certificates are ignored.
+fn webpki_root_certs() -> impl Iterator<Item = reqwest::Certificate> {
+    webpki_root_certs::TLS_SERVER_ROOT_CERTS
+        .iter()
+        .map(|cert| reqwest::Certificate::from_der(cert).expect("BUG: invalid webpki root cert"))
+}
+
 pub(crate) fn create_client() -> Client {
+    install_tls_crypto_provider();
+
     let client = std::env::var("PROXY_SERVER")
         .ok()
         .map(|proxy| reqwest::Client::builder().proxy(reqwest::Proxy::all(proxy).unwrap()))
@@ -46,6 +63,7 @@ pub(crate) fn create_client() -> Client {
         .connect_timeout(Duration::from_secs(5))
         .timeout(Duration::from_secs(17))
         .tcp_nodelay(true)
+        .tls_certs_only(webpki_root_certs())
         .build()
         .unwrap();
 

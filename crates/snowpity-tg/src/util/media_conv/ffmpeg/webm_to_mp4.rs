@@ -11,7 +11,8 @@ pub(crate) async fn webm_to_mp4(input: impl AsRef<Path>) -> Result<TempPath> {
     let output = std::env::temp_dir().join(format!("{}.mp4", nanoid::nanoid!()));
     let log_message = format!("Converting Webm to mp4 with output at {output:?}");
 
-    let output = tempfile::TempPath::from_path(output);
+    let output = tempfile::TempPath::try_from_path(output)
+        .fatal_ctx(|| "Failed to resolve the output path")?;
 
     // This is inspired a bit by this code:
     // https://github.com/philomena-dev/philomena/blob/master/lib/philomena/processors/gif.ex#L96

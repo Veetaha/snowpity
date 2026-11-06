@@ -1,7 +1,7 @@
 use super::model::*;
 use crate::Result;
 use crate::prelude::*;
-use sea_query::{Expr, OnConflict};
+use sea_query::{Expr, ExprTrait, OnConflict};
 use sqlx_bat::prelude::*;
 use teloxide::types::{ChatFullInfo, User};
 
@@ -23,7 +23,7 @@ impl TgChatRepo {
     #[metered_db]
     pub(crate) async fn register_chat(&self, ctx: TgChatQuery<'_>) -> Result {
         ctx.insert_statement()?
-            .into_sqlx()
+            .to_sqlx()
             .query()
             .execute(&self.db)
             .await?;
@@ -35,7 +35,7 @@ impl TgChatRepo {
     pub(crate) async fn get_chat(&self, ctx: TgChatQuery<'_>) -> Result<TgChat> {
         ctx.insert_statement()?
             .returning_all()
-            .into_sqlx()
+            .to_sqlx()
             .query_as::<TgChatRecord>()
             .fetch_one(&self.db)
             .await?
@@ -47,7 +47,7 @@ impl TgChatRepo {
     pub(crate) async fn get_or_update_captcha(&self, ctx: TgChatQuery<'_>) -> Result<bool> {
         ctx.insert_statement()?
             .returning_col(TgChatIden::IsCaptchaEnabled)
-            .into_sqlx()
+            .to_sqlx()
             .query_scalar()
             .fetch_one(&self.db)
             .await
@@ -74,7 +74,7 @@ impl<'a> TgChatQuery<'a> {
             TgChatIden::RegisteredByAction,
         ];
 
-        let mut values = sqlx_bat::simple_expr_vec![
+        let mut values = sqlx_bat::expr_vec![
             self.chat.id.try_into_db()?,
             TgChatKind::from_tg_api(self.chat).try_into_db()?,
             self.chat.title(),

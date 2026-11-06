@@ -1,10 +1,10 @@
 use crate::{PgQuery, PgQueryAs, PgQueryScalar};
 use easy_ext::ext;
-use sqlx::IntoArguments;
 use sqlx::postgres::{PgArguments, PgRow};
+use sqlx::{AssertSqlSafe, IntoArguments, SqlSafeStr, SqlStr};
 
 pub mod expr {
-    use sea_query::{Func, Iden, SimpleExpr};
+    use sea_query::{Expr, ExprTrait, Func, Iden};
 
     #[derive(Iden)]
     struct Now;
@@ -12,89 +12,56 @@ pub mod expr {
     #[derive(Iden)]
     struct Timestamp;
 
-    pub fn timestamp_now() -> SimpleExpr {
-        SimpleExpr::from(Func::cust(Now)).cast_as(Timestamp)
+    pub fn timestamp_now() -> Expr {
+        Expr::from(Func::cust(Now)).cast_as(Timestamp)
     }
 }
 
 #[macro_export]
-macro_rules! simple_expr_vec {
+macro_rules! expr_vec {
     ($($value:expr,)* $(,)?) => {
         vec![
-            $($crate::imp::sea_query::SimpleExpr::from($value),)*
+            $($crate::imp::sea_query::Expr::from($value),)*
         ]
     };
 }
 
-/// Unfortunately, [`sqlx`] query types are limited to borrowing the SQL string,
-/// so we must have this intermediate wrapper, that is also borrowed by a unique
-/// reference during the method call chain to let us keep it in scope while the
-/// [`sqlx`] query is being used.
+/// A query built by [`sea_query`], ready to be converted to one of the [`sqlx`]
+/// query types.
 pub struct SqlxQuery {
-    sql: String,
-    args: Option<PgArguments>,
+    sql: SqlStr,
+    args: PgArguments,
 }
 
 #[ext(SqlxBinderExt)]
-pub impl<T: sea_query_binder::SqlxBinder> T {
-    // This is intentional. Ideally we should take `self` by value, but,
-    // because of the limitations of [`sqlx`], we must take it by reference.
-    #[allow(clippy::wrong_self_convention)]
-    fn into_sqlx(&self) -> SqlxQuery {
+pub impl<T: sea_query_sqlx::SqlxBinder> T {
+    fn to_sqlx(&self) -> SqlxQuery {
         let (sql, args) = self.build_sqlx(sea_query::PostgresQueryBuilder);
         SqlxQuery {
-            sql,
-            args: Some(args.into_arguments()),
+            // `sea_query` passes all values as bind parameters,
+            // so the SQL string contains no user input.
+            sql: AssertSqlSafe(sql).into_sql_str(),
+            args: args.into_arguments(),
         }
     }
 }
 
 impl SqlxQuery {
-    /// Convert this to [`PgQuery`].
-    ///
-    /// # Panics
-    ///
-    /// This method should be a consuming one, but due to the limitations of [`sqlx`],
-    /// the check for the double call is done at runtime, so you must make sure
-    /// not to use the [`SqlxQuery`] after calling this method.
-    pub fn query(&mut self) -> PgQuery<'_> {
-        let args = self.unwrap_args();
-        sqlx::query_with(&self.sql, args)
+    pub fn query(self) -> PgQuery<'static> {
+        sqlx::query_with(self.sql, self.args)
     }
 
-    /// Convert this to [`PgQueryAs`].
-    ///
-    /// # Panics
-    ///
-    /// This method should be a consuming one, but due to the limitations of [`sqlx`],
-    /// the check for the double call is done at runtime, so you must make sure
-    /// not to use the [`SqlxQuery`] after calling this method.
-    pub fn query_as<O>(&mut self) -> PgQueryAs<'_, O>
+    pub fn query_as<O>(self) -> PgQueryAs<'static, O>
     where
         O: for<'r> sqlx::FromRow<'r, PgRow>,
     {
-        let args = self.unwrap_args();
-        sqlx::query_as_with(&self.sql, args)
+        sqlx::query_as_with(self.sql, self.args)
     }
 
-    /// Convert this to [`PgQueryScalar`].
-    ///
-    /// # Panics
-    ///
-    /// This method should be a consuming one, but due to the limitations of [`sqlx`],
-    /// the check for the double call is done at runtime, so you must make sure
-    /// not to use the [`SqlxQuery`] after calling this method.
-    pub fn query_scalar<O>(&mut self) -> PgQueryScalar<'_, O>
+    pub fn query_scalar<O>(self) -> PgQueryScalar<'static, O>
     where
         (O,): for<'r> sqlx::FromRow<'r, PgRow>,
     {
-        let args = self.unwrap_args();
-        sqlx::query_scalar_with(&self.sql, args)
-    }
-
-    fn unwrap_args(&mut self) -> PgArguments {
-        self.args
-            .take()
-            .expect("BUG: it is allowed to build sqlx query only once")
+        sqlx::query_scalar_with(self.sql, self.args)
     }
 }

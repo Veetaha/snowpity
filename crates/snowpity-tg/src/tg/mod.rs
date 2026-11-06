@@ -49,7 +49,7 @@ pub(crate) struct Ctx {
 }
 
 impl Ctx {
-    fn new(bot: Bot, opts: RunBotOptions) -> Self {
+    fn new(bot: Bot, opts: RunBotOptions) -> Result<Self> {
         let http = http::create_client();
 
         let tg_cfg = Arc::new(opts.tg_cfg);
@@ -62,14 +62,14 @@ impl Ctx {
 
         let ctx = posting::PostingContext::new(bot.clone(), tg_cfg.clone(), posting_params);
 
-        Ctx {
+        Ok(Ctx {
             tg_chats: db::TgChatRepo::new(opts.db),
             bot,
             cfg: tg_cfg,
-            sysinfo: SysInfoService::new(),
+            sysinfo: SysInfoService::new()?,
             captcha: Default::default(),
             inline_query: InlineQueryService::new(ctx),
-        }
+        })
     }
 }
 
@@ -88,7 +88,7 @@ pub(crate) async fn run_bot(opts: RunBotOptions) -> Result {
         .cache_me()
         .trace(teloxide::adaptors::trace::Settings::all());
 
-    di.insert(Arc::new(Ctx::new(bot.clone(), opts)));
+    di.insert(Arc::new(Ctx::new(bot.clone(), opts)?));
 
     info!("Starting bot...");
 

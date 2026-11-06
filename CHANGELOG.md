@@ -4,6 +4,7 @@
 - Shut down the server through the Hetzner API before its data volume is detached. Deploying needs no SSH key now
 - Build the docker images on GitHub ARM runners and publish them to the GitHub Container Registry instead of Docker Hub.
   The images are tagged with the commit SHA, and `x deploy` deploys the images of the current commit
+- Update all Rust dependencies to their latest versions. This fixes the tokio advisory [RUSTSEC-2026-0386](https://rustsec.org/advisories/RUSTSEC-2026-0386). Notable upgrades: `reqwest` 0.13, `sqlx` 0.9, `sea-query` 1.0 (with `sea-query-sqlx` in place of `sea-query-binder`), `sysinfo` 0.40, `fast_image_resize` 6, `metrics-exporter-prometheus` 0.18, `darling` 0.24, `syn` 3
 
 # 0.13.1 2026-11-05
 

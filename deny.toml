@@ -16,10 +16,6 @@ wildcards = "allow"
 
 multiple-versions = "deny"
 skip = [
-  # Comes from snowpity-tg -> nanoid@0.4.0
-  # Other direct parents: retry-policies@0.4.0, sqlx-postgres@0.8.6
-  { name = "rand", version = "=0.8.5" },
-
   # Comes from snowpity-tg -> teloxide@0.17.0
   # Direct parents: aquamarine@0.6.0
   { name = "itertools", version = "=0.10.5" },
@@ -28,7 +24,6 @@ skip = [
   # Direct parents:
   #   darling_core@0.14.4
   #   darling_macro@0.14.4
-  #   derivative@2.2.0
   #   from_variants_impl@1.0.2
   { name = "syn", version = "=1.0.109" },
 
@@ -40,19 +35,11 @@ skip = [
   # Direct parents: darling@0.14.4, darling_macro@0.14.4
   { name = "darling_core", version = "=0.14.4" },
 
-  # Comes from snowpity-tg -> nanoid@0.4.0
-  # Direct parents: rand@0.8.5
-  { name = "rand_chacha", version = "=0.3.1" },
-
-  # Comes from sqlx-bat -> sea-query-binder@0.7.0
-  # Direct parents: sea-query-derive@0.4.3, serde_with_macros@3.14.0
+  # Comes from snowpity-tg -> sea-query@1.0.2
+  # Direct parents: sea-query-derive@1.0.0
   { name = "darling", version = "=0.20.11" },
 
-  # Comes from snowpity-tg -> reqwest-middleware@0.4.2
-  # Other direct parents: reqwest-retry@0.7.0
-  { name = "thiserror", version = "=1.0.69" },
-
-  # Comes from sqlx-bat -> sea-query-binder@0.7.0
+  # Comes from snowpity-tg -> sea-query@1.0.2
   # Direct parents: darling@0.20.11, darling_macro@0.20.11
   { name = "darling_core", version = "=0.20.11" },
 
@@ -64,61 +51,114 @@ skip = [
   # Other direct parents: teloxide-core@0.13.0
   { name = "derive_more", version = "=1.0.0" },
 
-  # Comes from snowpity-tg -> nanoid@0.4.0
-  # Direct parents: rand@0.8.5, rand_chacha@0.3.1
-  { name = "rand_core", version = "=0.6.4" },
-
-  # Comes from snowpity-tg -> nanoid@0.4.0
-  # Direct parents: rand_core@0.6.4, ring@0.17.14
-  { name = "getrandom", version = "=0.2.16" },
-
   # Comes from snowpity-tg -> from_variants@1.0.2
   # Direct parents: darling@0.14.4
   { name = "darling_macro", version = "=0.14.4" },
 
-  # Comes from sqlx-bat -> sea-query-binder@0.7.0
+  # Comes from snowpity-tg -> sea-query@1.0.2
   # Direct parents: darling@0.20.11
   { name = "darling_macro", version = "=0.20.11" },
-
-  # Comes from snowpity-tg -> reqwest-middleware@0.4.2
-  # Direct parents: thiserror@1.0.69
-  { name = "thiserror-impl", version = "=1.0.69" },
 
   # Comes from snowpity-tg -> teloxide@0.17.0
   # Direct parents: derive_more@1.0.0
   { name = "derive_more-impl", version = "=1.0.0" },
 
-  # Comes from sqlx-bat -> sea-query-binder@0.7.0
-  # Direct parents: sea-query-derive@0.4.3
+  # Comes from snowpity-tg -> sea-query@1.0.2
+  # Direct parents: sea-query-derive@1.0.0
   { name = "heck", version = "=0.4.1" },
 
-  # Comes from sqlx-bat -> sea-query-binder@0.7.0
-  # Direct parents: hashlink@0.10.0, metrics-util@0.20.0, sqlx-core@0.8.6
-  { name = "hashbrown", version = "=0.15.5" },
+  # Comes from metrics-bat -> metrics-exporter-prometheus@0.18.3
+  # Other direct parents: reqwest@0.12.28, sqlx-core@0.9.0, sqlx-postgres@0.9.0
+  { name = "base64", version = "=0.22.1" },
 
-  # Comes from snowpity-tg -> image@0.25.9
-  # Direct parents: zune-jpeg@0.4.21
-  { name = "zune-core", version = "=0.4.12" },
+  # Comes from snowpity-tg -> sqlx@0.9.0
+  # Direct parents: digest@0.10.7
+  { name = "block-buffer", version = "=0.10.4" },
 
-  # Comes from snowpity-tg -> image@0.25.9
-  # Direct parents: tiff@0.10.3
-  { name = "zune-jpeg", version = "=0.4.21" },
+  # Comes from snowpity-tg -> sqlx@0.9.0
+  # Direct parents: sha2@0.10.9
+  { name = "cpufeatures", version = "=0.2.17" },
 
-  # Comes from snowpity-tg -> vergen-gitcl@10.0.3
-  # Direct parents: bon-macros@3.10.2
-  { name = "darling", version = "=0.24.1" },
+  # Comes from snowpity-tg -> sqlx@0.9.0
+  # Direct parents: digest@0.10.7
+  { name = "crypto-common", version = "=0.1.6" },
 
-  # Comes from snowpity-tg -> vergen-gitcl@10.0.3
-  # Direct parents: darling@0.24.1, darling_macro@0.24.1
-  { name = "darling_core", version = "=0.24.1" },
+  # Comes from snowpity-tg -> sqlx@0.9.0
+  # Direct parents: sha2@0.10.9
+  { name = "digest", version = "=0.10.7" },
 
-  # Comes from snowpity-tg -> vergen-gitcl@10.0.3
-  # Direct parents: darling@0.24.1
-  { name = "darling_macro", version = "=0.24.1" },
+  # Comes from snowpity-tg -> rustls@0.23.46
+  # Direct parents: ring@0.17.14
+  { name = "getrandom", version = "=0.2.17" },
 
-  # Comes from snowpity-tg -> vergen-gitcl@10.0.3
-  # Other direct parents: thiserror-impl@2.0.21
-  { name = "syn", version = "=3.0.9" },
+  # Comes from snowpity-tg -> nanoid@0.5.0
+  # Direct parents: rand_core@0.9.5
+  { name = "getrandom", version = "=0.3.4" },
+
+  # Comes from metrics-bat -> metrics-exporter-prometheus@0.18.3
+  # Direct parents: hashlink@0.11.1, metrics-util@0.20.4, sqlx-core@0.9.0
+  { name = "hashbrown", version = "=0.16.1" },
+
+  # Comes from snowpity-tg -> image@0.25.10
+  # Direct parents: prost-derive@0.13.5, rav1e@0.8.1
+  { name = "itertools", version = "=0.14.0" },
+
+  # Comes from snowpity-tg -> sqlx@0.9.0
+  # Direct parents: futures-intrusive@0.5.0, parking_lot@0.12.5
+  { name = "lock_api", version = "=0.4.14" },
+
+  # Comes from snowpity-tg -> image@0.25.10
+  # Direct parents: exr@1.74.2, png@0.18.1
+  { name = "miniz_oxide", version = "=0.8.9" },
+
+  # Comes from snowpity-tg -> sqlx@0.9.0
+  # Direct parents: futures-intrusive@0.5.0
+  { name = "parking_lot", version = "=0.12.5" },
+
+  # Comes from snowpity-tg -> sqlx@0.9.0
+  # Direct parents: parking_lot@0.12.5
+  { name = "parking_lot_core", version = "=0.9.12" },
+
+  # Comes from snowpity-tg -> nanoid@0.5.0
+  # Other direct parents: metrics-util@0.20.4
+  { name = "rand", version = "=0.9.5" },
+
+  # Comes from snowpity-tg -> nanoid@0.5.0
+  # Direct parents: rand@0.9.5, rand_chacha@0.9.0, rand_xoshiro@0.7.0
+  { name = "rand_core", version = "=0.9.5" },
+
+  # Comes from snowpity-tg -> tracing-loki@0.2.7
+  # Other direct parents: teloxide-core@0.13.0
+  { name = "reqwest", version = "=0.12.28" },
+
+  # Comes from snowpity-tg -> sqlx@0.9.0
+  # Direct parents: sqlx-core@0.9.0, sqlx-macros-core@0.9.0
+  { name = "sha2", version = "=0.10.9" },
+
+  # Comes from metrics-bat -> tracing@0.1.44
+  # Direct parents:
+  #   aquamarine@0.6.0
+  #   arg_enum_proc_macro@0.3.4
+  #   darling_core@0.20.11
+  #   darling_macro@0.20.11
+  #   derive_more-impl@1.0.0
+  #   derive_more-impl@2.1.1
+  #   equator-macro@0.4.2
+  #   num-derive@0.4.2
+  #   num_enum_derive@0.7.6
+  #   pin-project-internal@1.1.13
+  #   profiling-procmacros@1.0.18
+  #   prost-derive@0.13.5
+  #   sea-query-derive@1.0.0
+  #   sqlx-macros-core@0.9.0
+  #   sqlx-macros@0.9.0
+  #   strum_macros@0.28.0
+  #   teloxide-macros@0.10.0
+  #   test-log-core@0.2.21
+  #   test-log-macros@0.2.21
+  #   tracing-attributes@0.1.31
+  #   zerocopy-derive@0.8.63
+  { name = "syn", version = "=2.0.119" },
 ]
 
 deny = [

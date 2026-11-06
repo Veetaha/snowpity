@@ -10,6 +10,7 @@ mod tg;
 pub mod util;
 
 pub use crate::error::*;
+pub use crate::http::install_tls_crypto_provider;
 pub use config::*;
 pub use observability::*;
 

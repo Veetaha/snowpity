@@ -3,6 +3,8 @@ use snowpity_tg::util::media_conv;
 use std::hint::black_box;
 
 pub fn resize_bench_group(criterion: &mut Criterion) {
+    snowpity_tg::install_tls_crypto_provider();
+
     let image = reqwest::blocking::get("https://derpicdn.net/img/view/2021/9/16/2701452.png")
         .unwrap()
         .bytes()

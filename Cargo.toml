@@ -33,63 +33,65 @@ publish = false
 [workspace.dependencies]
 assert_matches      = "1.5"
 async-trait         = "0.1"
-base64              = "0.22"
-bytes               = "1.1"
-criterion           = "0.7"
-darling             = "0.21"
-derive_more         = { version = "2.0", features = ["deref", "from_str", "display"] }
+base64              = "0.23"
+bytes               = "1.12"
+criterion           = "0.8"
+darling             = "0.24"
+derive_more         = { version = "2.1", features = ["deref", "from_str", "display"] }
 display-error-chain = "=0.2.2"
 dotenvy             = "0.15"
 dptree              = "0.5"
 easy-ext            = "1.0"
 envy                = "0.4"
-expect-test         = "1.4"
-fast_image_resize   = "5.2"
+expect-test         = "1.5"
+fast_image_resize   = "6.1"
 from_variants       = "1.0"
-fs-err              = "3.1"
+fs-err              = "3.3"
 futures             = "0.3"
 heck                = "0.5"
-http                = "1.3"
+http                = "1.5"
 humansize           = "2.1"
 image               = "0.25"
 inventory           = "0.3"
-itertools           = "0.14"
-lazy-regex          = "3.0"
+itertools           = "0.15"
+lazy-regex          = "3.6"
 log                 = "0.4"
 metrics             = "0.24"
-nanoid              = "0.4"
+nanoid              = "0.5"
 num_enum            = "0.7"
-parking_lot         = "0.12"
+parking_lot         = "0.13"
 pin-project-lite    = "0.2"
 proc-macro2         = "1.0"
 quote               = "1.0"
-reqwest-middleware  = "0.4"
-reqwest-retry       = "0.7"
+reqwest-retry       = "0.9"
 serde_json          = "1.0"
 serde_yaml          = "0.9"
-sha2                = "0.10"
-shlex               = "1.1"
-syn                 = "2.0"
-sysinfo             = "0.37"
-tempfile            = "3.3"
+sha2                = "0.11"
+shlex               = "2.0"
+syn                 = "3.0"
+sysinfo             = "0.40"
+tempfile            = "3.27"
 thiserror           = "2.0"
-tokio               = "1.21"
+tokio               = "1.54"
 tracing             = "0.1"
-url                 = "2.2"
+url                 = "2.5"
+webpki-root-certs   = "1.0"
 
 # Deps with feature overrides
 chrono                      = { version = "0.4", features = ["clock", "std"], default-features = false }
-metrics-exporter-prometheus = { version = "0.17", default-features = false }
-reqwest                     = { version = "0.12", features = ["rustls-tls"], default-features = false }
-sea-query                   = { version = "0.32", features = ["attr", "derive", "backend-postgres"], default-features = false }
-sea-query-binder            = { version = "0.7", features = ["sqlx-postgres"], default-features = false }
+metrics-exporter-prometheus = { version = "0.18", default-features = false }
+reqwest                     = { version = "0.13", features = ["rustls-no-provider", "stream"], default-features = false }
+reqwest-middleware          = { version = "0.5", features = ["query"] }
+rustls                      = { version = "0.23", features = ["ring", "std", "tls12"], default-features = false }
+sea-query                   = { version = "1.0", features = ["attr", "derive", "backend-postgres"], default-features = false }
+sea-query-sqlx              = { version = "0.9", features = ["sqlx-postgres"], default-features = false }
 serde                       = { version = "1.0", features = ["derive"] }
-serde_with                  = { version = "3.0", features = ["json"] }
-sqlx                        = { version = "0.8", features = ["runtime-tokio", "postgres", "macros", "chrono"] }
-strum                       = { version = "0.27", features = ["derive"] }
+serde_with                  = { version = "3.24", features = ["json"] }
+sqlx                        = { version = "0.9", features = ["runtime-tokio", "postgres", "macros", "chrono"] }
+strum                       = { version = "0.28", features = ["derive"] }
 teloxide                    = { version = "0.17", features = ["rustls"], default-features = false }
 test-log                    = { version = "0.2", features = ["trace"], default-features = false }
-timeago                     = { version = "0.5", features = ["chrono"] }
+timeago                     = { version = "0.6", features = ["chrono"] }
 tracing-error               = { version = "0.2", default-features = false }
 tracing-loki                = { version = "0.2", features = ["rustls", "compat-0-2-1"], default-features = false }
 tracing-subscriber          = { version = "0.3", features = ["env-filter"] }

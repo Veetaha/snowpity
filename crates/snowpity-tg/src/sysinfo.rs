@@ -1,3 +1,4 @@
+use crate::Result;
 use crate::prelude::*;
 use crate::util::display::{human_duration, human_size};
 use crate::util::encoding;
@@ -18,10 +19,13 @@ impl SysInfoService {
             .with_memory(sysinfo::MemoryRefreshKind::everything())
     }
 
-    pub(crate) fn new() -> Self {
-        Self {
-            sysinfo: sysinfo::System::new_with_specifics(Self::refresh_kind()).into(),
-        }
+    pub(crate) fn new() -> Result<Self> {
+        let sysinfo = sysinfo::System::new_with_specifics(Self::refresh_kind())
+            .fatal_ctx(|| "Failed to initialize sysinfo")?;
+
+        Ok(Self {
+            sysinfo: sysinfo.into(),
+        })
     }
 
     pub(crate) fn to_human_readable(&self) -> String {
@@ -31,27 +35,26 @@ impl SysInfoService {
         let info = info;
         let percent = |x: &dyn fmt::Display| format!("{x:.1}%");
 
-        let load_average = sysinfo::System::load_average();
-        let load_average = LoadAvg {
-            one_min: percent(&load_average.one),
-            five_min: percent(&load_average.five),
-            fifteen_min: percent(&load_average.fifteen),
-        };
+        let load_average =
+            ok_or_warn(sysinfo::System::load_average(), "load_average").map(|load_average| {
+                LoadAvg {
+                    one_min: percent(&load_average.one),
+                    five_min: percent(&load_average.five),
+                    fifteen_min: percent(&load_average.fifteen),
+                }
+            });
 
         let cpu = Cpu {
             arch: sysinfo::System::cpu_arch(),
             usage: percent(&info.global_cpu_usage()),
         };
 
-        let boot_time = Utc
-            .timestamp_opt(
-                sysinfo::System::boot_time().try_into().unwrap_or_default(),
-                0,
-            )
-            .unwrap()
-            .to_human_readable();
+        let boot_time = ok_or_warn(sysinfo::System::boot_time(), "boot_time")
+            .and_then(|secs| Utc.timestamp_opt(secs.try_into().ok()?, 0).single())
+            .map(|boot_time| boot_time.to_human_readable());
 
-        let uptime = human_duration(Duration::from_secs(sysinfo::System::uptime()));
+        let uptime = ok_or_warn(sysinfo::System::uptime(), "uptime")
+            .map(|secs| human_duration(Duration::from_secs(secs)));
 
         let ram = Ram {
             available: human_size(info.available_memory()),
@@ -69,9 +72,9 @@ impl SysInfoService {
 
         let info = SysInfo {
             platform: Platform {
-                hostname: sysinfo::System::host_name(),
-                kernel: sysinfo::System::kernel_version(),
-                osname: sysinfo::System::long_os_version(),
+                hostname: ok_or_warn(sysinfo::System::host_name(), "host_name"),
+                kernel: ok_or_warn(sysinfo::System::kernel_version(), "kernel_version"),
+                osname: ok_or_warn(sysinfo::System::long_os_version(), "long_os_version"),
             },
             cpu,
             load_average,
@@ -87,6 +90,12 @@ impl SysInfoService {
     }
 }
 
+fn ok_or_warn<T>(result: std::result::Result<T, sysinfo::Error>, field: &str) -> Option<T> {
+    result
+        .inspect_err(|err| warn!(field, err = tracing_err(err), "Failed to read system info"))
+        .ok()
+}
+
 /// We define the structs with `serde(Serialize)` instead of using `json!()` macro
 /// for such a simple task, because we want to preserve the order of the fields.
 /// Enabling `preserve_order` feature for `serde_json` is not an option, because
@@ -98,15 +107,15 @@ struct SysInfo {
     ram: Ram,
     swap: Mem,
     cpu: Cpu,
-    load_average: LoadAvg,
+    load_average: Option<LoadAvg>,
     uptime: Uptime,
     platform: Platform,
 }
 
 #[derive(Serialize)]
 struct Uptime {
-    total: String,
-    booted: String,
+    total: Option<String>,
+    booted: Option<String>,
 }
 
 #[derive(Serialize)]
